@@ -1,9 +1,10 @@
 import { VOICE, type VoiceClip } from '@/data/voice';
 
-// Recorded speech. Every bank word was said once by a neural voice and the recording was cut at
-// the beat boundaries (see tools/voice), so a beat played on its own is the very sound it has
-// inside the word, and the beats tapped in a row add up to the word. The phone's own voice cannot
-// do that: handed "rayt" or "juh" it reads a made-up word, in a different voice each time.
+// Recorded speech, all in one neural voice (see tools/voice). Every bank word is recorded whole, and
+// every beat is recorded on its own: the voice says just "jen", as a teacher does when sounding out
+// "genuine", so a tapped beat is a whole unhurried syllable rather than a slice cut out of the word.
+// The phone's own voice cannot do that well: handed "rayt" or "juh" it reads a made-up word, in a
+// different voice each time.
 //
 // Anything without a recording (the learner's own words, sentences, letter names) still goes to
 // the phone's voice in audio.ts. Every function here is safe to call when the audio module is

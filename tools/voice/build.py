@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Records every bank word once and cuts the recording into its beats.
+"""Records every bank word, and every beat of it said on its own.
 
     python build.py                 # every word in src/data/bank
     python build.py separate rhythm # only these (the manifest is still rewritten in full)
@@ -8,7 +8,7 @@
 For each word this writes, under assets/voice/:
     <word>_w.m4a    the word at speaking pace
     <word>_s.m4a    the word said carefully (the slow button)
-    <word>_1.m4a …  the careful recording cut at the beat boundaries, one file per beat
+    <word>_1.m4a …  each beat said on its own, as a person says "jen" when sounding out "genuine"
 and regenerates src/data/voice.ts, the manifest the app reads. See README.md.
 """
 import argparse
@@ -29,6 +29,7 @@ warnings.filterwarnings('ignore')
 import torch  # noqa: E402
 
 import align as aligner  # noqa: E402
+import judge  # noqa: E402
 import syllables  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -41,7 +42,11 @@ OUT = HERE / 'out'
 SR = 24000
 VOICE = 'af_heart'
 NORMAL = 0.9  # speaking pace
-CAREFUL = 0.65  # the pace the beats are cut from: slow enough that a lazy vowel is still a sound
+CAREFUL = 0.65  # the slow button
+BEAT = 0.85  # a beat said on its own
+# Ways of saying a beat, tried in order until one is heard as the beat: (end mark, vowel speed or None
+# for the beat's pace, stressed). A shorter vowel keeps a lone 'uh' from sliding into 'eye'.
+TAKES = [('.', None, True), ('.', 1.3, True), ('.', 1.8, True), ('!', None, True), ('.', 1.3, False)]
 LEAD_MS = 12  # silence in front of every clip
 FADE = 0.004
 PEAK = 0.89
@@ -81,17 +86,20 @@ def _run(ps, speed):
     return audio.squeeze().numpy().astype(np.float32), dur.tolist()
 
 
-def synth(ps, pace):
-    """The word at `pace` (1 is the voice's own speed).
+def synth(ps, pace, vowel=None):
+    """The word at `pace` (1 is the voice's own speed). `vowel` sets the first vowel's own speed.
 
     Only the phonemes are slowed. The model hides the start of the first sound inside its opening
     mark, so slowing that mark as well (which is what Kokoro's own `speed` does) smears the first sound.
     """
-    key = hashlib.sha1(f'{VOICE}|{pace}|{ps}'.encode()).hexdigest()[:16]
+    key = hashlib.sha1((f'{VOICE}|{pace}|{ps}' + (f'|v{vowel}' if vowel else '')).encode()).hexdigest()[:16]
     cache = OUT / 'cache' / f'{key}.npy'
     if cache.exists():
         return np.load(cache)
-    audio, _ = _run(ps, [1.0] + [pace] * len(ps) + [1.0])
+    speed = [pace] * len(ps)
+    if vowel:
+        speed[next(i for i, c in enumerate(ps) if c in syllables.VOWELS)] = vowel
+    audio, _ = _run(ps, [1.0] + speed + [1.0])
     cache.parent.mkdir(parents=True, exist_ok=True)
     np.save(cache, audio)
     return audio
@@ -136,14 +144,130 @@ def whole(audio):
     return faded(audio[lo:hi]) * (PEAK / np.abs(audio[lo:hi]).max()), lo, hi
 
 
+# Vowels whose tongue should hold still to the end. Said last and alone, the voice tends to let
+# them drift up towards "ee", so "luh" comes out as "lie", "buh" as "bye" and "rih" as "ray".
+STEADY = set('ʌɑɔæɛɪ')
+GLIDE_HZ = 300
+MIN_BEAT = 0.22
+
+
+def without_glide(audio, alone):
+    """Fades a beat that ends on a steady vowel out before the vowel starts to glide.
+
+    The glide shows as the second formant climbing (a held "uh" keeps it near 1,500 Hz; "eye" ends
+    near 2,400). The beat is faded out where it has risen GLIDE_HZ above its lowest point.
+    """
+    if alone[-1] not in STEADY:
+        return audio
+    import parselmouth
+    formant = parselmouth.Sound(audio.astype(np.float64), SR).to_formant_burg(max_number_of_formants=5, maximum_formant=5500)
+    env = envelope(audio)
+    loud = np.where(env > env.max() * 0.15)[0]
+    times = np.arange(loud[0], loud[-1], int(0.01 * SR)) / SR
+    f2 = np.array([formant.get_value_at_time(2, t) for t in times])
+    vowel_from = int(len(times) * 0.25)  # past the opening consonant
+    low, at_low, glide = np.inf, None, None
+    for i in range(vowel_from, len(times)):
+        if np.isnan(f2[i]):
+            continue
+        if f2[i] < low:
+            low, at_low = f2[i], i
+        elif f2[i] > low + GLIDE_HZ and all(not (f2[j] < low + 150) for j in range(i, min(i + 3, len(times)))):
+            glide = i
+            break
+    if glide is None:
+        return audio
+    end = int(times[glide] * SR)
+    if end - loud[0] < MIN_BEAT * SR:  # leave enough of the vowel to be heard
+        end = loud[0] + int(MIN_BEAT * SR)
+    if end >= len(audio):
+        return audio
+    out = audio[:end].copy()
+    n = min(int(0.07 * SR), len(out) // 3)
+    out[-n:] *= np.cos(np.linspace(0, np.pi / 2, n)) ** 2
+    return out * (PEAK / np.abs(out).max())
+
+
+FRICATIVE_END = set('sfʃθ')
+STOP_END = set('ptk')
+
+
+def _voiced_runs(audio):
+    """(times, [(first, last) frame of each voiced stretch]) at 5 ms steps."""
+    import parselmouth
+    pitch = parselmouth.Sound(audio.astype(np.float64), SR).to_pitch(time_step=0.005)
+    voiced = pitch.selected_array['frequency'] > 0
+    runs, start = [], None
+    for i, v in enumerate(voiced):
+        if v and start is None:
+            start = i
+        if not v and start is not None:
+            runs.append((start, i))
+            start = None
+    if start is not None:
+        runs.append((start, len(voiced)))
+    return pitch.xs(), runs
+
+
+def without_tail(audio, alone):
+    """Cuts the vowel the voice adds after a beat's last consonant.
+
+    Ending on its own, a beat like "sik" or "us" tends to come out as "sik-uh" or "us-ee": after a k, t
+    or p a long breathy release, after an s or f the voice switching back on. A stop keeps its closure
+    and 60 ms of burst, which is how a final k sounds; a hiss ends where the voice comes back.
+    """
+    last = alone[-1]
+    if last not in FRICATIVE_END | STOP_END:
+        return audio
+    times, runs = _voiced_runs(audio)
+    if not runs:
+        return audio
+    main = max(runs, key=lambda r: r[1] - r[0])  # the beat's vowel
+    vowel_end = int(times[min(main[1], len(times) - 1)] * SR)
+    env = envelope(audio)
+    db = 20 * np.log10(env / env.max() + 1e-9)
+    cut = None
+    if last in STOP_END:
+        closure = next((i for i in range(vowel_end, len(audio)) if db[i] < -28), None)
+        burst = None if closure is None else next((i for i in range(closure, len(audio)) if db[i] > -24), None)
+        if burst is not None:
+            cut = burst + int(0.06 * SR)
+    else:
+        for a, b in runs:
+            if a > main[1] and db[int(times[a] * SR):int(times[min(b, len(times) - 1)] * SR) + 1].max() > -30:
+                cut = int(times[a] * SR) - int(0.005 * SR)
+                break
+    if cut is None or cut >= len(audio):
+        return audio
+    out = audio[:cut].copy()
+    n = int((0.03 if last in STOP_END else 0.015) * SR)
+    out[-n:] *= np.linspace(1, 0, n) ** 2
+    return out
+
+
+def say_beat(alone):
+    """The best take of one beat said on its own: (samples, distance, what the listener heard)."""
+    best = None
+    for end, vowel, stressed in TAKES:
+        ps = alone if stressed else alone.replace('ˈ', '')
+        audio = without_tail(without_glide(whole(synth(ps + end, BEAT, vowel))[0], alone), alone)
+        dist, heard = judge.score(audio, alone)
+        if best is None or dist < best[1]:
+            best = (audio, dist, heard)
+        if dist == 0:
+            break
+    return best
+
+
 def build_word(text, says, ps, plots):
     """Returns (clips, info). clips: {'w': samples, 's': samples, 'beats': [samples]}."""
     beats, shared = syllables.split(ps, says)
     notes = [n for n in (syllables.vowel_note(b, s) for b, s in zip(beats, says)) if n]
+    alone = [syllables.standalone(b, s, beats[k + 1] if k + 1 < len(beats) else None, k < len(shared) and shared[k])
+             for k, (b, s) in enumerate(zip(beats, says))]
     normal, _, _ = whole(synth(ps, NORMAL))
     raw = synth(ps, CAREFUL)
     slow, lo, hi = whole(raw)
-    gain = PEAK / np.abs(raw[lo:hi]).max()
 
     phones = [syllables.arpa(b) for b in beats]
     al = aligner.align(raw, [p for b in phones for p in b])
@@ -152,7 +276,8 @@ def build_word(text, says, ps, plots):
     env = envelope(raw)
     first = np.cumsum([1] + [len(b) for b in phones])  # index in `al` of each beat's first phone
 
-    # One cut between each pair of beats; the outer edges come from the trim above.
+    # Where each beat starts inside the careful recording, so the tiles light up in time with it.
+    # One boundary between each pair of beats; the outer edges come from the trim above.
     cuts = [lo]
     for k, both in enumerate(shared):
         nxt, prev = al[first[k + 1]], al[first[k + 1] - 1]
@@ -185,18 +310,17 @@ def build_word(text, says, ps, plots):
             ends[k] = melted
 
     floor = env[lo:hi].max() * 10 ** (-42 / 20)
-    pieces, spans = [], []
-    for a, b in zip(starts, ends):
-        s, e = loud_span(env, a, b, floor)
-        piece = faded(raw[s:e]) * gain
-        # A quiet beat is lifted a little (never past +6 dB) so it can be heard on its own.
-        peak = np.abs(piece).max()
-        if 0 < peak < 0.5:
-            piece = piece * min(2.0, 0.5 / peak)
-        pieces.append(piece)
-        spans.append((s, e))
-    short = [f'{says[k]}={len(p) / SR * 1000:.0f}ms' for k, p in enumerate(pieces) if len(p) < 0.09 * SR]
-    info = {'ps': ps, 'beats': beats, 'notes': notes, 'weak': weak, 'thin': thin, 'short': short}
+    spans = [loud_span(env, a, b, floor) for a, b in zip(starts, ends)]
+
+    # Each beat is said on its own rather than cut out of the word: a piece of the word is too quick
+    # and stops mid-sound, and does not sound like anyone saying "jen".
+    pieces, off = [], []
+    for k, a in enumerate(alone):
+        audio, dist, heard = say_beat(a)
+        pieces.append(audio)
+        if dist:
+            off.append(f'{says[k]}~{heard.replace(" ", "")}')
+    info = {'ps': ps, 'beats': beats, 'alone': alone, 'notes': notes, 'weak': weak, 'thin': thin, 'off': off}
     if plots:
         plot(text, ps, says, raw, al, cuts, spans)
     info['at'] = [round((c - lo) / SR * 1000) + LEAD_MS for c in starts]
@@ -234,16 +358,17 @@ def write_manifest(rows, old):
     lines = [
         '// Generated by tools/voice/build.py. Do not edit by hand.',
         '//',
-        '// One recording per bank word, said once by a neural voice and cut at the beat boundaries, so a',
-        '// beat played on its own is the very sound it has inside the word.',
+        '// Every bank word recorded by a neural voice, whole and slowly, and every beat of it said on its',
+        '// own, as a teacher sounds out "jen", "yoo", "in".',
         '',
         'export type VoiceClip = {',
         '  /** The word at speaking pace. */',
         '  word: number;',
-        '  /** The word said carefully. The beats are this recording, cut up. */',
+        '  /** The word said carefully (the slow button). */',
         '  slow: number;',
+        '  /** Each beat said on its own. */',
         '  beats: number[];',
-        '  /** Lengths in ms. `at` is where each beat starts inside `slow`. */',
+        '  /** Lengths in ms. `at` is where each beat starts inside `slow`, for lighting the tiles in time. */',
         '  ms: { word: number; slow: number; beats: number[]; at: number[] };',
         '};',
         '',
@@ -296,8 +421,8 @@ def main():
         with ThreadPoolExecutor(4) as pool:
             ms = list(pool.map(encode, jobs))
         lengths[text.lower()] = {'w': ms[0], 's': ms[1], 'beats': ms[2:], 'at': info['at']}
-        flags = ''.join(f'  [{k}: {", ".join(v)}]' for k, v in (('vowel', info['notes']), ('thin', info['thin']), ('weak', info['weak']), ('short', info['short'])) if v)
-        report.append(f'{text:16} {"|".join(says):28} {"|".join(info["beats"]):28} {ms[2:]}{flags}')
+        flags = ''.join(f'  [{k}: {", ".join(v)}]' for k, v in (('vowel', info['notes']), ('thin', info['thin']), ('weak', info['weak']), ('heard', info['off'])) if v)
+        report.append(f'{text:16} {"|".join(says):28} {"|".join(info["alone"]):32} {ms[2:]}{flags}')
         print(f'{n + 1:3}/{len(rows)} {report[-1]}', flush=True)
     # Drop recordings of words that have left the bank.
     live = {t.lower() for t, _, _ in rows}

@@ -123,3 +123,36 @@ def arpa(beat):
             out.append(ARPA[s[i]])
             i += 1
     return out
+
+
+# Sounds that only exist inside a word, and what they become when the beat is said on its own.
+ALONE = {'T': 't', 'ɾ': 't', 'ʔ': 't'}
+LAZY = set('əᵻɐᵊ')
+# A lazy vowel said on its own becomes the full vowel the tile shows: "bih" for the be- of "believe",
+# "uh" for the a- of "about".
+FULL = {'ih': 'ɪ', 'i': 'ɪ', 'e': 'ɛ', 'a': 'æ', 'oo': 'ʊ', 'er': 'ɜ', 'ur': 'ɜ', 'ir': 'ɜ'}
+
+
+def standalone(beat, say, next_beat=None, shared=False):
+    """The beat as it is said on its own, as a phoneme string with the stress on its vowel.
+
+    Inside 'separate' the middle beat is a quick lazy 'ə'; said alone it is a full 'uh' (ʌ), and the
+    soft t of 'butter' is a real t. A consonant the beat shares with the next one ('spat|chuh') is
+    said at the end of this beat too, as the respelling writes it.
+    """
+    ph = [c for c in beat if c not in STRESS]
+    if shared and next_beat:
+        opens = next((c for c in next_beat if c not in STRESS), '')
+        ph.append({'ʧ': 't', 'ʤ': 'd'}.get(opens, opens) if _edge(say, True) in ('t', 'd') else opens)
+    full = FULL.get(say_shape(say)[1], 'ʌ')
+    out = []
+    for i, c in enumerate(ph):
+        before_r = i + 1 < len(ph) and ph[i + 1] == 'ɹ'
+        if c in LAZY or (c == 'ʌ' and before_r):
+            c = 'ɜ' if before_r else full
+            if c == 'ɜ' and not before_r:
+                c = 'ɜɹ'  # 'er' whose r went to the next beat
+        out.append(ALONE.get(c, c))
+    s = ''.join(out)
+    v = next(i for i, c in enumerate(s) if c in VOWELS)
+    return s[:v] + 'ˈ' + s[v:]

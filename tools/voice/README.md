@@ -1,11 +1,15 @@
 # Root's voice
 
-Every bank word is recorded once and the recording is cut at the beat boundaries. A beat played on its
-own is therefore the very sound it has inside the word (the lazy "uh" in sep-**a**-rate stays lazy, the
-"rate" keeps its real vowel), and the beats tapped in a row add up to the word.
+Every bank word is recorded whole, and every beat of it is recorded **on its own**: the voice says just
+"jen", then just "yoo", then just "in", the way a teacher sounds out "genuine". A tapped beat is a whole,
+unhurried syllable with its own start and finish, not a 100 ms slice cut out of the word.
 
-The phone's own voice cannot do this. Handed a respelling such as `rayt` or `juh` it reads a made-up
-word, with the wrong vowel as often as not, and with the falling tune of a word said alone.
+(The first version did cut the beats out of the word. They added up to the word exactly, but each one
+was too quick and stopped mid-sound, so it sounded like a recording chopped up rather than a person
+saying the beat.)
+
+The phone's own voice cannot do this either. Handed a respelling such as `rayt` or `juh` it reads a
+made-up word, with the wrong vowel as often as not.
 
 What the pipeline produces:
 
@@ -13,10 +17,10 @@ What the pipeline produces:
 | --- | --- |
 | `assets/voice/<word>_w.m4a` | the word at speaking pace |
 | `assets/voice/<word>_s.m4a` | the word said carefully (the slow button) |
-| `assets/voice/<word>_1.m4a` … | the careful recording cut into its beats, one file each |
+| `assets/voice/<word>_1.m4a` … | each beat said on its own, one file each |
 | `src/data/voice.ts` | generated manifest: the files and their lengths, keyed by the word |
 | `lengths.json` | the lengths behind the manifest, kept so one word can be rebuilt without the rest |
-| `out/report.txt`, `out/plots/` | what was said for each word, and a picture of every cut (not committed) |
+| `out/report.txt`, `out/plots/` | what was said for each word, and a picture of the careful recording (not committed) |
 
 The app reads the manifest in `src/lib/voice.ts`. A word with no entry (the learner's own words) falls
 back to the phone's voice, as do sentences and letter names.
@@ -28,27 +32,34 @@ back to the phone's voice, as do sentences and letter names.
    dictionary picks a reading the bank does not mean, `overrides.json` has the last word.
 3. **Share the sounds out.** `syllables.py` gives each beat one vowel sound and splits the consonants in
    between the way the respelling does, so `sep|uh|rayt` becomes `sˈɛp | ə | ɹˌAt`.
-4. **Record.** [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) (Apache 2.0, voice `af_heart`) says the
-   word twice: at speaking pace, and carefully.
-5. **Find the boundaries.** `align.py` runs the [Charsiu](https://github.com/lingjzhu/charsiu) frame
-   classifier (MIT) over the careful recording. It names the sound in every 10 ms, and a Viterbi pass
-   pins each known sound to its stretch of audio.
-6. **Cut.** The recording is cut where one beat's last sound meets the next beat's first. Silence at the
-   edges of a piece is trimmed, the cut ends get a 4 ms fade, and a very quiet beat is lifted by at most
-   6 dB. Everything is encoded as 64 kbps AAC.
+4. **Say each beat alone.** `syllables.standalone` turns each share into what a person says when the beat
+   stands by itself: the stress moves onto its vowel, a lazy `ə` becomes the full vowel the tile shows
+   ("uh" for `uh`, "ih" for the `bih` of "believe", "ur" for `der`), the soft t
+   of "butter" becomes a real t, and a consonant two beats share (`spat|chuh`) closes the first one as the
+   respelling writes it. `sˈɛp | ə | ɹˌAt` becomes `sˈɛp`, `ˈʌ`, `ɹˈAt`.
+5. **Record.** [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) (Apache 2.0, voice `af_heart`) says the
+   word at speaking pace and carefully, and says each beat on its own at `BEAT` pace.
+6. **Pick the best take of each beat.** A lone syllable is not what the voice was trained on, and it
+   sometimes wanders (asked for "luh" it can say "lie"). Each beat is tried several ways (`TAKES`:
+   a shorter vowel, an exclamation mark, no stress). `judge.py` runs a phoneme recogniser
+   ([wav2vec2-xlsr-53-espeak-cv-ft](https://huggingface.co/facebook/wav2vec2-xlsr-53-espeak-cv-ft),
+   Apache 2.0) over each take and keeps the first one heard as the beat's sounds, or else the closest.
+7. **Stop a steady vowel from gliding.** Said last and alone, "uh", "ah", "aw", "ih" and the short a and e
+   drift up towards "ee" ("buh" becomes "bye"). `without_glide` follows the second formant with Praat
+   and fades the beat out just before it starts to climb.
+8. **Stop the voice adding a vowel at the end.** Ending on its own, "sik" or "us" tends to come out as
+   "sik-uh" or "us-ee". `without_tail` keeps a final k, t or p's closure and 60 ms of its burst, and ends
+   a final s, f or sh where the voice switches back on.
+9. **Encode.** Silence at the edges is trimmed, every clip is brought to the same peak level and
+   encoded as 64 kbps AAC.
 
-Two details worth knowing:
-
-- **A consonant that belongs to both beats** (`ad|dres`, `spat|chuh`) is cut through its middle, so the
-  first beat closes on it and the second opens with it.
-- **A beat that opens with a stop** (p, t, k, b, d, g, ch, j) has a moment of near silence in front of
-  it. The cut is moved to the bottom of that dip, which is more exact than the aligner on a weak vowel.
-- **A lazy vowel that melts into the next sound** (the "uh" of `sep|uh|rayt` is really an r-coloured
-  blur) takes the whole melted stretch, and the next beat starts half way into it.
+`align.py` still runs the [Charsiu](https://github.com/lingjzhu/charsiu) frame classifier (MIT) over the
+careful recording. It no longer cuts anything: it finds where each beat starts inside the slow word
+(`ms.at` in the manifest), so the tiles light up in time with it.
 
 ## Running it
 
-Python 3.12, ffmpeg on the path, about 2 GB of downloads the first time, no GPU needed.
+Python 3.12, ffmpeg on the path, about 3 GB of downloads the first time, no GPU needed.
 
 ```bash
 python3.12 -m venv venv
@@ -61,14 +72,14 @@ venv/bin/python build.py --plots          # every word, about 15 minutes on four
 venv/bin/python build.py separate rhythm  # only these
 ```
 
-Recordings are cached in `out/cache`, so a second run only redoes the cutting.
+Recordings are cached in `out/cache`, so a second run only redoes the listening and encoding.
 
 ## After adding or changing a word
 
 Run `build.py <word>` and read its line in the output:
 
 ```
-separate   sep|uh|rayt   sˈɛp|ə|ɹˌAt   [405, 102, 525]   [short: uh=50ms]
+spatula    spat|chuh|luh   spˈæt|ʧˈʌ|lˈʌ   [701, 593, 300]   [heard: luh~blaː]
 ```
 
 - **FAILED … n vowel sounds for m beats**: the dictionary's reading has a different number of beats from
@@ -78,10 +89,13 @@ separate   sep|uh|rayt   sˈɛp|ə|ɹˌAt   [405, 102, 525]   [short: uh=50ms]
 - **`[thin: …]`**: a vowel that lasts under 35 ms. Harmless inside "-ble" or next to an r, where the
   vowel really is that brief. At the start of a word it means the voice swallowed the vowel, as it did
   the "eye" of `itinerant`; a `ˌ` in front of the vowel in `overrides.json` brings it back.
-- **`[weak: …]`**: the aligner was unsure of a sound. Open `out/plots/<word>.png` and check that the green
-  cut lines sit where the picture changes.
-- **`[short: …]`**: a beat under 90 ms. That is how long the sound is inside the word. If it is too
-  short to hear, lower `CAREFUL` in `build.py` (everything is then said more slowly) and rebuild.
+- **`[weak: …]`**: the aligner was unsure of a sound in the slow word, so a tile may light a little
+  early or late. Open `out/plots/<word>.png` and check that the green lines sit where the picture changes.
+- **`[heard: …]`**: no take of that beat was heard exactly as its sounds, and this is what the recogniser
+  heard in the closest one (IPA). Often harmless: the recogniser hears a faint b or d at the edge of a
+  clip that is not there (`blaː` for "luh"), or a final p as b. Listen to `assets/voice/<word>_<n>.m4a`.
+  If it really is wrong, the beat's phonemes are on the same line; fix the word's reading in
+  `overrides.json`, or add a way of saying it to `TAKES`.
 
 Overrides use Kokoro's own phoneme letters: `A` ay, `I` eye, `O` oh, `W` ow, `Y` oy, `ᵊ` the vowel in
 "-ble", `T` the soft t of "butter", `ˈ` and `ˌ` before a stressed vowel. Print any word's dictionary

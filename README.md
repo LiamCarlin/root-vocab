@@ -158,7 +158,7 @@ The first time, Root asks whether it may search online. If yes, it uses the free
 ## What is simulated, and what is not verified
 
 - **Accounts.** There is no server. Everything is stored on the device; Backup moves it by copy and paste.
-- **Voices.** Bank words and their beats are recordings: each word is said once by a neural voice and cut at the beat boundaries (`tools/voice`), so a beat on its own is the sound it has inside the word. Sentences, meanings, letter names and the learner's own words are still spoken by the phone, so two voices can be heard on one screen, and the beats of a learner's own word are a best effort from its spelling.
+- **Voices.** Bank words and their beats are recordings by one neural voice (`tools/voice`). Each beat is its own recording of the voice saying just that beat, the way a teacher sounds out "jen", "yoo", "in", rather than a slice of the word. Sentences, meanings, letter names and the learner's own words are still spoken by the phone, so two voices can be heard on one screen, and the beats of a learner's own word are a best effort from its spelling.
 - **The hum on iPhone** is a fast run of soft ticks, because the haptics API has no continuous buzz. Android gets a true buzz.
 - **Finger writing** (the sand tray, and the finger option in Spell) is checked by the learner, by eye, against the word. Nothing reads handwriting. Typed spelling is checked letter by letter.
 - **Tracing** checks that the finger travels each stroke from its start to its end within a finger's width. It does not judge how neat the line is.
