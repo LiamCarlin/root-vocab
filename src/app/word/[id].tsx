@@ -156,7 +156,7 @@ export default function WordPage() {
           <IconBtn icon={Snail} label={slow ? 'Slower speech is on' : 'Slower speech'} kind={coloured ? 'glass' : 'ghost'} active={slow} onPress={() => patch({ slowAudio: !slow })} />
         </View>
       </Block>
-        <Perch pose={ROOT[stage]} size={78} side="left" inset={96} delay={350} />
+        <Perch pose={ROOT[stage]} size={78} side="left" inset={96} />
       </View>
 
       <Rise i={1}>

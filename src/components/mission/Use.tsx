@@ -5,11 +5,10 @@ import { Text, View } from 'react-native';
 import { Controls, MicButton } from '@/components/learn';
 import { Block, Btn, Chip, ChipRow, Field, IconBtn, Txt } from '@/components/ui';
 import { buzz, listenOnce, micAvailable, say, speakable, stopListening } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { gapped, judgeSpoken, meaningOf, plain, shuffled, splitAround } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, useTheme } from '@/theme';
-import { Sparks, StepScreen, Why } from './Frame';
+import { StepScreen, Why } from './Frame';
 import type { StepProps } from './types';
 
 /** Use: the word dropped into an everyday sentence first, then a sentence of the learner's own, said or typed. */
@@ -44,12 +43,10 @@ export function Use({ lex, top, next, skip }: StepProps) {
       setGapDone(true);
       setWrong(null);
       buzz.good();
-      buddy.react('correct');
       say(plain(lex.life));
       return;
     }
     buzz.nudge();
-    buddy.react('wrong');
     setWrong(opt);
   };
 
@@ -68,7 +65,6 @@ export function Use({ lex, top, next, skip }: StepProps) {
     praised.current = true;
     buzz.good();
     sfx.play('good');
-    buddy.react('correct');
   }, [ownDone]);
 
   const onMic = async () => {
@@ -119,7 +115,6 @@ export function Use({ lex, top, next, skip }: StepProps) {
                 </Text>
               )}
             </Block>
-            <Sparks on={gapDone} size={280} />
           </View>
 
           <ChipRow style={{ justifyContent: 'center' }}>

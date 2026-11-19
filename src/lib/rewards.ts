@@ -1,9 +1,9 @@
 // Badges and daily quests: definitions and maths only. The components that draw them live in components/rewards.tsx.
 
-import { BookOpen, CircleDot, Compass, Flame, Heart, Map, PenLine, Puzzle, Repeat, ScanSearch, Search, Sprout, Target, WandSparkles, type LucideIcon } from 'lucide-react-native';
+import { BookOpen, CircleDot, Compass, Flame, Hand, Map, PenLine, Puzzle, Repeat, ScanSearch, Search, Sprout, Target, type LucideIcon } from 'lucide-react-native';
 
 import type { BlockTone } from '@/theme/tokens';
-import { dayOf, patternsMastered, streakOf } from './engine';
+import { HANDS, dayOf, patternsMastered, streakOf } from './engine';
 import type { Data, Unlock } from './store';
 
 // ── Badges ────────────────────────────────────────────────────────────────
@@ -35,8 +35,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'pattern', name: 'Pattern spotter', icon: Puzzle, tone: 'lilac', tiers: [1, 3, 6], unit: 'spelling patterns mastered', value: (s) => patternsMastered(s) },
   { id: 'sleuth', name: 'Word sleuth', icon: ScanSearch, tone: 'brand', tiers: [1, 10, 30], unit: 'words tracked down', value: (s) => count(s, 'finder') },
   { id: 'marble', name: 'Steady hands', icon: CircleDot, tone: 'butter', tiers: [3, 15], unit: 'marble runs', value: (s) => count(s, 'marble') },
-  { id: 'sky', name: 'Sky writer', icon: WandSparkles, tone: 'pink', tiers: [3, 15], unit: 'words written in the air', value: (s) => count(s, 'sky') },
-  { id: 'friend', name: 'Best friends', icon: Heart, tone: 'orange', tiers: [10, 50], unit: 'pokes', value: (s) => count(s, 'pokes'), hidden: true },
+  { id: 'hands', name: 'Hands-on', icon: Hand, tone: 'pink', tiers: [5, 25, 100], unit: 'words tapped, traced, rolled, written or said', value: (s) => HANDS.reduce((n, g) => n + count(s, g), 0) },
 ];
 export const BADGE_BY_ID: Record<string, BadgeDef> = Object.fromEntries(BADGES.map((b) => [b.id, b]));
 
@@ -87,6 +86,7 @@ const GROUPS: QuestDef[][] = [
     { id: 'spell5', label: 'Spell 5 words', icon: PenLine, counter: 'spell', target: 5, gems: 15 },
     { id: 'spell3clean', label: '3 clean spells', icon: PenLine, counter: 'spell.clean', target: 3, gems: 20 },
     { id: 'trace2', label: 'Trace 2 words', icon: PenLine, counter: 'trace', target: 2, gems: 15 },
+    { id: 'tap2', label: 'Tap out 2 words', icon: Hand, counter: 'tap', target: 2, gems: 15 },
     { id: 'rounds2', label: 'Play 2 rounds', icon: Repeat, counter: 'sessions', target: 2, gems: 15 },
     { id: 'stops3', label: 'Clear 3 stops', icon: Map, counter: 'stops', target: 3, gems: 25 },
   ],

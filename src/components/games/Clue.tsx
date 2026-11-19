@@ -8,7 +8,6 @@ import { useElapsed } from '@/components/play/hooks';
 import { Block, Field, IconBtn, Tag, Txt } from '@/components/ui';
 import { TOPICS } from '@/data/profile';
 import { buzz, listenOnce, micAvailable, say, stopListening } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { closeEnough } from '@/lib/lexicon';
 import { useStore } from '@/lib/store';
 import { wordSize } from '@/theme';
@@ -127,7 +126,6 @@ export function Clue({ lex, onResult, done }: GameProps) {
   const nextCue = useCallback(() => {
     if (sent.current) return;
     const n = cues + 1;
-    buddy.react('hint');
     buzz.light();
     setCues(n);
     if (n > rungs) {

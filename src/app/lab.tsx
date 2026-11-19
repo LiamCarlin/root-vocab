@@ -2,37 +2,26 @@ import { Minus, Play, Plus, RotateCcw } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { BuddyHost, Peek, Perch, Reaction, Sidekick, hasBuddyHost, summonRoot } from '@/components/Buddy';
+import { Figure, Peek, Perch } from '@/components/Buddy';
 import { Burst, Confetti, CountUp, Float, FogVeil, Pop, Pulse, Rays, Shine, Typer, Wiggle } from '@/components/fx';
-import { Mascot, POSES, type Motion, type Pose } from '@/components/Mascot';
-import { CLIPS } from '@/components/mascotClips';
-import { Badge, Chest, GemPill, GoalRing, GroundShadow, QuestRow, Scene, StreakFlame, UnlockHost, hasUnlockHost } from '@/components/rewards';
+import { Mascot, POSE_LIST } from '@/components/Mascot';
+import { Badge, Chest, GemPill, GoalRing, QuestRow, Scene, StreakFlame, UnlockHost, hasUnlockHost } from '@/components/rewards';
 import { Block, Btn, Chip, ChipRow, IconBtn, Screen, SectionLabel, Toggle, TopBar, Txt } from '@/components/ui';
 import { STRAND_ORDER } from '@/data/profile';
 import type { SceneId } from '@/data/story';
-import { buddy, useHoldUnlocks, type BuddyEvent } from '@/lib/buddy';
+import { useHoldUnlocks } from '@/lib/unlocks';
 import { BADGES, QUESTS } from '@/lib/rewards';
 import { sfx, type SfxName } from '@/lib/sfx';
 import { useStore, type Unlock } from '@/lib/store';
 import { ON_BLOCK, useTheme } from '@/theme';
 
-// The lab: every piece of the companion, effects and rewards kit, working, with controls.
+// The lab: every picture of Root, and every piece of the effects and rewards kit, with controls.
 // Reached from You › Moderator. It is a review and tuning page, not part of the learner's app.
 
-const POSE_LIST = Object.keys(POSES) as Pose[];
-const MOTIONS: Motion[] = ['bob', 'hop', 'jump', 'sway', 'shake', 'none'];
-const EVENTS: BuddyEvent[] = ['correct', 'wrong', 'combo', 'hint', 'start', 'finish', 'unlock', 'poke'];
 const SOUNDS: SfxName[] = ['tap', 'pop', 'good', 'miss', 'combo', 'win', 'unlock', 'gem', 'whoosh', 'chest'];
 const SCENE_LIST: SceneId[] = ['garden', 'orchard', 'market', 'woods', 'harbour', 'summit'];
-const EVENT_SOUND: Partial<Record<BuddyEvent, SfxName>> = {
-  correct: 'good',
-  wrong: 'miss',
-  combo: 'combo',
-  finish: 'win',
-  unlock: 'unlock',
-};
 
-/** A plain card with visible overflow, so companions can stick out of it. */
+/** A plain card with visible overflow, so Root can stick out of it. */
 function Card({ children, height = 120 }: { children?: ReactNode; height?: number }) {
   const { c } = useTheme();
   return (
@@ -79,11 +68,7 @@ export default function Lab() {
   const bump = useStore((s) => s.bump);
   const storeGems = useStore((s) => s.gems);
 
-  const [motion, setMotion] = useState<Motion>('hop');
-  const [motionPose, setMotionPose] = useState<Pose>('thumbs');
-  const [clipSize, setClipSize] = useState(104);
-  const [clipStill, setClipStill] = useState(false);
-  const [onceRun, setOnceRun] = useState(0);
+  const [poseSize, setPoseSize] = useState(104);
   const [wiggle, setWiggle] = useState(0);
   const [pulse, setPulse] = useState(true);
   const [chest, setChest] = useState(false);
@@ -95,79 +80,40 @@ export default function Lab() {
   const [fog, setFog] = useState(1);
   const [hold, setHold] = useState(false);
   useHoldUnlocks(hold);
-  // The root layout normally hosts the ambient visits; if it does not yet, the lab hosts its own so they can be reviewed.
-  const [ownHost] = useState(() => !hasBuddyHost());
   const [ownUnlocks] = useState(() => !hasUnlockHost());
 
   const push = (u: Unlock) => useStore.setState((s) => ({ unlocks: [...s.unlocks, u] }));
-  const fire = (e: BuddyEvent) => {
-    buddy.react(e);
-    const sound = EVENT_SOUND[e];
-    if (sound) sfx.play(sound);
-  };
-
   const page = (
     <Screen top={<TopBar />} gap={22}>
       <Txt v="display">Lab</Txt>
 
       <SectionLabel>Feel</SectionLabel>
-      <ChipRow>
-        {(['lively', 'calm', 'off'] as const).map((m) => (
-          <Chip key={m} label={m} selected={(display.companion ?? 'lively') === m} onPress={() => setDisplay({ companion: m })} />
-        ))}
-      </ChipRow>
+      <Toggle label="Show Root" value={display.companion !== 'off'} onChange={(v) => setDisplay({ companion: v ? 'on' : 'off' })} />
       <Toggle label="Sound" value={display.sound !== false} onChange={(v) => setDisplay({ sound: v })} />
       <Toggle label="Reduce motion" value={display.reduceMotion} onChange={(v) => setDisplay({ reduceMotion: v })} />
-      <Btn small kind="soft" icon={Play} label="Summon Root" a11y="Make Root look in from the edge of the screen" onPress={summonRoot} />
 
-      {/* ── Clips ── */}
-      <SectionLabel>{`${POSE_LIST.length} animated clips · tap to poke`}</SectionLabel>
+      {/* ── Pictures ── */}
+      <SectionLabel>{`${POSE_LIST.length} pictures of Root`}</SectionLabel>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <IconBtn icon={Minus} label="Smaller" size={44} onPress={() => setClipSize((v) => Math.max(56, v - 16))} />
-        <Txt v="label" color="ink2">{`${clipSize} pt`}</Txt>
-        <IconBtn icon={Plus} label="Bigger" size={44} onPress={() => setClipSize((v) => Math.min(200, v + 16))} />
-        <View style={{ flex: 1 }} />
-        <Toggle value={clipStill} onChange={setClipStill} label="Still" />
+        <IconBtn icon={Minus} label="Smaller" size={44} onPress={() => setPoseSize((v) => Math.max(56, v - 16))} />
+        <Txt v="label" color="ink2">{`${poseSize} pt`}</Txt>
+        <IconBtn icon={Plus} label="Bigger" size={44} onPress={() => setPoseSize((v) => Math.min(200, v + 16))} />
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
         {POSE_LIST.map((p) => (
-          <View key={p} style={{ width: Math.max(96, clipSize * 0.95), height: clipSize * 1.45 + 26, alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-            <Mascot key={`${p}${onceRun}`} pose={p} size={p === 'peek' ? clipSize * 0.7 : clipSize} still={clipStill} poke />
+          <View key={p} style={{ width: Math.max(96, poseSize * 0.95), height: poseSize * 1.45 + 26, alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+            <Mascot pose={p} size={p === 'peek' ? poseSize * 0.7 : poseSize} />
             <Txt v="caption" color="ink2">
-              {CLIPS[p].loop ? p : `${p} · once`}
+              {p}
             </Txt>
           </View>
         ))}
       </View>
-      <Btn kind="soft" small icon={RotateCcw} label="Replay once clips" onPress={() => setOnceRun((v) => v + 1)} />
 
       <SectionLabel>Facing left</SectionLabel>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 150 }}>
-        <Mascot pose="walk" size={120} />
-        <Mascot pose="walk" size={120} flip />
-        <Mascot pose="run" size={120} flip />
-      </View>
-
-      <SectionLabel>Motion accents</SectionLabel>
-      <ChipRow>
-        {MOTIONS.map((m) => (
-          <Chip key={m} label={m} selected={motion === m} onPress={() => setMotion(m)} />
-        ))}
-      </ChipRow>
-      <ChipRow>
-        {(['thumbs', 'proud', 'oops', 'think', 'wave'] as Pose[]).map((p) => (
-          <Chip key={p} label={p} selected={motionPose === p} onPress={() => setMotionPose(p)} />
-        ))}
-      </ChipRow>
-      <View
-        style={{
-          height: 190,
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-        }}
-      >
-        <Mascot key={`${motion}${motionPose}`} pose={motionPose} size={150} motion={motion} />
-        <GroundShadow width={130} />
+        <Mascot pose="point" size={120} />
+        <Mascot pose="point" size={120} flip />
       </View>
 
       {/* ── Peek ── */}
@@ -178,97 +124,40 @@ export default function Lab() {
             start · center · end
           </Txt>
         </Card>
-        <Peek from="top" align="start" size={84} delay={300} />
-        <Peek from="top" align="center" pose="search" size={110} delay={900} />
-        <Peek from="top" align="end" size={100} delay={1500} />
+        <Peek from="top" align="start" size={84} />
+        <Peek from="top" align="center" pose="search" size={110} />
+        <Peek from="top" align="end" size={100} />
       </View>
 
       <SectionLabel>Peek · bottom</SectionLabel>
       <View style={{ marginBottom: 124 }}>
         <Card height={90} />
-        <Peek from="bottom" align="start" size={110} delay={300} />
-        <Peek from="bottom" align="end" pose="wink" size={110} delay={900} />
+        <Peek from="bottom" align="start" size={110} />
+        <Peek from="bottom" align="end" pose="wink" size={110} />
       </View>
 
       <SectionLabel>Peek · sides</SectionLabel>
       <View style={{ marginHorizontal: 78 }}>
         <Card height={150} />
-        <Peek from="left" align="end" inset={8} size={110} delay={300} />
-        <Peek from="right" align="end" inset={8} pose="listen" size={110} delay={900} />
+        <Peek from="left" align="end" inset={8} size={110} />
+        <Peek from="right" align="end" inset={8} pose="listen" size={110} />
       </View>
-
-      <SectionLabel>Peek · stays 3 s, then leaves</SectionLabel>
-      <Replay label="Short visit">
-        {() => (
-          <View style={{ marginTop: 84 }}>
-            <Card height={80} />
-            <Peek from="top" align="center" size={84} delay={400} stay={3000} />
-          </View>
-        )}
-      </Replay>
 
       {/* ── Perch ── */}
       <SectionLabel>Perch</SectionLabel>
-      <Replay label="Sit and stand">
-        {() => (
-          <View style={{ marginTop: 92 }}>
-            <Block tone="brand" style={{ height: 120 }} />
-            <Perch side="right" size={96} />
-            <Perch side="left" pose="read" size={88} delay={700} />
-            <View
-              pointerEvents="box-none"
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                top: 0,
-                alignItems: 'center',
-              }}
-            >
-              <View style={{ width: 0, height: 0 }}>
-                <Perch pose="wave" side="left" inset={-36} size={92} delay={1100} />
-              </View>
-            </View>
-          </View>
-        )}
-      </Replay>
-
-      {/* ── Sidekick ── */}
-      <SectionLabel>Sidekick · reacts to buddy events</SectionLabel>
-      <View
-        style={{
-          height: 250,
-          borderRadius: 28,
-          backgroundColor: c.surface,
-          borderWidth: 1,
-          borderColor: c.line,
-          padding: 16,
-          overflow: 'hidden',
-        }}
-      >
-        <ChipRow>
-          {EVENTS.map((e) => (
-            <Chip key={e} label={e} onPress={() => fire(e)} />
-          ))}
-        </ChipRow>
-        <Sidekick />
-        <Sidekick side="left" size={90} quiet />
+      <View style={{ marginTop: 92 }}>
+        <Block tone="brand" style={{ height: 120 }} />
+        <Perch side="right" size={96} />
+        <Perch side="left" pose="read" size={88} />
       </View>
 
-      <SectionLabel>Reaction</SectionLabel>
-      <Replay label="Pop in">
+      <SectionLabel>Figure</SectionLabel>
+      <Replay label="Fade in">
         {() => (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-around',
-              alignItems: 'flex-end',
-              height: 170,
-            }}
-          >
-            <Reaction pose="cheer" size={130} />
-            <Reaction pose="dance" size={130} delay={200} />
-            <Reaction pose="oops" size={130} delay={400} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 170 }}>
+            <Figure pose="cheer" size={130} />
+            <Figure pose="proud" size={130} delay={200} />
+            <Figure pose="oops" size={130} delay={400} />
           </View>
         )}
       </Replay>
@@ -475,7 +364,7 @@ export default function Lab() {
   );
   return (
     <>
-      {ownHost ? <BuddyHost>{page}</BuddyHost> : page}
+      {page}
       {ownUnlocks && <UnlockHost />}
     </>
   );

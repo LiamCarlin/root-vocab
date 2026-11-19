@@ -6,11 +6,10 @@ import { Controls, DrawPad, PartTiles, SpellingMarks } from '@/components/learn'
 import { Block, Btn, Field, IconBtn, Tag, Txt } from '@/components/ui';
 import { PATTERNS } from '@/data/words';
 import { beatMs, buzz, hum, say, sayHum } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { alignSpelling, partOfLetter, type Lexeme, type Mark } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, useTheme } from '@/theme';
-import { Sparks, StepScreen, Why } from './Frame';
+import { StepScreen, Why } from './Frame';
 import type { StepProps } from './types';
 
 /** Which beat the first off letter is in, and how that beat sounds: for when the slip is somewhere other than the tricky beat. */
@@ -66,12 +65,10 @@ export function Spell({ lex, top, next, skip, addRetry }: StepProps) {
     if (attempt.trim().toLowerCase().replace(/\s+/g, ' ') === target) {
       buzz.good();
       sfx.play('good');
-      buddy.react('correct');
       setStage('right');
       sayHum(lex.text, lex.says);
     } else {
       buzz.nudge();
-      buddy.react('wrong');
       setStage('almost');
     }
   };
@@ -112,7 +109,6 @@ export function Spell({ lex, top, next, skip, addRetry }: StepProps) {
         a11y="Mine is not quite right"
         onPress={() => {
           buzz.nudge();
-          buddy.react('wrong');
           setStage('notQuite');
         }}
       />,
@@ -124,7 +120,6 @@ export function Spell({ lex, top, next, skip, addRetry }: StepProps) {
         onPress={() => {
           buzz.good();
           sfx.play('good');
-          buddy.react('correct');
           next();
         }}
       />,
@@ -178,7 +173,6 @@ export function Spell({ lex, top, next, skip, addRetry }: StepProps) {
             <Block tone="success" style={{ alignItems: 'center' }}>
               <SpellingMarks marks={lex.text.toLowerCase().split('').map((ch) => ({ ch, ok: true }))} label="You wrote" />
             </Block>
-            <Sparks on size={300} />
           </View>
         </>
       )}

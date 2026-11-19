@@ -5,18 +5,26 @@ import type { DayId, Strand } from '@/data/profile';
 import { BANK, BANK_BY_ID, type BankWord, type PatternId, type Topic } from '@/data/words';
 import { addDays, diffDays, todayKey } from './dates';
 import { lexemeFor, type Lexeme } from './lexicon';
-import type { Data, Mem } from './store';
+import { traceable } from './glyphs';
+import type { Data, Mem, Stop } from './store';
 
-export type GameId = 'clue' | 'web' | 'pair' | 'meaning' | 'gap' | 'cover' | 'missing' | 'proof' | 'dictate' | 'scramble' | 'trace' | 'marble' | 'sky';
-export type SessionKind = 'find' | 'spell' | 'mix' | 'challenge' | 'game';
+export type GameId = 'clue' | 'web' | 'pair' | 'meaning' | 'gap' | 'cover' | 'missing' | 'proof' | 'dictate' | 'scramble' | 'trace' | 'marble' | 'sand' | 'tap' | 'echo';
+export type SessionKind = 'find' | 'spell' | 'mix' | 'challenge' | 'game' | 'hands';
 export type Exercise = { key: string; game: GameId; wordId: string; strand: Strand };
 
 /** Which strand an answer in each game counts towards. */
 export const GAME_STRAND: Record<GameId, Strand> = {
   clue: 'find', gap: 'find',
   web: 'know', pair: 'know', meaning: 'know',
-  cover: 'spell', missing: 'spell', proof: 'spell', dictate: 'spell', scramble: 'spell', trace: 'spell', marble: 'spell', sky: 'spell',
+  cover: 'spell', missing: 'spell', proof: 'spell', dictate: 'spell', scramble: 'spell', trace: 'spell', marble: 'spell', sand: 'spell', tap: 'spell',
+  echo: 'find',
 };
+/**
+ * The hands-on games: the word goes in through the hand, the arm and the voice. They are supported practice
+ * (the word is in front of the learner), so finishing one counts as right-with-help, never as recall.
+ * This is also the order a hands-on round runs them in: break it into beats, write it, say it, roll it, write it from memory.
+ */
+export const HANDS: GameId[] = ['tap', 'trace', 'echo', 'marble', 'sand'];
 export const STRAND_LIST: Strand[] = ['know', 'find', 'spell'];
 
 /** What a kind of day tends to talk about. Mirrors DAYS in data/profile (kept here so this file stays free of UI imports). */
@@ -105,8 +113,6 @@ export function streakOf(s: Pick<Data, 'practiceDays' | 'frozenDays' | 'mod'>): 
 }
 
 // ── What a game needs from a word ─────────────────────────────────────────
-const lettersOnly = (t: string) => /^[a-z]+$/i.test(t.replace(/[\s-]/g, ''));
-
 export function canPlay(lex: Lexeme, game: GameId): boolean {
   switch (game) {
     case 'clue':
@@ -127,13 +133,25 @@ export function canPlay(lex: Lexeme, game: GameId): boolean {
       return lex.text.replace(/[^a-z]/gi, '').length >= 3;
     case 'trace':
     case 'marble':
-    case 'sky':
-      return lettersOnly(lex.text) && lex.text.replace(/[\s-]/g, '').length <= 14;
+      // Every letter has to have a drawing, and the word has to fit the pad a beat at a time.
+      return traceable(lex.text) && lex.parts.every((p) => p.length <= 7);
+    case 'sand':
+      return lex.text.trim().length > 0 && lex.text.length <= 16;
+    case 'tap':
+      return lex.parts.length >= 2 && lex.parts.length <= 6;
+    case 'echo':
+      return lex.text.trim().length > 0;
     case 'cover':
     case 'dictate':
       return lex.text.trim().length > 0;
   }
 }
+
+// ── Journey stops ─────────────────────────────────────────────────────────
+/** The words a learn stop teaches. A stop saved by an older build holds a single `wordId`. */
+export const stopWords = (st: Pick<Stop, 'words' | 'wordId'>): string[] => st.words ?? (st.wordId ? [st.wordId] : []);
+/** The words of a learn stop still to be taught, in order. */
+export const stopTodo = (st: Pick<Stop, 'words' | 'wordId' | 'got'>): string[] => stopWords(st).filter((id) => !st.got?.includes(id));
 
 // ── Choosing what to teach next ───────────────────────────────────────────
 const lexOfState = (s: Pick<Data, 'words'>, id: string) => lexemeFor(id, s.words[id]);
@@ -151,7 +169,7 @@ function weakPatterns(s: Pick<Data, 'patterns'>): Set<string> {
 export function pickNewWords(s: Pick<Data, 'words' | 'skill' | 'profile' | 'patterns' | 'journey' | 'counters' | 'mod'>, n: number, exclude: string[] = []): string[] {
   const out: string[] = [];
   const skip = new Set(exclude);
-  for (const st of s.journey.stops) if (st.wordId) skip.add(st.wordId);
+  for (const st of s.journey.stops) for (const id of stopWords(st)) skip.add(id);
 
   const queued = Object.values(s.words)
     .filter((w) => w.status === 'queued' && !skip.has(w.id))
@@ -237,6 +255,7 @@ export function dueItems(s: Pick<Data, 'words' | 'mod'>): number {
  * Falls back to bank words near the learner's level, so there is always something to play.
  */
 export function buildSession(s: Pick<Data, 'words' | 'skill' | 'mod'>, kind: SessionKind, opts: { size?: number; game?: GameId; words?: string[] } = {}): Exercise[] {
+  if (kind === 'hands') return buildHands(s, opts);
   const single = kind === 'game' ? (opts.game ?? 'clue') : null;
   const t = dayOf(s);
   const strands: Strand[] = single ? [GAME_STRAND[single]] : kind === 'find' ? ['find', 'know'] : kind === 'spell' ? ['spell'] : ['find', 'know', 'spell'];
@@ -364,6 +383,28 @@ export function buildSession(s: Pick<Data, 'words' | 'skill' | 'mod'>, kind: Ses
   return out;
 }
 
+/**
+ * A hands-on round: one go at each hands-on game, each on a different word where there are enough words.
+ * The words are the chapter's (`opts.words`), then anything learned, then bank words near the learner's level.
+ */
+function buildHands(s: Pick<Data, 'words' | 'skill' | 'mod'>, opts: { size?: number; words?: string[] }): Exercise[] {
+  const learned = Object.values(s.words).filter((w) => w.status === 'learning' || w.status === 'known').map((w) => w.id);
+  const ids = Array.from(new Set([...(opts.words ?? []), ...learned, ...nearLevel(s, 'spell', 6)])).filter((id) => !!lexOfState(s, id));
+  const want = Math.max(1, opts.size ?? HANDS.length);
+  const out: Exercise[] = [];
+  const used = new Set<string>();
+  for (let i = 0; out.length < want && i < want * 2; i++) {
+    const game = HANDS[i % HANDS.length];
+    // The first word that can play this game and has not been used yet; failing that, any word that can.
+    const can = ids.filter((id) => canPlay(lexOfState(s, id)!, game));
+    const id = can.find((x) => !used.has(x)) ?? can[out.length % Math.max(1, can.length)];
+    if (!id) continue;
+    used.add(id);
+    out.push({ key: `${out.length}-${game}-${id}`, game, wordId: id, strand: GAME_STRAND[game] });
+  }
+  return out;
+}
+
 // ── Placement ─────────────────────────────────────────────────────────────
 /** The next placement item: an unused bank word whose difficulty for this strand is nearest the running estimate. */
 export function assessNext(strand: Strand, theta: number, used: string[]): BankWord | null {
@@ -409,7 +450,7 @@ export function insights(s: Data): Insights {
     return last.length ? last.reduce((sum, a) => sum + a.r, 0) / last.length : null;
   };
   const words = Object.values(s.words);
-  const pending = s.journey.stops.filter((st) => st.kind === 'learn' && !st.done && st.wordId && (!s.words[st.wordId] || s.words[st.wordId].status === 'queued')).map((st) => st.wordId!);
+  const pending = s.journey.stops.filter((st) => st.kind === 'learn' && !st.done).flatMap(stopTodo).filter((id) => !s.words[id] || s.words[id].status === 'queued');
   const next = [...pending, ...pickNewWords(s, 3, pending)].slice(0, 3);
   return {
     levels: { know: levelOf(s.skill.know), find: levelOf(s.skill.find), spell: levelOf(s.skill.spell) },

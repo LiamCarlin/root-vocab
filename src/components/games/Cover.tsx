@@ -6,7 +6,6 @@ import { Peek } from '@/components/Buddy';
 import { Controls } from '@/components/learn';
 import { Btn, Field, IconBtn } from '@/components/ui';
 import { say, sayHum, speakable } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { sfx } from '@/lib/sfx';
 import { radius, useTheme, wordSize } from '@/theme';
 import { Letters, SpellNote, diffOf, WordBeats, editsFrom, sameWord, useReport } from './spellkit';
@@ -56,7 +55,6 @@ export function Cover({ lex, onResult, done }: GameProps) {
       recover();
       return;
     }
-    buddy.react('hint');
     setPeeks((n) => n + 1);
     setCovered(false);
   };
@@ -84,7 +82,7 @@ export function Cover({ lex, onResult, done }: GameProps) {
         <View style={[{ minHeight: 132, borderRadius: radius.xl, backgroundColor: hidden ? c.surface2 : c.surface, borderWidth: hidden ? 2.5 : 1, borderColor: c.line, borderStyle: hidden ? 'dashed' : 'solid', paddingHorizontal: 18, paddingVertical: 22, alignItems: 'center', justifyContent: 'center' }, hidden ? null : e1]} accessible={hidden} accessibilityLabel={hidden ? 'The word is covered' : undefined}>
           {hidden ? <EyeOff size={40} color={c.ink3} strokeWidth={2.2} /> : <WordBeats lex={lex} size={wordSize(lex.text, 46, 300)} />}
         </View>
-        {hidden && <Peek from="top" pose="cover" size={118} align="center" inset={0} delay={60} show={0.62} onPress={peek} />}
+        {hidden && <Peek from="top" pose="cover" size={118} align="center" inset={0} show={0.62} onPress={peek} a11y="Root is covering the word. Tap to look again." />}
       </View>
 
       {phase === 'look' && !locked ? (

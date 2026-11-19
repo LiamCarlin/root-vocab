@@ -2,21 +2,25 @@ import { ArrowRight, Volume2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
 
+import { Echo } from '@/components/hands/Echo';
 import { Controls, PartTiles, SylWord } from '@/components/learn';
 import { Block, Btn, Field, IconBtn, Tag, Tap } from '@/components/ui';
 import { TOPICS } from '@/data/profile';
 import { beatMs, hum, say, sayByParts } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { exampleFor, plain, splitAround } from '@/lib/lexicon';
 import { useStore } from '@/lib/store';
 import { ON_BLOCK, useTheme, wordSize } from '@/theme';
 import { StepScreen } from './Frame';
 import type { StepProps } from './types';
 
-/** Hear: the word, its beats in colour, how each sounds, what it means, and one sentence it lives in. The phone hums each beat as it is said. */
+/**
+ * Hear: the word, its beats in colour, how each sounds, what it means, and one sentence it lives in.
+ * The phone hums each beat as it is said. Then it is the learner's turn: hold the button and say it back.
+ */
 export function Hear({ lex, top, next, skip }: StepProps) {
   const { c, text } = useTheme();
   const updateWord = useStore((s) => s.updateWord);
+  const bump = useStore((s) => s.bump);
   const interests = useStore((s) => s.profile.interests);
   const { width } = useWindowDimensions();
   const [active, setActive] = useState(-1);
@@ -83,7 +87,6 @@ export function Hear({ lex, top, next, skip }: StepProps) {
             icon={ArrowRight}
             a11y="Next"
             onPress={() => {
-              buddy.react('correct');
               next();
             }}
           />
@@ -134,6 +137,11 @@ export function Hear({ lex, top, next, skip }: StepProps) {
           </Text>
         </Tap>
       )}
+
+      {/* Your turn: the word is not learned until the mouth has made it. Root has said it; now the learner says it back. */}
+      <Block pad={16} style={{ alignItems: 'center', gap: 2 }}>
+        <Echo key={lex.id} text={lex.text} parts={lex.parts} says={lex.says} whole quiet onDone={() => bump('echo')} />
+      </Block>
     </StepScreen>
   );
 }

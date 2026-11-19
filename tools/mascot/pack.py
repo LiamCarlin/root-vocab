@@ -1,11 +1,14 @@
 """
-python3 pack.py            (system Python with Pillow; run after render.py and render.py --still)
+python3 pack.py            (any Python with Pillow; run after render.py)
 
-Packs out/frames/<clip>/f###.png into one sprite sheet per clip (WebP with alpha, at most 2048 px a side),
-copies the double-size hold frames as stills, writes src/components/mascotClips.ts, and makes
-out/contact.jpg (every clip's hold frame) for a quick review.
+1. Converts freshly rendered pictures to WebP with alpha:
+     out/stills/<pose>.png            → assets/mascot/still/<pose>.webp
+     out/keepsakes/keepsake-<id>.png  → assets/props/keepsake-<id>.webp
+2. Always rewrites src/components/mascotStills.ts: one entry for every pose in the registry (clips.CLIPS)
+   that has a still in assets/mascot/still/.
+3. Rebuilds the review sheets contact.jpg and contact_dark.jpg from those stills.
 """
-import os, sys, glob, math, re
+import os, sys, glob, math
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 
@@ -13,69 +16,79 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import clips as C
 
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
-OUT_SHEETS = os.path.join(ROOT, 'assets', 'mascot', 'clips'); OUT_STILLS = os.path.join(ROOT, 'assets', 'mascot', 'still')
-os.makedirs(OUT_SHEETS, exist_ok=True); os.makedirs(OUT_STILLS, exist_ok=True)
-MAX = 2048
-rows_ts = []; total = 0; holds = []
+STILLS = os.path.join(ROOT, 'assets', 'mascot', 'still'); PROPS = os.path.join(ROOT, 'assets', 'props')
+os.makedirs(STILLS, exist_ok=True); os.makedirs(PROPS, exist_ok=True)
+
+
+def to_webp(src, dst):
+    Image.open(src).convert('RGBA').save(dst, 'WEBP', quality=92, method=6, alpha_quality=100)
+    print('  %s  %d KB' % (os.path.relpath(dst, ROOT), os.path.getsize(dst) // 1024))
+
+
+# 1. fresh renders → WebP
+for src in sorted(glob.glob(os.path.join(HERE, 'out', 'stills', '*.png'))):
+    name = os.path.splitext(os.path.basename(src))[0]
+    if name not in C.CLIPS:
+        print('!! out/stills/%s.png is not a pose in clips.CLIPS, skipped' % name); continue
+    to_webp(src, os.path.join(STILLS, name + '.webp'))
+for src in sorted(glob.glob(os.path.join(HERE, 'out', 'keepsakes', 'keepsake-*.png'))):
+    name = os.path.splitext(os.path.basename(src))[0]
+    if name[len('keepsake-'):] not in C.KEEPSAKES:
+        print('!! out/keepsakes/%s.png is not in clips.KEEPSAKES, skipped' % name); continue
+    to_webp(src, os.path.join(PROPS, name + '.webp'))
+
+# 2. manifest
+rows, names = [], []
 for name, cl in C.CLIPS.items():
-    files = sorted(glob.glob(os.path.join(HERE, 'out', 'frames', name, 'f*.png')))
-    if len(files) != cl.frames:
-        print('!! %s: %d of %d frames rendered, skipped' % (name, len(files), cl.frames)); continue
-    first = Image.open(files[0]); fw, fh = first.size
-    cols = min(cl.frames, MAX // fw); rows = math.ceil(cl.frames / cols)
-    assert rows * fh <= MAX, (name, rows * fh)
-    sheet = Image.new('RGBA', (cols * fw, rows * fh), (0, 0, 0, 0))
-    for i, f in enumerate(files):
-        im = Image.open(f).convert('RGBA')
-        sheet.paste(im, ((i % cols) * fw, (i // cols) * fh))
-    dst = os.path.join(OUT_SHEETS, name + '.webp')
-    sheet.save(dst, 'WEBP', quality=88, method=6, alpha_quality=100)
-    total += os.path.getsize(dst)
-    still_src = os.path.join(HERE, 'out', 'stills', name + '.png')
-    if os.path.exists(still_src):
-        st = Image.open(still_src).convert('RGBA'); sd = os.path.join(OUT_STILLS, name + '.webp')
-        st.save(sd, 'WEBP', quality=92, method=6, alpha_quality=100); total += os.path.getsize(sd)
+    path = os.path.join(STILLS, name + '.webp')
+    if not os.path.exists(path):
+        print('!! %s has no still in assets/mascot/still, left out of the manifest' % name); continue
+    fw, fh = round(cl.w * C.PX), round(cl.h * C.PX)
+    size = Image.open(path).size
+    if size != (round(cl.w * C.PX * 2), round(cl.h * C.PX * 2)):
+        print('!! %s.webp is %dx%d, expected %dx%d (double size): re-render it' % (name, size[0], size[1], round(cl.w * C.PX * 2), round(cl.h * C.PX * 2)))
     ztop = cl.bottom + cl.h
     top = (ztop - cl.top) / cl.h; base = (ztop - cl.base) / cl.h
-    extra = (', seat: %.4f' % ((ztop - cl.seat) / cl.h)) if cl.seat is not None else ''
-    rows_ts.append("  %s: { src: require('../../assets/mascot/clips/%s.webp'), still: require('../../assets/mascot/still/%s.webp'), cols: %d, rows: %d, frames: %d, fps: %d, fw: %d, fh: %d, loop: %s, hold: %d, top: %.4f, base: %.4f, stand: %.4f, aspect: %.3f, face: %.4f%s },"
-                   % (name, name, name, cols, rows, cl.frames, cl.fps, fw, fh, 'true' if cl.loop else 'false', cl.hold, top, base, base - top, cl.aspect, (ztop - cl.face) / cl.h, extra))
-    holds.append(Image.open(files[cl.hold]).convert('RGBA'))
-    print('%-8s %2d frames %dx%d  sheet %dx%d  %4d KB' % (name, cl.frames, fw, fh, cols * fw, rows * fh, os.path.getsize(dst) // 1024))
+    seat = (', seat: %.4f' % ((ztop - cl.seat) / cl.h)) if cl.seat is not None else ''
+    rows.append("  %s: { src: require('../../assets/mascot/still/%s.webp'), fw: %d, fh: %d, top: %.4f, base: %.4f, stand: %.4f, aspect: %.3f, face: %.4f%s },"
+                % (name, name, fw, fh, top, base, base - top, cl.aspect, (ztop - cl.face) / cl.h, seat))
+    names.append(name)
 
-names = [r.split(':')[0].strip() for r in rows_ts]
 ts = """// GENERATED by tools/mascot/pack.py. Do not edit by hand: re-render and re-pack instead.
 //
-// One entry per animation clip of Root. A clip is a sprite sheet of `frames` frames, each fw × fh px,
-// laid out left to right, top to bottom, `cols` to a row. Fractions are of the frame height, from the top:
+// One entry per still picture of Root. fw × fh is the picture's size in layout pixels (the file is twice that).
+// Fractions are of the picture height, from the top:
 //   top    where the top of Root's layout box is (leaf tips; the fists for `hang`)
 //   base   where the bottom of the layout box is (the feet; the ledge for `peek`)
-//   stand  base - top: the part of the frame that a Mascot `size` maps to
+//   stand  base - top: the part of the picture that a Mascot `size` maps to
 //   seat   (sit only) the line Root is sitting on
 //   face   the middle of the face, for the round avatar crop
-// Every clip is rendered at the same scale (UNIT px per unit), so swapping clips never resizes Root.
+// Every still is rendered at the same scale (UNIT px per unit), so swapping poses never resizes Root.
 
 export const UNIT = %d;
 
-export type ClipId = %s;
+export type Pose = %s;
 
-export type Clip = { src: number; still: number; cols: number; rows: number; frames: number; fps: number; fw: number; fh: number; loop: boolean; hold: number; top: number; base: number; stand: number; aspect: number; face: number; seat?: number };
+export type Still = { src: number; fw: number; fh: number; top: number; base: number; stand: number; aspect: number; face: number; seat?: number };
 
-export const CLIPS: Record<ClipId, Clip> = {
+export const STILLS: Record<Pose, Still> = {
 %s
 };
-""" % (C.PX, ' | '.join("'%s'" % n for n in names), '\n'.join(rows_ts))
-open(os.path.join(ROOT, 'src', 'components', 'mascotClips.ts'), 'w').write(ts)
-print('total %.1f MB in %d clips' % (total / 1e6, len(names)))
+""" % (C.PX, ' | '.join("'%s'" % n for n in names), '\n'.join(rows))
+open(os.path.join(ROOT, 'src', 'components', 'mascotStills.ts'), 'w').write(ts)
+print('mascotStills.ts: %d poses' % len(names))
 
-# contact sheet
-if holds:
-    H = 300; per = 9
-    tiles = [h.resize((round(h.width * H / h.height), H), Image.LANCZOS) for h in holds]
-    W = max(sum(t.width + 10 for t in tiles[i:i + per]) for i in range(0, len(tiles), per)) + 10
-    for bgname, bg in (('', (157, 183, 255)), ('_dark', (14, 14, 18))):
-        sh = Image.new('RGB', (W, (H + 10) * math.ceil(len(tiles) / per) + 10), bg)
-        for i, t in enumerate(tiles):
-            x = 10 + sum(tt.width + 10 for tt in tiles[(i // per) * per:i]); y = 10 + (i // per) * (H + 10)
-            sh.paste(t, (x, y), t)
-        sh.save(os.path.join(HERE, 'out', 'contact%s.jpg' % bgname), quality=88)
+# 3. review sheets, straight from the shipped stills
+H = 300; per = 9
+tiles = []
+for n in names:
+    im = Image.open(os.path.join(STILLS, n + '.webp')).convert('RGBA')
+    tiles.append(im.resize((round(im.width * H / im.height), H), Image.LANCZOS))
+W = max(sum(t.width + 10 for t in tiles[i:i + per]) for i in range(0, len(tiles), per)) + 10
+for suffix, bg in (('', (157, 183, 255)), ('_dark', (14, 14, 18))):
+    sh = Image.new('RGB', (W, (H + 10) * math.ceil(len(tiles) / per) + 10), bg)
+    for i, t in enumerate(tiles):
+        x = 10 + sum(tt.width + 10 for tt in tiles[(i // per) * per:i]); y = 10 + (i // per) * (H + 10)
+        sh.paste(t, (x, y), t)
+    sh.save(os.path.join(HERE, 'contact%s.jpg' % suffix), quality=88)
+print('contact.jpg, contact_dark.jpg: %d stills' % len(tiles))

@@ -422,6 +422,31 @@ def build_props():
         o = link(bpy.data.objects.new(name, me), parent); o.location = loc; o.rotation_euler = rot
         return o
 
+    def lathe(name, prof, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), seg=48):
+        """A shape turned round the Z axis from a profile [(radius, z), …]."""
+        import bmesh
+        verts, faces = [], []
+        for r, z in prof:
+            for i in range(seg):
+                a = 2 * math.pi * i / seg
+                verts.append((r * math.cos(a), r * math.sin(a), z))
+        for j in range(len(prof) - 1):
+            for i in range(seg):
+                faces.append((j * seg + i, j * seg + (i + 1) % seg, (j + 1) * seg + (i + 1) % seg, (j + 1) * seg + i))
+        me = bpy.data.meshes.new(name); me.from_pydata(verts, [], faces); me.update()
+        bm = bmesh.new(); bm.from_mesh(me)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6); bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.to_mesh(me); bm.free()
+        for p in me.polygons:
+            p.use_smooth = True
+        me.materials.append(mat)
+        o = link(bpy.data.objects.new(name, me), parent); o.location = loc; o.rotation_euler = rot
+        return o
+
+    def corner(cx, cz, r, a0, a1, k=5):
+        """Points round a profile corner: an arc of radius r about (cx, cz) from angle a0 to a1 (degrees)."""
+        return [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / (k - 1))), cz + r * math.sin(math.radians(a0 + (a1 - a0) * i / (k - 1)))) for i in range(k)]
+
     # book (held open, spine down the middle)
     g = group('book')
     for s in (-1, 1):
@@ -464,11 +489,18 @@ def build_props():
         torus('bagStrap%d' % s, 0.30, 0.035, periD, g, (s * 0.22, -0.33, 0.02), rot=(0, math.pi / 2, 0)).scale = (1.0, 1.15, 1.0)
     # watering can (spout toward +X)
     g = group('can')
-    cyl('canBody', 0.2, 0.17, 0.3, peri, g)
+    waterm = principled('water', '#4F97F5', rough=0.08, coat=1.0)
+    lathe('canBody', [(0, -0.15)] + corner(0.172, -0.122, 0.028, -90, 0) + [(0.173, 0.12)] + corner(0.159, 0.137, 0.014, 0, 180)
+          + [(0.147, 0.09), (0, 0.09)], peri, g)
+    lathe('canWater', [(0, 0.105), (0.148, 0.105)], waterm, g)
     cyl('canSpout', 0.045, 0.035, 0.36, peri, g, (0.3, 0, 0.06), rot=(0, math.radians(58), 0))
-    cyl('canRose', 0.05, 0.085, 0.06, periD, g, (0.47, 0, 0.165), rot=(0, math.radians(58), 0))
+    rose = cyl('canRose', 0.05, 0.085, 0.06, periD, g, (0.47, 0, 0.165), rot=(0, math.radians(58), 0))
+    for k in range(6):
+        a = 2 * math.pi * k / 5
+        r = 0.05 if k < 5 else 0.0
+        o = ellipsoid('canHole%d' % k, 0.012, 0.012, 0.005, peri, rose, 12, 8); o.location = (r * math.cos(a), r * math.sin(a), 0.031)
     torus('canHandle', 0.13, 0.028, periD, g, (-0.2, 0, 0.02), rot=(math.pi / 2, 0, 0))
-    torus('canTop', 0.12, 0.025, periD, g, (0, 0, 0.19), rot=(math.pi / 2, 0, 0)).scale = (1, 1, 0.8)
+    arc('canTop', periD, g, [(0.158 * math.cos(math.pi * i / 10), 0, 0.14 + 0.135 * math.sin(math.pi * i / 10)) for i in range(11)], 0.025)
     # lantern
     g = group('lantern')
     cyl('lampCore', 0.105, 0.105, 0.26, lampglow, g)
@@ -478,6 +510,224 @@ def build_props():
         a = math.pi / 4 + i * math.pi / 2
         cyl('lampBar%d' % i, 0.014, 0.014, 0.26, periD, g, (math.cos(a) * 0.12, math.sin(a) * 0.12, 0), seg=8)
     torus('lampRing', 0.085, 0.016, periD, g, (0, 0, 0.30), rot=(math.pi / 2, 0, 0))
+
+    # ── props added for the still-only set ──────────────────────────────────
+    mint = principled('mint', '#A9E8BC', rough=0.5, sss=0.1)
+    mintD = principled('mintD', '#7FD09A', rough=0.5)
+    butter = principled('butter', '#FFE08A', rough=0.5, sss=0.1)
+    flagOrange = principled('flagOrange', '#FF9A3D', rough=0.5, sss=0.1)
+    woodD = principled('woodD', '#D49A5C', rough=0.6)
+    ink = principled('ink', '#4A3B36', rough=0.5)
+    redOrange = principled('redOrange', '#F2552C', rough=0.45, sss=0.1)
+    apple = principled('apple', '#8FD14F', rough=0.45, sss=0.1)
+    lensm = principled('lens', '#BFE2FF', rough=0.08, coat=1.0)
+    # marble: deep blue glass with a paler swirl running through it
+    marb = principled('marble', '#1F47C8', rough=0.06, coat=1.0)
+    nt = marb.node_tree; b = nt.nodes['Principled BSDF']
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    wave = nt.nodes.new('ShaderNodeTexWave'); wave.inputs['Scale'].default_value = 1.7; wave.inputs['Distortion'].default_value = 9.0
+    wave.inputs['Detail'].default_value = 1.0; wave.inputs['Detail Scale'].default_value = 1.2
+    nt.links.new(tc.outputs['Object'], wave.inputs['Vector'])
+    mr = nt.nodes.new('ShaderNodeMapRange'); mr.interpolation_type = 'SMOOTHSTEP'
+    mr.inputs['From Min'].default_value = 0.55; mr.inputs['From Max'].default_value = 0.95
+    nt.links.new(wave.outputs['Fac'], mr.inputs['Value'])
+    mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.inputs['A'].default_value = rgb('#1B3FBE'); mx.inputs['B'].default_value = rgb('#6FB0FF')
+    nt.links.new(mr.outputs['Result'], mx.inputs['Factor']); nt.links.new(mx.outputs['Result'], b.inputs['Base Color'])
+
+    def ball(name, r, mat, parent, loc=(0, 0, 0), sc=(1, 1, 1)):
+        o = ellipsoid(name, r * sc[0], r * sc[1], r * sc[2], mat, parent, 32, 20); o.location = loc
+        return o
+
+    def arch(name, R, r, mat, parent, a0=0.0, a1=math.pi, loc=(0, 0, 0), rot=(0, 0, 0), sz=1.0, n=13):
+        """Part of a ring standing in the XZ plane, from angle a0 to a1 (0 = +X, 90° = +Z)."""
+        pts = [(R * math.cos(a0 + (a1 - a0) * i / (n - 1)), 0, R * sz * math.sin(a0 + (a1 - a0) * i / (n - 1))) for i in range(n)]
+        o = arc(name, mat, parent, pts, r); o.location = loc; o.rotation_euler = rot
+        return o
+
+    def ribbon(name, pts, nrm, width, thick, mat, parent, K=12):
+        """A closed flat strap through pts, lying flat against the surface whose normals are nrm."""
+        import bmesh
+        n = len(pts); verts, faces = [], []
+        for i in range(n):
+            p = Vector(pts[i]); t = (Vector(pts[(i + 1) % n]) - Vector(pts[i - 1])).normalized()
+            nn = Vector(nrm[i]).normalized(); sd = t.cross(nn).normalized()
+            for j in range(K):
+                a = 2 * math.pi * j / K; cx, cy = math.cos(a), math.sin(a)
+                ex = math.copysign(abs(cx) ** 0.5, cx); ey = math.copysign(abs(cy) ** 0.5, cy)
+                verts.append(tuple(p + sd * (width / 2) * ex + nn * (thick / 2) * ey))
+        for i in range(n):
+            for j in range(K):
+                faces.append((i * K + j, ((i + 1) % n) * K + j, ((i + 1) % n) * K + (j + 1) % K, i * K + (j + 1) % K))
+        me = bpy.data.meshes.new(name); me.from_pydata(verts, [], faces); me.update()
+        bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
+        for p in me.polygons:
+            p.use_smooth = True
+        me.materials.append(mat)
+        return link(bpy.data.objects.new(name, me), parent)
+
+    def prism(name, outline, depth, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.012):
+        """A flat shape in the XZ plane (outline: [(x, z), …]) with a little thickness and soft edges."""
+        import bmesh
+        bm = bmesh.new()
+        front = [bm.verts.new((x, -depth / 2, z)) for x, z in outline]
+        back = [bm.verts.new((x, depth / 2, z)) for x, z in outline]
+        bm.faces.new(front); bm.faces.new(back[::-1])
+        k = len(outline)
+        for i in range(k):
+            bm.faces.new((front[i], back[i], back[(i + 1) % k], front[(i + 1) % k]))
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        if bevel:
+            bmesh.ops.bevel(bm, geom=bm.edges[:], offset=bevel, segments=3, affect='EDGES')
+        me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+        for p in me.polygons:
+            p.use_smooth = True
+        me.materials.append(mat)
+        o = link(bpy.data.objects.new(name, me), parent); o.location = loc; o.rotation_euler = rot
+        o.modifiers.new('ws', 'WEIGHTED_NORMAL')
+        return o
+
+    # marble
+    g = group('marble')
+    ball('marbleBall', 0.16, marb, g)
+    # headphones (worn: placed at the body centre). Band over the top in front of the leaves, a cup each side at eye height.
+    g = group('headphones')
+    hy = -0.11; hz = WIDE_AT * HB
+    ax, az = RX + 0.055, HB * (1 - WIDE_AT) + 0.06
+    a0 = math.radians(14)
+    arc('hpBand', periD, g, [(ax * math.cos(a0 + (math.pi - 2 * a0) * i / 16), hy, hz + az * math.sin(a0 + (math.pi - 2 * a0) * i / 16)) for i in range(17)], 0.045)
+    a0 = math.radians(62)
+    arc('hpPad', peri, g, [((ax + 0.004) * math.cos(a0 + (math.pi - 2 * a0) * i / 8), hy, hz + (az + 0.004) * math.sin(a0 + (math.pi - 2 * a0) * i / 8)) for i in range(9)], 0.064)
+    for s in (-1, 1):
+        cupE = empty('hpCup%d' % s, g, (s * 0.80, hy - 0.04, 0.17)); cupE.rotation_euler = (0, 0, s * 0.42)
+        ball('hpCushion%d' % s, 1, peri, cupE, (-s * 0.035, 0, 0), (0.085, 0.215, 0.255))
+        ball('hpShell%d' % s, 1, periD, cupE, (s * 0.035, 0, 0), (0.105, 0.19, 0.23))
+        ball('hpDot%d' % s, 1, peri, cupE, (s * 0.115, 0, 0), (0.035, 0.085, 0.10))
+        cyl('hpYoke%d' % s, 0.04, 0.04, 0.16, periD, g, (s * 0.815, hy, 0.44), rot=(0, -s * 0.12, 0), seg=16)
+    # map: three panels folded like a zigzag, printed side toward the camera
+    g = group('map')
+    PW, PH, fold = 0.30, 0.56, 0.30
+    panels = {}
+    for i in (-1, 0, 1):
+        pn = box('mapPanel%d' % i, PW, 0.018, PH, paper, g, (i * PW * math.cos(fold), 0, 0), bevel=0.006)
+        pn.rotation_euler = (0, 0, fold if i else -fold)
+        panels[i] = pn
+
+    def on_map(x, z):
+        """Panel and panel-local position for a point on the unfolded sheet."""
+        i = -1 if x < -PW / 2 else (1 if x > PW / 2 else 0)
+        return panels[i], (x - i * PW, -0.011, z)
+    trail = [(-0.36, -0.19), (-0.30, -0.12), (-0.22, -0.07), (-0.13, -0.08), (-0.04, -0.12), (0.05, -0.11), (0.12, -0.04), (0.16, 0.05), (0.22, 0.11)]
+    for k, (x, z) in enumerate(trail):
+        pn, loc = on_map(x, z)
+        ball('mapDot%d' % k, 1, ink, pn, loc, (0.02, 0.008, 0.02))
+    pn, loc = on_map(0.31, 0.16)
+    for k, a in enumerate((45, -45)):
+        box('mapX%d' % k, 0.125, 0.014, 0.034, redOrange, pn, loc, bevel=0.005).rotation_euler = (0, math.radians(a), 0)
+    pn, loc = on_map(-0.33, 0.14); ball('mapHillA', 1, mint, pn, loc, (0.075, 0.012, 0.06))
+    pn, loc = on_map(-0.24, 0.11); ball('mapHillB', 1, mint, pn, loc, (0.055, 0.013, 0.045))
+    pn, loc = on_map(0.02, 0.15); ball('mapPond', 1, peri, pn, loc, (0.085, 0.012, 0.05))
+    pn, loc = on_map(0.30, -0.16); ball('mapHillC', 1, mint, pn, loc, (0.07, 0.012, 0.05))
+    # telescope (eyepiece at the origin, pointing up along +Z)
+    g = group('telescope')
+    cyl('scopeEye', 0.085, 0.085, 0.06, periD, g, (0, 0, 0.03))
+    cyl('scopeA', 0.068, 0.072, 0.30, peri, g, (0, 0, 0.19))
+    cyl('scopeB', 0.092, 0.098, 0.30, peri, g, (0, 0, 0.45))
+    cyl('scopeC', 0.118, 0.14, 0.36, peri, g, (0, 0, 0.76))
+    for k, (z, r) in enumerate(((0.07, 0.076), (0.31, 0.10), (0.585, 0.125), (0.935, 0.148))):
+        cyl('scopeRing%d' % k, r, r, 0.045, gold, g, (0, 0, z))
+    cyl('scopeLens', 0.125, 0.125, 0.012, lensm, g, (0, 0, 0.955))
+    # fruit basket (origin at the middle of the basket body)
+    g = group('basket')
+    cyl('basketCore', 0.20, 0.285, 0.30, woodD, g)
+    for k in range(5):
+        z = -0.125 + k * 0.0625; r = 0.215 + 0.085 * (z + 0.15) / 0.30
+        torus('basketCoil%d' % k, r, 0.038, wood if k % 2 == 0 else woodD, g, (0, 0, z))
+    for k in range(12):
+        a = 2 * math.pi * (k + 0.5) / 12
+        cyl('basketRib%d' % k, 0.017, 0.017, 0.30, woodD, g, (math.cos(a) * 0.288, math.sin(a) * 0.288, 0), rot=(0, math.atan2(0.085, 0.30), a), seg=10)
+    torus('basketRim', 0.305, 0.042, woodD, g, (0, 0, 0.16))
+    arch('basketHandle', 0.30, 0.03, woodD, g, loc=(0, 0, 0.16), sz=0.95, n=11)
+    cyl('basketFill', 0.27, 0.27, 0.02, woodD, g, (0, 0, 0.12))
+    ball('fruitA', 0.125, redOrange, g, (0.02, -0.05, 0.25))
+    ball('fruitB', 0.11, pink, g, (-0.165, -0.04, 0.20))
+    ball('fruitC', 0.105, yellow, g, (0.175, -0.03, 0.20), (1.1, 1, 0.92))
+    ball('fruitD', 0.115, apple, g, (-0.07, 0.12, 0.24))
+    ball('fruitE', 0.105, pink, g, (0.12, 0.13, 0.22))
+    cyl('fruitStem', 0.012, 0.012, 0.07, woodD, g, (0.02, -0.05, 0.385), rot=(0, 0.25, 0), seg=10)
+    ball('fruitLeaf', 1, apple, g, (0.065, -0.05, 0.40), (0.05, 0.02, 0.026)).rotation_euler = (0, -0.5, 0)
+    # compass (face toward the camera, hanging ring at the top)
+    g = group('compass')
+    cyl('compassCase', 0.215, 0.215, 0.085, gold, g, rot=(math.pi / 2, 0, 0), seg=48)
+    torus('compassRim', 0.195, 0.032, gold, g, (0, -0.045, 0), rot=(math.pi / 2, 0, 0))
+    cyl('compassFace', 0.172, 0.172, 0.012, paper, g, (0, -0.046, 0), rot=(math.pi / 2, 0, 0), seg=48)
+    for k in range(4):
+        a = k * math.pi / 2
+        ball('compassTick%d' % k, 1, ink, g, (math.sin(a) * 0.135, -0.052, math.cos(a) * 0.135), (0.016, 0.008, 0.016))
+    nd = empty('compassNeedle', g, (0, -0.058, 0)); nd.rotation_euler = (0, math.radians(-32), 0)
+    prism('compassN', [(-0.042, 0), (0.042, 0), (0, 0.135)], 0.016, redOrange, nd, bevel=0.005)
+    prism('compassS', [(0.042, 0), (-0.042, 0), (0, -0.135)], 0.016, periD, nd, bevel=0.005)
+    ball('compassPin', 0.026, gold, g, (0, -0.066, 0), (1, 0.7, 1))
+    cyl('compassStem', 0.035, 0.035, 0.06, gold, g, (0, 0, 0.235), seg=16)
+    torus('compassLoop', 0.055, 0.016, gold, g, (0, 0, 0.30), rot=(math.pi / 2, 0, 0))
+    # bunting: a sagging string of five flags
+    g = group('bunting')
+    sag = lambda x: 0.56 * x * x
+    arc('buntString', woodD, g, [(x / 8 * 0.88, 0, sag(x / 8 * 0.88)) for x in range(-8, 9)], 0.017)
+    for k, (x, mat) in enumerate(zip((-0.64, -0.32, 0.0, 0.32, 0.64), (peri, pink, butter, mint, flagOrange))):
+        f = prism('buntFlag%d' % k, [(-0.15, 0.0), (0.15, 0.0), (0.0, -0.40)], 0.024, mat, g, (x, 0, sag(x) - 0.006), bevel=0.009)
+        f.rotation_euler = (0, -0.85 * math.atan(1.12 * x), (0.16, -0.12, 0.0, 0.12, -0.16)[k])
+    for s in (-1, 1):
+        ball('buntKnot%d' % s, 0.042, woodD, g, (s * 0.88, 0, sag(0.88)))
+    # a soft warm glow to put behind the lantern when it is shown on its own: a disc facing the camera that fades out
+    g = group('halo')
+    hm = bpy.data.materials.new('halo'); hm.use_nodes = True; M['halo'] = hm
+    nt = hm.node_tree; nt.nodes.remove(nt.nodes['Principled BSDF'])
+    tc = nt.nodes.new('ShaderNodeTexCoord'); ln = nt.nodes.new('ShaderNodeVectorMath'); ln.operation = 'LENGTH'
+    nt.links.new(tc.outputs['Object'], ln.inputs[0])
+    mr = nt.nodes.new('ShaderNodeMapRange'); mr.interpolation_type = 'SMOOTHERSTEP'
+    mr.inputs['From Min'].default_value = 0.10; mr.inputs['From Max'].default_value = 0.60; mr.inputs['To Min'].default_value = 0.55; mr.inputs['To Max'].default_value = 0.0
+    nt.links.new(ln.outputs['Value'], mr.inputs['Value'])
+    tr = nt.nodes.new('ShaderNodeBsdfTransparent'); em = nt.nodes.new('ShaderNodeEmission')
+    em.inputs['Color'].default_value = rgb('#FFD76A'); em.inputs['Strength'].default_value = 1.0
+    mix = nt.nodes.new('ShaderNodeMixShader')
+    nt.links.new(mr.outputs['Result'], mix.inputs['Fac']); nt.links.new(tr.outputs[0], mix.inputs[1]); nt.links.new(em.outputs[0], mix.inputs[2])
+    nt.links.new(mix.outputs[0], nt.nodes['Material Output'].inputs['Surface'])
+    try:
+        hm.surface_render_method = 'BLENDED'
+    except Exception:
+        pass
+    hb = lathe('haloDisc', [(0, 0), (0.3, 0), (0.62, 0)], hm, g, (0, 0.45, 0.02), rot=(math.pi / 2, 0, 0))
+    for attr in ('visible_shadow', 'visible_diffuse', 'visible_glossy'):
+        try:
+            setattr(hb, attr, False)
+        except Exception:
+            pass
+    # shoulder straps for the backpack: a loop round each arm, lying on the body and reaching back to the bag
+    # (placed at the body centre; one prop per side, so a turned pose can leave out the far one)
+    w0 = (SHOULDER[2] - ZC) / HB; kk = math.sqrt(1 - w0 * w0); back = 0.63
+    for s in (-1, 1):
+        g = group('strapL' if s < 0 else 'strapR')
+        c0 = Vector((s * math.cos(back) * kk, math.sin(back) * kk, w0)); e1 = Vector((s * math.sin(back), -math.cos(back), 0)); e2 = c0.cross(e1).normalized()
+
+        def at(a, k=1.0):
+            r = k / math.sqrt((math.cos(a) / 0.95) ** 2 + (math.sin(a) / 0.52) ** 2)
+            d = math.cos(r) * c0 + math.sin(r) * (math.cos(a) * e1 + math.sin(a) * e2)
+            return shape(d.x, d.y, d.z)
+        pts, nrm = [], []
+        for i in range(56):
+            a = 2 * math.pi * i / 56; e = 0.01
+            p = at(a)
+            nn = (at(a + e) - at(a - e)).cross(at(a, 1 + e) - at(a, 1 - e)).normalized()
+            if nn.dot(p - Vector((0, 0, ZC))) < 0:
+                nn = -nn
+            pts.append(p + nn * 0.016 - Vector((0, 0, ZC))); nrm.append(nn)
+        ribbon('strap%d' % s, pts, nrm, 0.12, 0.04, periD, g)
+    # bedroll (lies along X; sits on top of the backpack)
+    g = group('bedroll')
+    cyl('rollMat', 0.14, 0.14, 0.74, mint, g, rot=(0, math.pi / 2, 0))
+    for s in (-1, 1):
+        cyl('rollEnd%d' % s, 0.10, 0.10, 0.02, mintD, g, (s * 0.365, 0, 0), rot=(0, math.pi / 2, 0))
+        torus('rollBand%d' % s, 0.14, 0.022, periD, g, (s * 0.2, 0, 0), rot=(0, math.pi / 2, 0))
     for o in O.values():
         if o.name.startswith('prop_'):
             set_visible(o, False)
@@ -731,6 +981,38 @@ def apply(P):
                 sc_ = spec.get('scale', 1)
                 o.matrix_local = base @ Matrix.Translation(spec.get('loc', (0, 0, 0))) @ rot @ Matrix.Diagonal((sc_, sc_, sc_, 1))
     bpy.context.view_layer.update()
+
+
+def solo(prop, rot=(0, 0, 0), size=512, pad=0.07, extra=(), scale=1.0):
+    """Show one prop on its own (no character), turned by rot (degrees), and frame it in a size × size picture.
+    extra: more props to show at the same place, not turned or scaled (the lantern's halo)."""
+    for o in O.values():
+        if o.type not in ('EMPTY', 'CAMERA', 'LIGHT'):
+            o.hide_render = True; o.hide_viewport = True
+    shown = []
+    for name in (prop,) + tuple(extra):
+        g = O['prop_' + name]
+        set_visible(g, True)
+        k = scale if name == prop else 1.0
+        g.matrix_local = (Matrix.Translation((0, -0.2, 1.5)) @ Euler(tuple(math.radians(a) for a in (rot if name == prop else (0, 0, 0)))).to_matrix().to_4x4()
+                          @ Matrix.Diagonal((k, k, k, 1)))
+        shown += children_deep(g)
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get()
+    xs, zs = [], []
+    for o in shown:
+        if o.type == 'EMPTY':
+            continue
+        ev = o.evaluated_get(dg); me = ev.to_mesh()
+        for v in me.vertices:
+            p = ev.matrix_world @ v.co; xs.append(p.x); zs.append(p.z)
+        ev.to_mesh_clear()
+    w, h = max(xs) - min(xs), max(zs) - min(zs)
+    sc = bpy.context.scene
+    sc.render.resolution_x = sc.render.resolution_y = size; sc.render.resolution_percentage = 100
+    cam = O['cam']
+    cam.data.ortho_scale = max(w, h) / (1 - 2 * pad)
+    cam.location = ((max(xs) + min(xs)) / 2, -12, (max(zs) + min(zs)) / 2)
 
 
 def render(path):

@@ -1,7 +1,7 @@
-import { Check, Flag, Lock, PenLine, Play, Search } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { Check, Flag, Hand, Lock, PenLine, Play, Search } from 'lucide-react-native';
+import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Path as Line } from 'react-native-svg';
 
 import { Mascot, poseWidth } from '@/components/Mascot';
@@ -14,7 +14,7 @@ import type { Stop, StopKind } from '@/lib/store';
 import { ON_BLOCK, useTheme, type BlockTone } from '@/theme';
 
 // The trail: one chunky node per stop, winding down the screen, with Root standing on the
-// stop that is next. Spacing is the same for every node, so nothing shifts when Root moves on.
+// stop that is next. Spacing is the same for every node, so nothing shifts when a stop is cleared.
 const STEP = 128;
 const TOP = 104;
 const NODE = 70;
@@ -22,62 +22,32 @@ const NOW = 88;
 const ROOT = 74;
 const FEET = 0.965;
 
-export const KIND_LABEL: Record<StopKind, string> = { learn: 'New word', find: 'Find', spell: 'Spell', chest: 'Chest', challenge: 'Challenge' };
+export const KIND_LABEL: Record<StopKind, string> = { learn: 'New words', find: 'Find', spell: 'Spell', chest: 'Chest', hands: 'Hands-on', challenge: 'Challenge' };
 
 /** Where the middle of stop `i` sits, measured from the top of the path. */
 export const stopY = (i: number) => TOP + i * STEP;
 export const pathHeight = (count: number) => TOP + Math.max(0, count - 1) * STEP + NOW / 2 + 66;
 const stopX = (i: number, width: number) => width / 2 + Math.min(width * 0.26, 92) * Math.sin(i * 1.05);
 
-export type StopFace = { text?: string; hook?: string };
+/** What a learn stop shows: its words ("ladder · harvest"), the mark inside its node (a picked picture, or the words' first letters) and how many of its words are done. */
+export type StopFace = { text?: string; /** The words one to a line, for the label beside the node. */ lines?: string[]; mark?: string; got?: number; of?: number };
 
 export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces: StopFace[]; /** The stop Root is standing on: the next one to do, or -1 when the chapter is finished. */ at: number; tone: BlockTone; onOpen: (i: number) => void }) {
   const { c, reduceMotion } = useTheme();
   const [width, setWidth] = useState(340);
   const [nudged, setNudged] = useState<Record<number, number>>({});
-  const [moving, setMoving] = useState<'left' | 'right' | null>(null);
 
   const stand = at < 0 ? stops.length - 1 : at;
   const nowTone: BlockTone = tone === 'orange' ? 'brand' : 'orange';
   const labelRight = (i: number) => stopX(i, width) <= width / 2 + 1;
 
   // Root stands on the shoulder of its node, on the side away from the label.
-  const rootW = poseWidth('wave', ROOT);
+  const rootW = poseWidth(at < 0 ? 'cheer' : 'hike', ROOT);
   const rootAt = (i: number) => {
     const r = (i === at ? NOW : NODE) / 2;
     return { x: stopX(i, width) + (labelRight(i) ? -r * 0.5 : r * 0.5) - rootW / 2, y: stopY(i) - r * 0.6 - ROOT * FEET };
   };
   const home = rootAt(Math.max(0, stand));
-  const px = useSharedValue(home.x);
-  const py = useSharedValue(home.y);
-  const hop = useSharedValue(0);
-  const prev = useRef({ stand, width });
-
-  useEffect(() => {
-    const was = prev.current;
-    prev.current = { stand, width };
-    const to = { x: home.x, y: home.y };
-    if (was.stand === stand || was.width !== width || reduceMotion) {
-      px.set(to.x);
-      py.set(to.y);
-      return;
-    }
-    // A stop was finished: Root walks on to the next one.
-    const dir = to.x < px.value ? 'left' : 'right';
-    const wait = 420;
-    const ms = 900;
-    const start = setTimeout(() => setMoving(dir), wait);
-    const stop = setTimeout(() => setMoving(null), wait + ms + 60);
-    px.set(withDelay(wait, withTiming(to.x, { duration: ms, easing: Easing.inOut(Easing.quad) })));
-    py.set(withDelay(wait, withTiming(to.y, { duration: ms, easing: Easing.inOut(Easing.quad) })));
-    hop.set(withDelay(wait, withRepeat(withSequence(withTiming(-9, { duration: ms / 8, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: ms / 8, easing: Easing.in(Easing.quad) })), 4, false)));
-    return () => {
-      clearTimeout(start);
-      clearTimeout(stop);
-    };
-  }, [stand, width, home.x, home.y, reduceMotion, px, py, hop]);
-
-  const rootStyle = useAnimatedStyle(() => ({ transform: [{ translateX: px.value }, { translateY: py.value + hop.value }] }));
 
   // The dotted trail through every node, and the walked part of it in the chapter's colour.
   const trail = (upTo: number) => {
@@ -121,7 +91,8 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
         const ink = done || now ? ON_BLOCK.ink : c.ink3;
         const bg = done ? c[tone] : now ? c[nowTone] : c.surface;
         const lip = done ? LIP[tone] : now ? LIP[nowTone] : c.line;
-        const a11y = `${st.kind === 'learn' ? `New word: ${label}` : label}${done ? ', done' : now ? ', next' : ', locked'}`;
+        const part = st.kind === 'learn' && !done && (face.got ?? 0) > 0 ? `, ${face.got} of ${face.of} learned` : '';
+        const a11y = `${st.kind === 'learn' ? `New words: ${label}` : label}${part}${done ? ', done' : now ? ', next' : ', locked'}`;
         const room = right ? width - (x + size / 2 + 12) : x - size / 2 - 12;
 
         return (
@@ -137,11 +108,13 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
                       ) : st.kind === 'chest' ? (
                         <Image source={done ? PROPS.chestOpen.src : PROPS.chest.src} style={{ width: size * 0.62, height: size * 0.62, opacity: done || now ? 1 : 0.55 }} resizeMode="contain" />
                       ) : st.kind === 'learn' ? (
-                        <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: face.hook ? size * 0.4 : size * 0.38, color: ink }}>{face.hook ?? (face.text ?? '?').charAt(0).toUpperCase()}</Text>
+                        <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: (face.mark ?? '?').length > 2 ? size * 0.26 : size * 0.36, letterSpacing: 0.5, color: ink }}>{face.mark ?? '?'}</Text>
                       ) : st.kind === 'find' ? (
                         <Search size={size * 0.38} color={ink} strokeWidth={2.6} />
                       ) : st.kind === 'spell' ? (
                         <PenLine size={size * 0.38} color={ink} strokeWidth={2.6} />
+                      ) : st.kind === 'hands' ? (
+                        <Hand size={size * 0.38} color={ink} strokeWidth={2.6} />
                       ) : (
                         <Flag size={size * 0.38} color={ink} strokeWidth={2.6} fill={now ? ink : 'none'} />
                       )}
@@ -156,26 +129,26 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
                 {now && (
                   <View style={{ marginTop: 8, height: 34, borderRadius: 17, paddingHorizontal: 13, backgroundColor: c.ink, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Play size={13} color={c.onInk} fill={c.onInk} />
-                    <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 14, color: c.onInk }}>Start</Text>
+                    <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 14, color: c.onInk }}>{(face.got ?? 0) > 0 ? 'Carry on' : 'Start'}</Text>
                   </View>
                 )}
               </Tap>
             </Wiggle>
             <View pointerEvents="none" style={[{ position: 'absolute', top: 0, height: size, justifyContent: 'center', width: Math.max(60, room) }, right ? { left: x + size / 2 + 12 } : { left: x - size / 2 - 12 - Math.max(60, room), alignItems: 'flex-end' }]}>
-              <Txt v={now ? 'heading' : 'bodyS'} color={done || now ? 'ink' : 'ink3'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ textAlign: right ? 'left' : 'right' }}>
-                {label}
-              </Txt>
+              {(st.kind === 'learn' && face.lines?.length ? face.lines : [label]).map((line, k) => (
+                <Txt key={k} v={now ? 'heading' : 'bodyS'} color={done || now ? 'ink' : 'ink3'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ textAlign: right ? 'left' : 'right' }}>
+                  {line}
+                </Txt>
+              ))}
             </View>
           </Rise>
         );
       })}
 
-      {/* Root, standing on the next stop. It walks there when a stop is finished. */}
+      {/* Root, standing on the next stop. */}
       {stops.length > 0 && (
-        <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', left: 0, top: 0, width: rootW, height: ROOT }, rootStyle]}>
-          <View pointerEvents="box-none" style={{ transform: [{ scaleX: moving === 'left' ? -1 : 1 }] }}>
-            <Mascot pose={moving ? 'walk' : at < 0 ? 'cheer' : 'wave'} size={ROOT} poke={!moving} />
-          </View>
+        <Animated.View key={stand} entering={reduceMotion ? undefined : FadeIn.duration(320).delay(240)} pointerEvents="none" style={{ position: 'absolute', left: home.x, top: home.y, width: rootW, height: ROOT }}>
+          <Mascot pose={at < 0 ? 'cheer' : 'hike'} size={ROOT} />
         </Animated.View>
       )}
     </View>

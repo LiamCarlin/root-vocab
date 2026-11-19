@@ -5,7 +5,6 @@ import { Pop, Wiggle } from '@/components/fx';
 import { Controls } from '@/components/learn';
 import { Tap } from '@/components/ui';
 import { buzz, say, speakable } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
 import { puzzleFor } from './missingPuzzle';
@@ -47,7 +46,6 @@ export function Missing({ lex, onResult, done }: GameProps) {
     setTried(next);
     if (next.length >= puzzle.options.length - 1) {
       // Both wrong pieces tried: show where the real one goes.
-      buddy.react('hint');
       setFilled(true);
       report({ r: 0, cue: next.length, note: <SpellNote lex={lex} /> });
     }

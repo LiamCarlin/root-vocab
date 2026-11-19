@@ -3,83 +3,113 @@ import { Home, LogOut, Play } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Sidekick } from '@/components/Buddy';
 import { Mascot } from '@/components/Mascot';
 import { Beats } from '@/components/mission/Beats';
+import { Bridge } from '@/components/mission/Bridge';
 import { Build } from '@/components/mission/Build';
-import { Done } from '@/components/mission/Done';
-import { LessonBar, LessonLayout } from '@/components/mission/Frame';
+import { Done, type Taught } from '@/components/mission/Done';
+import { LessonBar } from '@/components/mission/Frame';
 import { Hear } from '@/components/mission/Hear';
 import { Link } from '@/components/mission/Link';
 import { Move } from '@/components/mission/Move';
 import { Spell } from '@/components/mission/Spell';
-import { stepsFor, type MissionStats, type StepId, type StepProps } from '@/components/mission/types';
+import { Together } from '@/components/mission/Together';
+import { stepsFor, type MissionStats, type StepProps } from '@/components/mission/types';
 import { Use } from '@/components/mission/Use';
 import { Btn, Screen, Sheet, TopBar, Txt } from '@/components/ui';
+import { trailLine } from '@/data/story';
 import { buzz, stopListening, stopSpeaking } from '@/lib/audio';
-import { buddy, useHoldUnlocks } from '@/lib/buddy';
-import { lexemeFor } from '@/lib/lexicon';
+import { sharedPattern, stopTodo, stopWords } from '@/lib/journey';
+import { lexemeFor, type Lexeme } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
 import { stopForWord, useStore, type StopOutcome } from '@/lib/store';
+import { useHoldUnlocks } from '@/lib/unlocks';
 import { useTheme } from '@/theme';
 
 const leave = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
 
-type Result = { stats: MissionStats; outcome: StopOutcome | null; first: boolean; steps: StepId[] };
+type Phase = 'word' | 'bridge' | 'together' | 'done';
+type Plan = { queue: string[]; stop: number; /** Words of the set taught before this visit, and the size of the set. */ before: number; of: number; trail: string };
 
 /**
- * The lesson: how a new word is first taught. One route, seven steps, then a celebration:
- * hear → link → beats → build → move → spell → use → done.
- * Each step puts another sense behind the same word. Replay, slower and skip sit in the
- * same place on every step, and Root watches from the corner the whole way through.
+ * The lesson: how new words are first taught.
  *
- * `/mission/[id]?stop=N` — `stop` is the journey stop this lesson belongs to.
+ * One word is seven steps, each putting another sense behind it:
+ * hear → link → beats → build → move → spell → use.
+ *
+ * A stop on the journey teaches a small set of words, so the route runs the seven steps for
+ * the first word, a short bridge, the seven steps for the next, and then one step that mixes
+ * the set. A word is recorded as soon as its own steps are done, so leaving half-way loses
+ * nothing: the stop picks up at the next word. Replay, slower and skip sit in the same place
+ * on every step.
+ *
+ * `/mission/[id]?stop=N` — `stop` is the journey stop this lesson belongs to. Without one (a
+ * word opened from its own page, or from the Finder) the lesson is that one word.
  */
 export default function Mission() {
   const params = useLocalSearchParams<{ id: string; stop?: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : (params.id ?? '');
   const stopRaw = Array.isArray(params.stop) ? params.stop[0] : params.stop;
   const { reduceMotion } = useTheme();
-  const insets = useSafeAreaInsets();
 
-  // Path words are not in `words` until they are learned; the bank resolves them by id.
-  const own = useStore((s) => s.words[id]);
-  const lex = useMemo(() => lexemeFor(id, own), [id, own]);
-  const steps = useMemo(() => (lex ? stepsFor(lex) : []), [lex]);
+  // What this visit will teach, fixed when the screen opens.
+  const [plan] = useState<Plan>(() => {
+    const st = useStore.getState();
+    const asked = stopRaw != null && stopRaw !== '' ? Number(stopRaw) : NaN;
+    const named = Number.isInteger(asked) ? st.journey.stops[asked] : undefined;
+    // The stop in the link if this word really is waiting on it, else whichever stop holds the word.
+    const stop = named && named.kind === 'learn' && !named.done && stopTodo(named).includes(id) ? asked : stopForWord(st, id);
+    if (stop < 0) return { queue: [id], stop: -1, before: 0, of: 1, trail: '' };
+    const s = st.journey.stops[stop];
+    const todo = stopTodo(s);
+    const of = stopWords(s).length;
+    const nth = st.journey.stops.slice(0, stop).filter((x) => x.kind === 'learn').length;
+    return { queue: [id, ...todo.filter((x) => x !== id)], stop, before: of - todo.length, of, trail: trailLine(st.journey.chapter, nth) };
+  });
 
+  const [wi, setWi] = useState(0);
   const [idx, setIdx] = useState(0);
+  const [phase, setPhase] = useState<Phase>('word');
+  const [taught, setTaught] = useState<Taught[]>([]);
+  const [outcome, setOutcome] = useState<StopOutcome | null>(null);
   const [leaving, setLeaving] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
   const [hook, setHook] = useState<string | null>(null);
   const [settled, setSettled] = useState(false);
-  const [footerH, setFooterH] = useState(150);
   const stats = useRef<MissionStats>({ hints: 0, retries: 0, skipped: [] });
-  const recorded = useRef(false);
-  const layout = useMemo(() => ({ setFooter: (h: number) => setFooterH((cur) => (Math.abs(cur - h) > 1 ? h : cur)) }), []);
+  const recorded = useRef(new Set<string>());
+  const closed = useRef(false);
+
+  // Path words are not in `words` until they are learned; the bank resolves them by id.
+  const wordId = plan.queue[Math.min(wi, plan.queue.length - 1)];
+  const own = useStore((s) => s.words[wordId]);
+  const lex = useMemo(() => lexemeFor(wordId, own), [wordId, own]);
+  const steps = useMemo(() => (lex ? stepsFor(lex) : []), [lex]);
+  // Every lexeme of the set, for the bar, the bridge and the last step.
+  const set = useMemo(() => plan.queue.map((w) => lexemeFor(w, useStore.getState().words[w])).filter((l): l is Lexeme => !!l), [plan]);
+  const pattern = useMemo(() => sharedPattern(set.map((l) => l.id)), [set]);
+  const mixes = set.length > 1;
 
   // No full-screen celebration may open over a step. They wait for the Done screen, and then a moment more so it gets its own beat first.
   // A lesson that finishes the chapter keeps them back until the story's ending has played.
-  useHoldUnlocks(!result || !settled || !!result.outcome?.chapterDone);
-  const finished = !!result;
+  const finished = phase === 'done';
+  useHoldUnlocks(!finished || !settled || !!outcome?.chapterDone);
   useEffect(() => {
     if (!finished) return;
     const t = setTimeout(() => setSettled(true), 2400);
     return () => clearTimeout(t);
   }, [finished]);
 
-  useEffect(() => {
-    const t = setTimeout(() => buddy.react('start'), 500);
-    return () => {
-      clearTimeout(t);
+  useEffect(
+    () => () => {
       stopSpeaking();
       stopListening();
-    };
-  }, []);
+    },
+    [],
+  );
 
   // Android back: ask before dropping a lesson that is under way.
-  const inProgress = !!lex && !result;
+  const inProgress = !!lex && !finished;
   useEffect(() => {
     if (!inProgress) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -88,6 +118,18 @@ export default function Mission() {
     });
     return () => sub.remove();
   }, [inProgress]);
+
+  /** The stop is cleared and the end screen shown. Once only. */
+  const close = useCallback(() => {
+    if (closed.current) return;
+    closed.current = true;
+    stopSpeaking();
+    stopListening();
+    const store = useStore.getState();
+    setOutcome(plan.stop >= 0 ? store.completeStop(plan.stop) : null);
+    buzz.good();
+    setPhase('done');
+  }, [plan.stop]);
 
   const advance = useCallback(
     (skipped: boolean) => {
@@ -100,26 +142,33 @@ export default function Mission() {
         setIdx(idx + 1);
         return;
       }
-      // The one place a lesson is recorded. A double tap on the last button must not record it twice.
-      if (recorded.current) return;
-      recorded.current = true;
+      // The one place a word is recorded. A double tap on the last button must not record it twice.
+      if (!lex || recorded.current.has(wordId)) return;
+      recorded.current.add(wordId);
       const final: MissionStats = { ...stats.current, skipped: [...stats.current.skipped] };
       const store = useStore.getState();
-      const before = store.words[id];
-      const first = !before?.learnedOn;
-      // Which journey stop this lesson finishes: the one in the link if it really is this word's, else whichever stop holds the word.
-      const asked = stopRaw != null && stopRaw !== '' ? Number(stopRaw) : NaN;
-      const named = Number.isInteger(asked) ? store.journey.stops[asked] : undefined;
-      const stop = named && named.kind === 'learn' && !named.done && named.wordId === id ? asked : stopForWord(store, id);
-      store.completeLesson(id, final);
-      if (hook) store.setHook(id, hook);
-      const outcome = stop >= 0 ? store.completeStop(stop) : null;
-      buzz.good();
-      buddy.react('finish');
-      setResult({ stats: final, outcome, first, steps });
+      const first = !store.words[wordId]?.learnedOn;
+      store.completeLesson(wordId, final);
+      if (hook) store.setHook(wordId, hook);
+      setTaught((t) => [...t, { lex, steps, stats: final, hook, first }]);
+      stats.current = { hints: 0, retries: 0, skipped: [] };
+      if (wi < plan.queue.length - 1) {
+        sfx.play('good');
+        setPhase('bridge');
+      } else if (mixes) {
+        sfx.play('pop');
+        setPhase('together');
+      } else close();
     },
-    [idx, id, steps, stopRaw, hook],
+    [idx, steps, lex, wordId, hook, wi, plan.queue.length, mixes, close],
   );
+
+  const nextWord = () => {
+    setHook(null);
+    setIdx(0);
+    setWi(wi + 1);
+    setPhase('word');
+  };
 
   if (!lex) {
     return (
@@ -134,12 +183,19 @@ export default function Mission() {
     );
   }
 
-  if (result) return <Done lex={lex} steps={result.steps} stats={result.stats} outcome={result.outcome} hook={hook} first={result.first} />;
+  if (phase === 'done') return <Done taught={taught} outcome={outcome} story={plan.trail} />;
+
+  // One bar for the whole stop: every step of every word, the mixing step, and the end.
+  const perWord = set.map((l) => stepsFor(l).length);
+  const total = perWord.reduce((a, b) => a + b, 0) + (mixes ? 1 : 0) + 1;
+  const before = perWord.slice(0, wi).reduce((a, b) => a + b, 0);
+  const doneSteps = phase === 'word' ? before + idx : phase === 'bridge' ? before + (perWord[wi] ?? 0) : total - 2;
+  const top = <TopBar back="close" onBack={() => setLeaving(true)} center={<LessonBar total={total} done={doneSteps} />} right={<View style={{ width: 4 }} />} />;
 
   const step = steps[idx];
   const props: StepProps = {
     lex,
-    top: <TopBar back="close" onBack={() => setLeaving(true)} center={<LessonBar total={steps.length + 1} done={idx} />} right={<View style={{ width: 4 }} />} />,
+    top,
     next: () => advance(false),
     skip: () => advance(true),
     addHint: () => {
@@ -153,22 +209,23 @@ export default function Mission() {
   };
 
   return (
-    <LessonLayout.Provider value={layout}>
+    <>
       <View style={{ flex: 1 }}>
-        <Animated.View key={step} entering={reduceMotion ? undefined : FadeIn.duration(220)} style={{ flex: 1 }}>
-          {step === 'hear' && <Hear {...props} />}
-          {step === 'link' && <Link {...props} />}
-          {step === 'beats' && <Beats {...props} />}
-          {step === 'build' && <Build {...props} />}
-          {step === 'move' && <Move {...props} />}
-          {step === 'spell' && <Spell {...props} />}
-          {step === 'use' && <Use {...props} />}
+        <Animated.View key={`${phase}-${wordId}-${step}`} entering={reduceMotion ? undefined : FadeIn.duration(220)} style={{ flex: 1 }}>
+          {phase === 'bridge' && set[wi + 1] && <Bridge done={lex} next={set[wi + 1]} at={plan.before + wi + 1} of={plan.of} pattern={pattern} top={top} onNext={nextWord} />}
+          {phase === 'together' && <Together words={set} pattern={pattern} top={top} next={close} skip={close} />}
+          {phase === 'word' && (
+            <>
+              {step === 'hear' && <Hear {...props} />}
+              {step === 'link' && <Link {...props} />}
+              {step === 'beats' && <Beats {...props} />}
+              {step === 'build' && <Build {...props} />}
+              {step === 'move' && <Move {...props} />}
+              {step === 'spell' && <Spell {...props} />}
+              {step === 'use' && <Use {...props} />}
+            </>
+          )}
         </Animated.View>
-
-        {/* Root rests on top of the footer, in the corner, for the whole lesson. */}
-        <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: footerH + 20 + insets.bottom }}>
-          <Sidekick size={104} />
-        </View>
       </View>
 
       <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave?">
@@ -186,6 +243,6 @@ export default function Mission() {
           }}
         />
       </Sheet>
-    </LessonLayout.Provider>
+    </>
   );
 }

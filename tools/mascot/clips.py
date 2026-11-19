@@ -1,10 +1,10 @@
 """
-Root's animation clips.
+Root's poses.
 
-Every clip is a function of phase t (0 … 1) that returns pose overrides (see rootrig.BASE).
-Loops are built from whole-cycle sines and looping keys, so the last frame flows into the first.
-The leaves are not animated by hand: sample() bends them from how the body moved a moment ago
-(follow-through), on top of anything a clip asks for.
+Every pose is a function that returns pose overrides (see rootrig.BASE). The app shows only still pictures.
+The first 33 poses were animation clips once: they are functions of a phase t (0 … 1) and the still is their
+`hold` frame, with the leaves bent by how the body moved a moment before (sample() adds that follow-through).
+Poses added since are plain stills: they ignore t and are registered with Still(...).
 """
 import math
 
@@ -82,7 +82,7 @@ def breathe(t, n=1):
     return {'sq': 1 + 0.014 * s(t, n), 'dz': 0.008 * s(t, n)}
 
 
-# ── clips ────────────────────────────────────────────────────────────────────
+# ── poses that were animation clips (functions of the phase t) ───────────────
 def idle(t):
     look = key(t, [(0.0, (0, 0)), (0.52, (0, 0)), (0.62, (0.75, 0.1)), (0.8, (0.75, 0.1)), (0.9, (0, 0))], loop=True)
     sway = s(t, 1, 0.1)
@@ -464,6 +464,95 @@ def hello(t):
             'armL': {'hand': RL}, 'look': (0, 0), 'blink': blink(k, (0.6,)), 'mouth': 'laugh' if k < 0.6 else 'open', 'open': 0.95, 'brow': (0.5 * up, 0)}
 
 
+
+# ── still-only poses (no motion: t is ignored) ───────────────────────────────
+def trace(t):
+    return {'pos': (-0.12, 0, 0), 'tilt': 2, 'lean': (4, 5), 'twist': 12,
+            'armR': {'hand': (1.14, -0.66, 0.28), 'pole': (0.6, 0.2, -1), 'len': 0.99}, 'finger': (0, 1),
+            'armL': {'hand': RL},
+            'look': (0.85, 0.3), 'mouth': 'smile', 'brow': (0.25, -0.35), 'mroll': 4}
+
+
+def tap(t):
+    return {'lean': (5, 2), 'twist': 6,
+            'armR': {'hand': (0.74, -0.92, -0.42), 'pole': (0.8, -0.2, 1), 'len': 1.05}, 'finger': (0, 1),
+            'armL': HIPL, 'look': (0.5, -0.85), 'mouth': 'open', 'open': 0.95, 'brow': (0.5, 0)}
+
+
+def marble(t):
+    return {'tilt': 2, 'lean': (2, 3), 'twist': 8,
+            'armR': {'hand': (0.92, -0.62, 0.26), 'pole': (1, 0.2, -1), 'len': 1.0},
+            'props': {'marble': {'at': 'handR', 'upright': True, 'loc': (0.0, -0.05, 0.25), 'rot': (0, 0, 30), 'scale': 1.25}},
+            'armL': {'hand': RL}, 'look': (0.8, 0.3), 'wide': 1.08, 'mouth': 'o', 'open': 0.6, 'brow': (0.9, 0.1)}
+
+
+def speak(t):
+    return {'lean': (7, -3), 'twist': -10, 'tilt': -2,
+            'armR': {'hand': (0.62, -0.78, -0.07), 'pole': (1, 0.0, -1), 'len': 1.05, 'rot': (0, -30, 0)},
+            'armL': {'hand': add(RL, (-0.04, 0, 0.04))},
+            'eyes': 'happy', 'mouth': 'laugh', 'open': 1.0, 'brow': (0.8, 0)}
+
+
+def headphones(t):
+    return {'tilt': 3, 'lean': (0, 3),
+            'props': {'headphones': {'at': 'body'}},
+            'armR': {'hand': (0.96, -0.2, 0.12), 'pole': (0.45, 0.3, -1), 'len': 0.8},
+            'armL': {'hand': RL}, 'eyes': 'happy', 'mouth': 'smile', 'brow': (0.5, 0)}
+
+
+def readmap(t):
+    return {'lean': (6, 0),
+            'props': {'map': {'at': 'body', 'loc': (0, -1.0, -0.60), 'rot': (-30, 0, 0), 'scale': 1.15}},
+            'armL': {'hand': (-0.56, -0.96, -0.58), 'pole': (-1, 0.2, -0.5), 'len': 1.0},
+            'armR': {'hand': (0.56, -0.96, -0.58), 'pole': (1, 0.2, -0.5), 'len': 1.0},
+            'look': (0.15, -0.9), 'mouth': 'o', 'open': 0.32, 'brow': (0.8, 0.15), 'wide': 1.04}
+
+
+def telescope(t):
+    return {'pos': (-0.18, 0, 0), 'lean': (-3, 3), 'twist': 10, 'tilt': 2,
+            'props': {'telescope': {'at': 'body', 'loc': (0.37, -0.76, 0.27), 'rot': (10, 42, 0), 'scale': 1.35}},
+            'armR': {'hand': (0.83, -0.905, 0.585), 'pole': (1, 0.2, -1), 'len': 1.35},
+            'armL': HIPL, 'eyes': 'winkL', 'mouth': 'open', 'open': 0.8, 'brow': (0.5, 0)}
+
+
+def basket(t):
+    return {'lean': (-2, 0),
+            'props': {'basket': {'at': 'body', 'loc': (0, -1.0, -0.92), 'rot': (14, 0, 0), 'scale': 1.2}},
+            'armL': {'hand': (-0.44, -1.02, -0.90), 'pole': (-1, 0.2, -0.3), 'len': 1.15},
+            'armR': {'hand': (0.44, -1.02, -0.90), 'pole': (1, 0.2, -0.3), 'len': 1.15},
+            'mouth': 'laugh', 'open': 0.85, 'brow': (0.7, 0)}
+
+
+def compass(t):
+    return {'lean': (4, -3), 'twist': -8, 'tilt': -2,
+            'armL': {'hand': (-0.76, -0.90, -0.34), 'pole': (-1, 0.2, -0.8), 'len': 1.0},
+            'props': {'compass': {'at': 'handL', 'upright': True, 'loc': (0, -0.05, 0.26), 'rot': (-40, 0, 0), 'scale': 1.15}},
+            'armR': {'hand': RR}, 'look': (-0.7, -0.75), 'mouth': 'open', 'open': 0.6, 'brow': (0.8, 0.1)}
+
+
+def shiver(t):
+    return {'sq': 0.96, 'dz': -0.04, 'lean': (5, -3), 'tilt': -3,
+            'armR': {'hand': (-0.36, -0.56, -0.60), 'pole': (0.2, -1, 0), 'len': 1.5},
+            'armL': {'hand': (0.36, -0.64, -0.66), 'pole': (-0.2, -1, 0), 'len': 1.66},
+            'legL': {'foot': (-0.21, 0, 0), 'rot': (0, 0, 9)}, 'legR': {'foot': (0.21, 0, 0), 'rot': (0, 0, -9)},
+            'look': (0.65, 0.6), 'mouth': 'o', 'open': 0.4, 'brow': (0.7, 0.9), 'leaf': (6, 16, 14)}
+
+
+def hike(t):
+    P = _walk(0.15, stride=0.52, lift=0.17, swing=0.34, bob=0.06, yaw=36, lean=5)
+    P['props'] = {'backpack': {'at': 'body', 'loc': (0, 1.0, -0.17), 'scale': 1.45}, 'strapL': {'at': 'body'},
+                  'bedroll': {'at': 'body', 'loc': (0, 0.98, 0.56), 'rot': (0, 0, 0), 'scale': 1.15}}
+    P['look'] = (0.4, 0.1); P['mouth'] = 'smile'; P['brow'] = (0.2, -0.5)
+    return P
+
+
+def calm(t):
+    return {'sq': 1.02, 'lean': (-2, 0),
+            'armL': {'hand': (-0.10, -0.68, -0.62), 'pole': (-1, 0.3, -0.6), 'len': 1.15},
+            'armR': {'hand': (0.08, -0.75, -0.55), 'pole': (1, 0.3, -0.6), 'len': 1.15},
+            'eyes': 'shut', 'mouth': 'smile', 'brow': (0.3, 0.1), 'leaf': (0, 4, 8)}
+
+
 # ── registry ─────────────────────────────────────────────────────────────────
 PX = 127           # pixels per unit: a standing Root is about 370 px tall
 BOTTOM = -0.08
@@ -484,6 +573,11 @@ class Clip:
         self.seat = seat
         self.aspect = aspect                 # layout width / layout height
         self.face = face                     # z of the middle of the face, for the round avatar crop
+
+
+def Still(fn, **kw):
+    """A pose with no motion: one frame."""
+    return Clip(fn, 1, 1, hold=0, **kw)
 
 
 CLIPS = {
@@ -520,6 +614,29 @@ CLIPS = {
     'yes': Clip(yes, 16, 20, loop=False, hold=7),
     'no': Clip(no, 20, 18, loop=False, hold=4),
     'hello': Clip(hello, 25, 15, loop=False, box='wide', hold=24, aspect=0.74),
+    # still-only poses
+    'trace': Still(trace, box='wide', aspect=0.82),
+    'tap': Still(tap, aspect=0.7),
+    'marble': Still(marble, box='wide', aspect=0.8),
+    'speak': Still(speak, aspect=0.7),
+    'headphones': Still(headphones, aspect=0.74),
+    'map': Still(readmap),
+    'telescope': Still(telescope, box='wide', aspect=0.82),
+    'basket': Still(basket),
+    'compass': Still(compass, aspect=0.74),
+    'shiver': Still(shiver),
+    'hike': Still(hike, aspect=0.7),
+    'calm': Still(calm),
+}
+
+# keepsake objects, rendered on their own (render.py --keepsake): id -> prop and how it is turned (degrees)
+KEEPSAKES = {
+    'garden': {'prop': 'can', 'rot': (20, 8, -30)},
+    'orchard': {'prop': 'basket', 'rot': (22, 0, 0)},
+    'market': {'prop': 'bunting', 'rot': (0, 0, 14)},
+    'woods': {'prop': 'lantern', 'rot': (12, 0, 20), 'scale': 1.5, 'extra': ('halo',), 'pad': 0.0},
+    'harbour': {'prop': 'compass', 'rot': (-18, 0, -24)},
+    'summit': {'prop': 'telescope', 'rot': (28, 52, 0)},
 }
 
 

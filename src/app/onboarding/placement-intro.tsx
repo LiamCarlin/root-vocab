@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { List, Play, SkipForward, TimerOff } from 'lucide-react-native';
 import { View } from 'react-native';
 
-import { Reaction } from '@/components/Buddy';
+import { Figure } from '@/components/Buddy';
 import { Pop } from '@/components/fx';
 import { Btn, Rise, Screen, Tag, TopBar, Txt } from '@/components/ui';
 import { STRANDS, STRAND_ORDER } from '@/data/profile';
@@ -39,7 +39,7 @@ export default function PlacementIntro() {
         </>
       }>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 26 }}>
-        <Reaction pose="search" size={190} />
+        <Figure pose="search" size={190} />
         <Rise i={1}>
           <Txt v="display" center accessibilityRole="header">
             Quick check

@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { ArrowRight, RotateCcw } from 'lucide-react-native';
 import { View, useWindowDimensions } from 'react-native';
 
-import { Reaction } from '@/components/Buddy';
+import { Figure } from '@/components/Buddy';
 import { Float, Pop, Rays } from '@/components/fx';
 import { Btn, Rise, Screen, Txt } from '@/components/ui';
 import { sfx } from '@/lib/sfx';
@@ -39,7 +39,7 @@ export default function Welcome() {
               <View style={{ width: disc, height: disc, borderRadius: disc / 2, backgroundColor: 'rgba(255,255,255,0.42)' }} />
             </Float>
           </Pop>
-          <Reaction pose="wave" size={size} delay={220} />
+          <Figure pose="wave" size={size} delay={220} />
         </View>
         <Rise i={2}>
           <Txt v="hero" center accessibilityRole="header">

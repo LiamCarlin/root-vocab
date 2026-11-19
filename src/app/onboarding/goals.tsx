@@ -73,7 +73,7 @@ export default function Goals() {
       {/* How much in a day. Root looks over the top of the card. */}
       <Rise i={4} style={{ marginTop: 58 }}>
         <View style={{ position: 'relative' }}>
-          <Peek from="top" size={92} align="end" inset={26} delay={700} />
+          <Peek from="top" size={92} align="end" inset={26} />
           <Block pad={18} style={{ gap: 12 }}>
             <SectionLabel style={{ marginTop: 0 }}>Each day</SectionLabel>
             <View style={{ flexDirection: 'row', gap: 10 }}>

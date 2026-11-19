@@ -2,10 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { House, LogOut, Play as PlayIcon, RotateCcw, SkipForward } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { BackHandler, Keyboard, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInRight, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Sidekick } from '@/components/Buddy';
 import { GAMES, type GameResult } from '@/components/games';
 import { Mascot } from '@/components/Mascot';
 import { ComboFlame, ComboPop } from '@/components/play/Combo';
@@ -15,30 +14,30 @@ import { praise, sessionMeta, type Played } from '@/components/play/meta';
 import { SessionDone } from '@/components/play/SessionDone';
 import { Bar, Btn, IconBtn, Screen, Sheet, TopBar, Txt } from '@/components/ui';
 import { buzz, stopListening, stopSpeaking } from '@/lib/audio';
-import { buddy, useHoldUnlocks } from '@/lib/buddy';
-import { buildSession, type Exercise, type GameId, type SessionKind } from '@/lib/engine';
-import { chapterWords } from '@/lib/journey';
+import { useHoldUnlocks } from '@/lib/unlocks';
+import { HANDS, buildSession, type Exercise, type GameId, type SessionKind } from '@/lib/engine';
+import { chapterWords, stopWords } from '@/lib/journey';
 import { questState, questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
 import { lexOf, useStore, type SessionSummary, type StopOutcome } from '@/lib/store';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
 
-const KINDS: SessionKind[] = ['find', 'spell', 'mix', 'challenge', 'game'];
+const KINDS: SessionKind[] = ['find', 'spell', 'mix', 'challenge', 'game', 'hands'];
 const one = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v) ?? '';
 const leave = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
 
 type Item = Exercise & { retry?: boolean };
 type Phase = 'start' | 'play' | 'half' | 'done';
 const LEDGE = 58;
-/** Trace, marble and sky-writing are supported practice, not recall: finishing one is simply done. */
-const SENSORY: GameId[] = ['trace', 'marble', 'sky'];
+/** The hands-on games are supported practice, not recall: finishing one is simply done. */
+const SENSORY: GameId[] = HANDS;
 
 /**
- * The session runner: /play/find, /play/spell, /play/mix, /play/challenge, /play/game?game=clue.
+ * The session runner: /play/find, /play/spell, /play/mix, /play/hands, /play/challenge, /play/game?game=clue.
  *
  * It owns everything around an exercise so that every game feels like part of one thing:
- * the arrival card, the progress bar and the run of right answers, Root watching from the
- * corner, the feedback that slides up after each answer, a breath halfway, a second go at
+ * the arrival card, the progress bar and the run of right answers, the feedback that slides
+ * up after each answer, a breath halfway, a second go at
  * anything missed, and the summary. A game only draws its own play area and reports once.
  */
 export default function Play() {
@@ -59,7 +58,7 @@ export default function Play() {
   const [queue, setQueue] = useState<Item[]>(() => {
     const s = useStore.getState();
     const words = wordsParam.split(',').map((w) => w.trim()).filter(Boolean);
-    return buildSession(s, kind, { game, words: words.length ? words : kind === 'challenge' ? chapterWords(s) : undefined });
+    return buildSession(s, kind, { game, words: words.length ? words : kind === 'challenge' || kind === 'hands' ? chapterWords(s) : undefined });
   });
   const [base] = useState(queue.length);
   const [questsBefore] = useState<Record<string, number>>(() => {
@@ -106,13 +105,6 @@ export default function Play() {
     return () => sub.remove();
   }, [inProgress]);
 
-  // Root moves up to sit on the feedback bar while it is showing.
-  const lift = useSharedValue(0);
-  useEffect(() => {
-    lift.set(withTiming(res && barH ? Math.max(0, barH - 6) : 0, { duration: reduceMotion ? 0 : 220 }));
-  }, [res, barH, lift, reduceMotion]);
-  const liftStyle = useAnimatedStyle(() => ({ bottom: lift.value }));
-
   const finish = (all: Played[]) => {
     const st = useStore.getState();
     const first = all.filter((p) => !p.retry);
@@ -121,7 +113,7 @@ export default function Play() {
     let outcome: StopOutcome | null = null;
     if (stopIdx !== null && kind !== 'game') {
       const stop = st.journey.stops[stopIdx];
-      if (stop && !stop.done && (stop.kind === kind || (stop.kind === 'learn' && !stop.wordId))) outcome = st.completeStop(stopIdx);
+      if (stop && !stop.done && (stop.kind === kind || (stop.kind === 'learn' && !stopWords(stop).length))) outcome = st.completeStop(stopIdx);
     }
     if (!first.length) {
       if (outcome?.chapterDone) router.replace('/story/outro');
@@ -178,12 +170,9 @@ export default function Play() {
       buzz.nudge();
     }
     if (r.r > 0 && (run === 3 || (run >= 5 && run % 5 === 0))) {
-      buddy.react('combo');
       setPop({ n: run, id: Date.now() });
       setTimeout(() => sfx.play('combo'), 380);
       if (run === 5) st.bump('combo5');
-    } else {
-      buddy.react(r.r > 0 ? 'correct' : 'wrong');
     }
 
     setLine(sensory ? 'Done' : praise(r.r, ex.strand, retry, played.length));
@@ -281,14 +270,10 @@ export default function Play() {
           {pop && <ComboPop key={pop.id} n={pop.n} />}
         </View>
 
-        {/* The ledge: skip on the left, Root's corner on the right. */}
+        {/* The ledge: skip sits here, under the play area. */}
         <View style={{ height: LEDGE + Math.max(insets.bottom, 8), flexDirection: 'row', alignItems: 'flex-start' }}>
           <IconBtn icon={SkipForward} label="Skip this one" size={46} disabled={!!res} onPress={() => advance(true)} />
         </View>
-
-        <Animated.View pointerEvents="box-none" style={[{ position: 'absolute', left: 0, right: 0, height: 150 }, liftStyle]}>
-          {ex?.game !== 'cover' && <Sidekick size={104} />}
-        </Animated.View>
       </Screen>
 
       {res && lex && <FeedbackBar res={res} lex={lex} line={line} positive={!!ex && SENSORY.includes(ex.game) && res.r > 0} last={idx + 1 >= queue.length} onContinue={() => advance(false)} onHeight={setBarH} />}

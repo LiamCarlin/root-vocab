@@ -3,10 +3,9 @@ import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Peek, Reaction } from '@/components/Buddy';
+import { Peek, Figure } from '@/components/Buddy';
 import { Pop } from '@/components/fx';
 import { buzz } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
 import type { SessionMeta } from './meta';
@@ -52,7 +51,6 @@ export function StartCard({ meta, total, onDone }: { meta: SessionMeta; total: n
   const go = useAutoAdvance(reduceMotion ? 1000 : 1500, onDone);
   useEffect(() => {
     sfx.play('whoosh');
-    buddy.react('start');
   }, []);
   const Icon = meta.icon;
   return (
@@ -78,7 +76,7 @@ export function StartCard({ meta, total, onDone }: { meta: SessionMeta; total: n
             <Dots total={total} done={0} onBlock />
           </Pop>
           <View style={{ height: 210, justifyContent: 'flex-end' }}>
-            <Reaction pose={meta.pose} size={200} delay={220} pokable={false} />
+            <Figure pose={meta.pose} size={200} delay={220} />
           </View>
         </SafeAreaView>
       </Pressable>
@@ -105,7 +103,7 @@ export function HalfwayCard({ done, total, onDone }: { done: number; total: numb
               <Dots total={total} done={done} onBlock />
             </View>
           </Pop>
-          <Peek from="top" size={128} align="center" delay={180} />
+          <Peek from="top" size={128} align="center" />
         </View>
       </View>
     </Animated.View>

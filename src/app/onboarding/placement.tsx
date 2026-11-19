@@ -3,7 +3,7 @@ import { ArrowRight, Check, CircleQuestionMark, Lightbulb, LogOut, Mic, Play, Sk
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, View } from 'react-native';
 
-import { Reaction, Sidekick } from '@/components/Buddy';
+import { Figure } from '@/components/Buddy';
 import type { Pose } from '@/components/Mascot';
 import { Pop, Wiggle } from '@/components/fx';
 import { Controls, SylWord } from '@/components/learn';
@@ -11,7 +11,7 @@ import { Block, Btn, Field, IconBtn, Rise, Screen, Sheet, Tag, TopBar, Txt } fro
 import { STRANDS, TOPICS, type Strand } from '@/data/profile';
 import { BANK, type BankWord } from '@/data/words';
 import { buzz, listenOnce, micAvailable, say, speakable, stopListening, stopSpeaking } from '@/lib/audio';
-import { buddy, useHoldUnlocks } from '@/lib/buddy';
+import { useHoldUnlocks } from '@/lib/unlocks';
 import { assessNext, bumpSkill, difficulty } from '@/lib/engine';
 import { closeEnough, gapped, judgeSpoken, levenshtein, plain } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
@@ -123,7 +123,6 @@ export default function Placement() {
     else {
       // A small beat between items. Root looks up for each new one; it never judges an answer here.
       sfx.play('pop');
-      buddy.react('start');
     }
     setSt({ si, n, inter, theta, used, missed, item: next, res: null });
   };
@@ -178,7 +177,7 @@ export default function Placement() {
       <>
         <Screen tone={meta.tone} scroll={false} top={<TopBar back="close" onBack={() => setLeaving(true)} center={bars} />} footer={<Btn icon={Play} a11y={`Start the ${meta.label} part`} onPress={() => setSt({ ...st, inter: false })} />}>
           <View key={strand} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22 }}>
-            <Reaction pose={POSE[strand]} size={180} />
+            <Figure pose={POSE[strand]} size={180} />
             <Pop delay={160}>
               <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center' }}>
                 <meta.icon size={34} color="#FFFFFF" strokeWidth={2.4} />
@@ -211,10 +210,6 @@ export default function Placement() {
         {strand === 'find' && <FindItem key={item.word.id} item={item} res={st.res} onAnswer={answer} />}
         {strand === 'spell' && <SpellItem key={item.word.id} item={item} res={st.res} onAnswer={answer} />}
       </Screen>
-      {/* Root keeps the learner company from the corner. Neutral and encouraging only. */}
-      <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: st.res ? 96 : 0, height: 150 }}>
-        <Sidekick size={96} />
-      </View>
       {leave}
     </>
   );
