@@ -20,6 +20,7 @@ import { HANDS, buildSession, type Exercise, type GameId, type SessionKind } fro
 import { chapterWords, stopWords } from '@/lib/journey';
 import { questState, questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
+import { clock, noteUi } from '@/lib/signals';
 import { lexOf, useStore, type SessionSummary, type StopOutcome } from '@/lib/store';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
 
@@ -69,6 +70,16 @@ export default function Play() {
     return Object.fromEntries(questsToday(s).map((id) => [id, questState(s, id).have]));
   });
   const [startedAt] = useState(() => Date.now());
+  // A game picked in the arcade says something about what the learner likes doing.
+  useEffect(() => {
+    if (kind === 'game' && game) useStore.getState().sense({ k: 'ui', what: 'arcade', game });
+  }, [kind, game]);
+  /** Leaving a round half-way: the model takes it as a sign the round was too much. */
+  const walkOut = () => {
+    const first = played.filter((p) => !p.retry);
+    if (phase !== 'start' && first.length < base) useStore.getState().sense({ k: 'session', total: first.length, right: first.filter((p) => p.r > 0).length, ms: clock() - startedAt, hour: new Date().getHours(), left: true });
+    leave();
+  };
 
   const [phase, setPhase] = useState<Phase>('start');
   const [idx, setIdx] = useState(0);
@@ -159,7 +170,7 @@ export default function Play() {
     const retry = !!ex.retry;
     // A second go is practice: it can earn "right with help" at best, and a second miss is not counted twice.
     const scored: 0 | 0.5 | 1 = retry ? (r.r > 0 ? 0.5 : 0) : r.r;
-    if (!retry || scored > 0) st.recordAttempt({ id: ex.wordId, strand: ex.strand, r: scored, game: ex.game, ms: r.ms, cue: r.cue });
+    if (!retry || scored > 0) st.recordAttempt({ id: ex.wordId, strand: ex.strand, r: scored, game: ex.game, ms: r.ms, cue: r.cue, attempt: r.attempt, pos: played.length });
 
     const sensory = SENSORY.includes(ex.game) && r.r > 0;
     const run = r.r > 0 ? combo + 1 : 0;
@@ -197,7 +208,7 @@ export default function Play() {
         label="Leave"
         onPress={() => {
           setLeaving(false);
-          leave();
+          walkOut();
         }}
       />
     </Sheet>
@@ -275,7 +286,16 @@ export default function Play() {
 
         {/* The ledge: skip on the left, Root on the right, under the play area. */}
         <View style={{ height: LEDGE + Math.max(insets.bottom, 8), flexDirection: 'row', alignItems: 'flex-start' }}>
-          <IconBtn icon={SkipForward} label="Skip this one" size={46} disabled={!!res} onPress={() => advance(true)} />
+          <IconBtn
+            icon={SkipForward}
+            label="Skip this one"
+            size={46}
+            disabled={!!res}
+            onPress={() => {
+              noteUi('skip');
+              advance(true);
+            }}
+          />
           {/* Root stands in the other corner, doing what this exercise is about. */}
           {ex && <Companion pose={GAME_POSE[ex.game]} size={84} style={{ position: 'absolute', right: -4, bottom: Math.max(insets.bottom, 8) + 2 }} />}
         </View>

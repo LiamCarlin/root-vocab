@@ -22,6 +22,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Circle } from 'react-native-svg';
 
 import { buzz } from '@/lib/audio';
+import { noteTap } from '@/lib/signals';
 import { GUTTER, ON_BLOCK, motion, radius, useTheme, type BlockTone, type Colors, type Variant } from '@/theme';
 import { Mascot, type Pose } from './Mascot';
 
@@ -64,6 +65,7 @@ export function Tap({ style, onPress, haptic = true, disabled, children, scaleTo
       onPressOut={() => s.set(withTiming(1, { duration: motion.tap, easing: Easing.out(Easing.quad) }))}
       onPress={(e) => {
         if (haptic) buzz.tap();
+        noteTap(rest.accessibilityLabel);
         onPress?.(e);
       }}
       style={[style, anim]}>
@@ -112,6 +114,7 @@ export function Btn({ icon: Icon, iconRight: IconR, label, a11y, onPress, kind =
     <Pressable
       onPress={() => {
         buzz.tap();
+        noteTap(a11y ?? label);
         onPress?.();
       }}
       onPressIn={() => y.set(withTiming(lipH, { duration: 70 }))}

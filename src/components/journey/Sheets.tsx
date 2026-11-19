@@ -1,4 +1,5 @@
-import { Check, Gift, Snowflake } from 'lucide-react-native';
+import { router, type Href } from 'expo-router';
+import { BookOpen, Check, Gift, Snowflake, Store, Wrench } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 
@@ -11,7 +12,7 @@ import { buzz } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/unlocks';
 import { weekOf } from '@/lib/dates';
 import { sfx } from '@/lib/sfx';
-import { GEMS, MAX_FREEZES, streak, today, useStore } from '@/lib/store';
+import { GEMS, MAX_FREEZES, journalPages, repairable, streak, today, useStore } from '@/lib/store';
 import { ON_BLOCK, useTheme } from '@/theme';
 
 // Two letters each: a lone T or S could be either day.
@@ -27,6 +28,13 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
   const lit = s.practiceDays.includes(t);
   const week = weekOf(t);
   const canBuy = s.gems >= GEMS.freeze && s.freezes < MAX_FREEZES;
+  const fix = repairable(s);
+
+  const mend = () => {
+    if (!s.repairStreak()) return buzz.nudge();
+    sfx.play('gem');
+    buzz.good();
+  };
 
   const buy = () => {
     if (!s.buyFreeze()) return buzz.nudge();
@@ -57,6 +65,19 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
           );
         })}
       </Block>
+
+      {/* A streak that broke in the last couple of days can be mended. */}
+      {fix && (
+        <Block tone="orange" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt v="heading">Mend streak</Txt>
+            <Txt v="bodyS" color="ink2">
+              {fix.lost} days, saved
+            </Txt>
+          </View>
+          <Btn kind="white" small disabled={s.gems < fix.cost} a11y={`Mend your ${fix.lost} day streak for ${fix.cost} gems`} onPress={mend} label={String(fix.cost)} icon={Wrench} style={{ minWidth: 112 }} />
+        </Block>
+      )}
 
       {/* Freezes: each one covers a missed day so the streak survives it. */}
       <Block tone="brand" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
@@ -90,6 +111,16 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
           style={{ minWidth: 112 }}
         />
       </Block>
+      <Btn
+        kind="soft"
+        icon={Store}
+        label="Shop"
+        a11y="Open the shop: pledges, and rebuilding the valley"
+        onPress={() => {
+          onClose();
+          router.push('/shop' as Href);
+        }}
+      />
     </Sheet>
   );
 }
@@ -98,15 +129,20 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
 export function ChestSheet({ index, onClose }: { index: number | null; onClose: () => void }) {
   const openChest = useStore((s) => s.openChest);
   const [won, setWon] = useState<number | null>(null);
+  const [page, setPage] = useState(false);
   // Anything the chest unlocks (a streak, the daily goal) waits until the sheet is closed.
   useHoldUnlocks(index !== null);
 
   const open = () => {
     if (index === null || won !== null) return;
+    const before = journalPages(useStore.getState());
     setWon(openChest(index));
+    // Every chest holds a page of the journal, until all of them are found.
+    setPage(journalPages(useStore.getState()) > before);
   };
   const close = () => {
     setWon(null);
+    setPage(false);
     onClose();
   };
 
@@ -125,7 +161,23 @@ export function ChestSheet({ index, onClose }: { index: number | null; onClose: 
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
         {index !== null && <Figure key={won === null ? 'wait' : 'won'} pose={won === null ? 'gasp' : 'cheer'} size={104} />}
-        <View style={{ flex: 1 }}>{won === null ? <Btn icon={Gift} label="Open" onPress={open} /> : <Btn kind="soft" icon={Check} label="Done" onPress={close} />}</View>
+        <View style={{ flex: 1, gap: 10 }}>
+          {won !== null && page && (
+            <Pop delay={700}>
+              <Btn
+                kind="orange"
+                icon={BookOpen}
+                label="New page"
+                a11y="A page of the journal was in the chest. Read it."
+                onPress={() => {
+                  close();
+                  router.push('/journal' as Href);
+                }}
+              />
+            </Pop>
+          )}
+          {won === null ? <Btn icon={Gift} label="Open" onPress={open} /> : <Btn kind="soft" icon={Check} label="Done" onPress={close} />}
+        </View>
       </View>
     </Sheet>
   );

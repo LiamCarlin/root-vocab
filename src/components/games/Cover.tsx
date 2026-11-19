@@ -69,7 +69,7 @@ export function Cover({ lex, onResult, done }: GameProps) {
     const exact = sameWord(attempt, lex.text);
     const near = !exact && editsFrom(attempt, lex.text) <= 1;
     setChecked(attempt);
-    report({ r: exact ? (peeks ? 0.5 : 1) : near ? 0.5 : 0, cue: peeks, note: exact ? undefined : <SpellNote lex={lex} attempt={attempt} /> });
+    report({ r: exact ? (peeks ? 0.5 : 1) : near ? 0.5 : 0, cue: peeks, attempt, note: exact ? undefined : <SpellNote lex={lex} attempt={attempt} /> });
   };
 
   const wrote = checked ?? attempt;

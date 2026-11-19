@@ -10,7 +10,7 @@ A word app for people with dyslexia. Root trains three things:
 
 It teaches general English vocabulary (about 300 words in six levels, plus any word the learner looks up) with Orton-Gillingham ideas: structured, cumulative, multisensory and diagnostic. What the learner does day to day, what they like and what they want to get better at flavour the examples and the order words arrive in. They never limit the words.
 
-It reads nothing from your email or other apps. Everything it knows comes from what you do inside it.
+It reads nothing from your email or other apps. Everything it knows comes from what you do inside it, and all of it stays on the phone: the model of the learner is trained there, and friends are added by passing a card from hand to hand, with no account and no server.
 
 Built with Expo SDK 58, Expo Router and TypeScript.
 
@@ -28,7 +28,7 @@ Two things need a real phone:
 - **Tilt and shake** use the accelerometer. Simulators and browsers have none, so the marble run falls back to dragging on the board and the sand tray to its Smooth button.
 - **Voice input** uses a native module that Expo Go does not include. Make a development build with `npx expo run:ios` for the microphone; everywhere else saying a word is taken on trust, and written answers are typed.
 
-Checks: `npx tsc --noEmit` and `npx eslint src`.
+Checks: `npx tsc --noEmit` and `npx expo lint`. `npx tsx tools/sim/run.ts` runs the learner model against made-up learners whose true level is known (see below).
 
 ## The design rules
 
@@ -44,28 +44,90 @@ Tokens live in `src/theme/tokens.ts`; the kit is `src/components/ui.tsx`.
 
 Setup is short: a name (optional), what your days look like, what you like, what you want. Then a **placement** of a few minutes, with no timer, takes a handful of words through each strand and sets a starting level for each.
 
-After that every answer in every game updates four things (`src/lib/store.ts`, `src/lib/engine.ts`):
+After that Root watches what the learner does and keeps a model of them, **the mind** (`src/lib/mind.ts`). It is trained on the phone, one answer at a time, and it does three jobs.
 
-- **A level per strand**, 1.0 to 6.9. The placement, and any word Root has not taught yet, move it quickly by how surprising the answer was. For words Root has taught, practice alone does not raise it: the level rises a little each time a word at or above it reaches box 3 on that strand (more if it got there cleanly), and falls a little on an outright miss of a well-known word. Know and Find use how common the word is; Spell uses how hard it is to spell, which is a separate number ("necessary" is common, and hard to spell).
-- **A memory box per word, per strand**, 0 to 4. A right answer on a strand that is due moves the word up a box, and it comes back after 1, 3, 7, 21, then 60 days. A right answer before it is due changes nothing; a right answer with a cue holds it where it is; a miss moves it down and brings it back tomorrow. A box moves up at most once a day. A word is **rooted** when all three strands reach box 3. Rounds are built from whatever is most overdue first, across all three strands.
-- **Spelling patterns.** Every bank word names its one tricky beat and which of 16 patterns it is (double letters, silent letters, lazy vowels, ei or ie, …). Root keeps a score per pattern, so it knows that someone is solid on lazy vowels and shaky on double letters.
-- **Counters** for quests, badges and the streak.
+### 1. It guesses
 
-**Which word comes next** (`pickNewWords`): words the learner looked up themselves come first, then words missed in the placement. After that, bank words are ranked by how close they sit to just above the learner's levels (weighted toward the strands they chose as goals), with a boost for their interests, a smaller one for their kind of day, and a boost for spelling patterns they are weak on. A chapter avoids repeating one pattern five times.
+Before every answer the model predicts how likely this learner is to get this word right, in this game, right now. The learner's level and the word's difficulty go in as they are. Everything else is a weight the model learns for this one person:
 
-*You › Your map* shows all of this: the three levels, the patterns being worked on and the strong ones, and the next words.
+| Weight | What it learns |
+| --- | --- |
+| a correction per strand | where the placement got them wrong |
+| one per game | recognising a meaning is easier than recalling a word; how much easier, for them |
+| one per spelling pattern | 16 patterns: solid on lazy vowels, shaky on double letters |
+| one per topic | topics they already know a lot about |
+| time of day, and how far into a round | when they are sharp, and how they tire |
+| memory | how well a taught word holds, by its box and by how overdue it is |
+
+Then the answer comes in and the model moves every weight a little towards what happened. The guess it made is kept beside the answer, so its record is honest: *You › What Root knows* shows how often it called the answer correctly.
+
+### 2. It observes
+
+| Signal | Where it comes from | What it is used for |
+| --- | --- | --- |
+| Right, right with help, missed | every game | all of the above |
+| How long the answer took | every game, measured silently | a word that came at once can wait longer; one that had to be dug for comes back sooner, even though it was right |
+| Cues, second looks, replays, slower speech | the cue ladder, Look-cover-write, the audio buttons | right-with-help; how the learner likes to take a word in |
+| The letters that were off | anything typed | a fingerprint of their spelling: neighbours swapped, letters dropped or added, doubles, vowel mix-ups, mirror letters (b for d), sound-alike letters, whether the slip was at the start, middle or end, and whether it still sounded right |
+| How a word came out when said aloud | Echo, and the Use step | a word that came out wrong comes back to be said again |
+| Time and trouble on each lesson step | the lesson | whether the words were within reach |
+| Reading pace | story pages | shown on the map |
+| Skips, rounds left half-way | the runner | the clearest sign something was too much |
+| What they choose to do | look-ups in the Finder, word pages opened, pictures picked, their own sentences, games picked in the arcade | what they want words for |
+| Every button press, by the button's name | the kit's buttons | a count of what gets used. Answer options are counted as "Answer", never by their text |
+
+Small signals (a tap, a replay) are buffered and handed over with the next answer, so a tap never costs a write to storage (`src/lib/signals.ts`).
+
+### 3. It steers
+
+- **Which words come next** (`pickNewWords`, `pickSet`). Words the learner looked up come first, then words missed in the placement. After that every bank word is scored. *Reach*: it should sit just past what they can do, which is the level the model reads for them plus `stretch`, a number that climbs while answers come easily and quickly and drops when they do not (a miss pulls back more than a hit pushes, so it settles where about 82% of answers are right). A topic they know well makes its words count as easier, so harder ones are picked there. *Use*: words from what they said they like, what their days are made of and what they have chosen to look at, words that come with a sentence from their own world, and the more everyday word when all else is equal. *Need*: spelling patterns they are weak on. When things are going badly, a set is one stretching word and one comfortable one.
+- **When** (`prepareStop`). The words for a stop are chosen at the moment it is opened, not when the chapter was laid out. The path shows what a stop is, not which words it will hold.
+- **Whether to teach it at all** (`shouldProbe`, the **Know it?** check). If the model thinks the learner already has a word, the lesson opens with two questions: what it means, and how it is spelled from hearing it. Both right first time and the word is rooted on the spot, the stop gets a harder one, and the target moves up. The learner can ask for the check on the first step of any new word. Nothing is lost by trying.
+- **How long to wait** (`gapFor`). Words come back after 1, 3, 7, 21, then 60 days, times the learner's own multiplier: it grows while reviews on their due day keep succeeding and shrinks when they do not, aiming at 85%.
+- **Which game** (`buildSession`). For each word due, the model guesses how every game it can play would go, and picks the one nearest the chance the round should aim at: easier formats (picking) when things are going badly, harder ones (recalling, writing) when they are going well. Games that work on the learner's own kind of slip are pulled forward.
+- **How long a round is** (`spanShift`). Shorter when accuracy falls away late in a round or rounds get abandoned, longer when it holds.
+- **The level itself** (`levelDrift`). When the model has been sure for a while that a level is off by half a level or more, part of the correction is handed to the level. A placement that got someone wrong is put right for good.
+
+The older parts are still there underneath: **a memory box per word, per strand**, 0 to 4 (a right answer on a strand that is due moves the word up a box; a right answer before it is due changes nothing; a cue holds it; a miss moves it down and brings it back tomorrow; a box moves up at most once a day; a word is **rooted** when all three strands reach box 3), and **a level per strand**, 1.0 to 6.9, which rises a little each time a word at or above it reaches box 3.
+
+*You › What Root knows* shows all of it: the three levels, what the model has noticed and is acting on ("Swaps neighbours", "Long memory", "In the evening", "Spells by ear"), the patterns being worked on and the strong ones, and the likely next words. If Root is adapting to something, it is on that page.
+
+### Does it work?
+
+`npx tsx tools/sim/run.ts` runs the same functions the app uses against three made-up learners whose true level is known: one placed two levels too low, one placed two levels too high, and one who is strong on meaning, weak on spelling and trips on double letters. It prints the difficulty of the words each is given day by day, how often their reviews succeed, and how wrong the model's guesses are in the first ten days against the last ten. The words should move towards the true level, the guesses should get better, and the weak pattern should be found. They do. It is a check on the arithmetic, not on people: only real use will say how well the weights transfer.
 
 ## The journey and the story
 
 The valley grows words. A fog called **the Hush** has rolled in, and words slip away just as you reach for them. Every word rooted clears a little.
 
-There are six places (Garden, Orchard, Market, Lantern Woods, Harbor, Summit), then the valley carries on. Each place is a chapter of ten stops and ten new words: five word sets, a Find round, a Spell round, a hands-on round, a chest, and a challenge that mixes the chapter's words.
+There are six places (Garden, Orchard, Market, Lantern Woods, Harbor, Summit), then the valley carries on. Each place is a chapter of ten stops and ten new words: five word sets, a Find round, a Spell round, a hands-on round, a chest, and a challenge that mixes the chapter's words. The path shows what each stop is. Which words a set holds is decided when the learner gets there.
 
-**A learn stop teaches two words, not one.** Where it can, the pair shares a spelling pattern, so the pattern is met twice in a row in two different words. The stop runs the first word's lesson, a short bridge, the second word's lesson, and then one step that mixes the two and has the learner pull each back out from its meaning. A word is recorded as soon as its own lesson ends, so a stop left half-way picks up at the second word.
+**A learn stop teaches two words, not one.** Where it can, the pair shares a spelling pattern, so the pattern is met twice in a row in two different words. The stop runs the first word's lesson, a short bridge, the second word's lesson, and then one step that mixes the two and has the learner pull each back out from its meaning. A word is recorded as soon as its own lesson ends, so a stop left half-way picks up at the second word. Before a word's lesson there may be the two-question **Know it?** check (see above).
 
 The story is told a page at a time, each page a short passage shown whole: a six-page prologue, a four-page opening and a four-page ending for every place, and one more line on the trail after every word set. Each ending also names, in a sentence, the part of the method that made the words stick. Story text is in `src/data/story.ts`. Clearing a place gives back a keepsake (watering can, fruit basket, bunting, lantern, compass, telescope), each with its own picture.
 
-Reasons to come back: a daily goal (one, two or three stops), a streak with freezes bought with gems, three daily quests, badges with tiers, chests, and reminders that say something specific and never guilt.
+The learner's own words are part of it: after each set, the trail line ends with the words they have just learned turning up in the place ("ladder" and "harvest" are carved into the ladder).
+
+**The journal** (`src/data/valley.ts`, `/journal`). Somebody walked the valley before, and left pages in the chests: one in every chest and one each time a place is cleared, twelve in all. Read in order they say where the Hush came from, what was tried, what worked, and where Root came from. Each page is three or four sentences and ends wanting the next.
+
+Reasons to come back: a daily goal (one, two or three stops), a streak, three daily quests, badges with tiers, chests, the next journal page, and reminders that say something specific and never guilt.
+
+### What gems are for
+
+Gems are earned and, apart from what is spent in the shop, never taken away (`/shop`, opened from the gem count).
+
+- **Rebuild the valley.** Every cleared place has three things the fog years wore out (a gate, a ladder, a town clock, a ferry, a beacon). Gems put them back for good, each one dearer than the last, and Root has a line about each. Eighteen in all: there is always something to save towards.
+- **Streak freeze.** Covers one missed day. Two held at most.
+- **Mend a streak.** For two days after a streak of three or more breaks, gems cover the days that were missed.
+- **A seven-day pledge.** Fifty gems staked on practicing seven days running, paid back double.
+
+### Friends
+
+Root is for a lot of people who have been told they are bad at this, and it goes better with somebody who notices when you show up (`/friends`, `src/lib/friends.ts`).
+
+There is no account and no server. A learner sends their **card** through whatever they already use to talk to people: a first name, their streak, the gems they have earned this week, the words they have rooted. The person who gets it taps the link or pastes the code, and sends theirs back. The Friends page ranks everyone by the week's gems and says how old each card is. **Nudge** sends a card with a line: "I did my words today. Your turn?"
+
+Nothing is uploaded and nothing is fetched, so a friend's numbers are exactly as fresh as the last card they sent. That is a real limit, and the honest price of keeping everything on the phone. A live feed would need a server, accounts, and the care that a social graph of learners deserves.
 
 ## The lesson: one new word, many senses
 
@@ -146,8 +208,10 @@ The first time, Root asks whether it may search online. If yes, it uses the free
 | Hands-on pads, letter strokes | `src/components/hands/*`, `src/lib/glyphs.ts`, `src/lib/motion.ts` |
 | Games and the runner | `src/components/games/*`, `src/components/play/*`, `src/app/play/*` |
 | Arcade, Garden, Finder, word page | `src/app/(tabs)/practice.tsx`, `src/app/(tabs)/words.tsx`, `src/app/finder.tsx`, `src/app/word/[id].tsx` |
-| You, badges, your map, settings | `src/app/(tabs)/you.tsx`, `src/app/badges.tsx`, `src/app/insights.tsx`, `src/app/settings/*` |
-| State, learner model, journey, rewards | `src/lib/store.ts`, `src/lib/engine.ts`, `src/lib/journey.ts`, `src/lib/rewards.ts` |
+| You, badges, what Root knows, settings | `src/app/(tabs)/you.tsx`, `src/app/badges.tsx`, `src/app/insights.tsx`, `src/app/settings/*` |
+| Shop, journal, friends | `src/app/shop.tsx`, `src/app/journal.tsx`, `src/app/friends.tsx`, `src/data/valley.ts`, `src/lib/friends.ts` |
+| The model of the learner | `src/lib/mind.ts` (guess, observe, steer), `src/lib/signals.ts` (what gets noted), `tools/sim/run.ts` (the dry run) |
+| State, word choice and rounds, journey, rewards | `src/lib/store.ts`, `src/lib/engine.ts`, `src/lib/journey.ts`, `src/lib/rewards.ts` |
 | Words and matching | `src/data/schema.ts`, `src/data/bank/*`, `src/lib/lexicon.ts`, `src/lib/finder.ts` |
 | Companion, effects, rewards, sound | `src/components/Buddy.tsx`, `src/components/fx.tsx`, `src/components/rewards.tsx`, `src/lib/buddy.ts`, `src/lib/sfx.ts` |
 | Mascot | `src/components/Mascot.tsx`, `assets/mascot/*`, `tools/mascot/*` |

@@ -243,6 +243,26 @@ export function chapterOf(n: number): Chapter {
 }
 export const STORY_LENGTH = STORY.length;
 
+/** Where the words just learned turn up in each place. `{w}` is the word, or the two of them. */
+const WORD_LINES: Record<SceneId, [one: string, two: string]> = {
+  garden: ['{w} is written on a new label.', '{w} are written on the new labels.'],
+  orchard: ['Somebody has carved {w} into the ladder.', 'Somebody has carved {w} into the ladder.'],
+  market: ['{w} is chalked up on the baker’s board.', '{w} are chalked up on the baker’s board.'],
+  woods: ['The new lamp is {w}.', 'The two new lamps are {w}.'],
+  harbour: ['{w} went into the keeper’s logbook.', '{w} went into the keeper’s logbook.'],
+  summit: ['I said {w} out loud up here. It carried.', 'I said {w} out loud up here. They carried.'],
+};
+
+/**
+ * One more line for the trail, with the learner's own words in it: the words they have just learned are now
+ * part of the place. Empty when there are none.
+ */
+export function wordLine(n: number, words: string[]): string {
+  const w = words.slice(0, 2).map((x) => `“${x}”`);
+  if (!w.length) return '';
+  return WORD_LINES[chapterOf(n).scene][w.length === 1 ? 0 : 1].replace('{w}', w.join(' and '));
+}
+
 /** What Root says on the trail after the `k`th set of words in chapter `n` (0-based). */
 export const trailLine = (n: number, k: number): string => {
   const t = chapterOf(n).trail;

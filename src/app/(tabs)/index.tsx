@@ -1,5 +1,5 @@
-import { router, useFocusEffect } from 'expo-router';
-import { Flame, Play, Target, Zap } from 'lucide-react-native';
+import { router, useFocusEffect, type Href } from 'expo-router';
+import { BookOpen, Flame, Hammer, Play, Target, Users, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 
@@ -10,12 +10,13 @@ import { ChestSheet, StreakSheet } from '@/components/journey/Sheets';
 import { GemPill, GoalRing, QuestRow, Scene } from '@/components/rewards';
 import { Bar, Block, Btn, Rise, Screen, Stat, Tap, Txt } from '@/components/ui';
 import { KEEPSAKES, chapterOf } from '@/data/story';
+import { JOURNAL, RESTORE } from '@/data/valley';
 import { refreshCheckIns } from '@/lib/checkins';
 import { dueItems } from '@/lib/engine';
 import { stopTodo, stopWords } from '@/lib/journey';
 import { questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
-import { currentStop, dueCount, goalProgress, lexOf, streak, today, useStore } from '@/lib/store';
+import { currentStop, dueCount, goalProgress, journalPages, lexOf, streak, today, useStore } from '@/lib/store';
 import { GUTTER, ON_BLOCK, useTheme } from '@/theme';
 import { TAB_SPACE } from './_layout';
 
@@ -47,6 +48,7 @@ export default function Journey() {
   // The path below still opens the next stop directly, so nothing is ever blocked.
   const heavy = dueItems(s) > 12 && stops[cur]?.kind === 'learn';
   const quests = questsToday(s);
+  const pages = journalPages(s);
 
   // Root only moves on while this screen is in view and no chest is being opened,
   // so the walk to the next stop is something you see.
@@ -94,14 +96,16 @@ export default function Journey() {
   const nextLabel = next ? (next.kind === 'learn' ? (faces[cur]?.text ?? KIND_LABEL.learn) : KIND_LABEL[next.kind]) : '';
 
   const open = (i: number) => {
-    const st = stops[i];
-    if (!st) return;
-    const ids = st.kind === 'learn' ? stopWords(st) : [];
-    if (st.done) {
-      if (ids.length) router.push(`/word/${ids[0]}`);
+    if (!stops[i]) return;
+    if (stops[i].done) {
+      const first = stops[i].kind === 'learn' ? stopWords(stops[i])[0] : undefined;
+      if (first) router.push(`/word/${first}`);
       return;
     }
     sfx.play('pop');
+    // A set of new words is chosen now, as the stop is opened: for the learner as they are today.
+    const st = s.prepareStop(i) ?? stops[i];
+    const ids = st.kind === 'learn' ? stopWords(st) : [];
     const todo = stopTodo(st);
     if (ids.length && todo.length) router.push(`/mission/${todo[0]}?stop=${i}`);
     // Every word of the set is learned but the stop was never closed (the app was shut on the last screen): close it now.
@@ -121,7 +125,7 @@ export default function Journey() {
           </Tap>
           <View style={{ flex: 1 }} />
           <Stat icon={Flame} value={fire} tint={lit ? 'orange' : 'ink3'} onPress={() => setStreakOpen(true)} a11y={`${fire} day streak${lit ? '' : ', not yet today'}. Open streak.`} />
-          <GemPill value={s.gems} />
+          <GemPill value={s.gems} onPress={() => router.push('/shop' as Href)} />
         </View>
 
         {/* The place. The fog thins as the chapter's stops are cleared. */}
@@ -157,6 +161,28 @@ export default function Journey() {
             </View>
           </Block>
           <Peek from="top" align="start" inset={76} size={150} />
+        </Rise>
+
+        {/* Who you are doing this with, what your gems have rebuilt, and the pages found so far. */}
+        <Rise i={1}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {[
+              { icon: Users, label: 'Friends', value: s.friends.length ? String(s.friends.length) : '+', to: '/friends', tone: 'pink' as const, dot: false, a11y: s.friends.length ? `Friends. ${s.friends.length} added.` : 'Friends. Add someone to do this with.' },
+              { icon: Hammer, label: 'Valley', value: `${s.built.length}/${RESTORE.length}`, to: '/shop', tone: 'mint' as const, dot: false, a11y: `Shop. ${s.built.length} of ${RESTORE.length} things rebuilt in the valley.` },
+              { icon: BookOpen, label: 'Journal', value: `${pages}/${JOURNAL.length}`, to: '/journal', tone: 'butter' as const, dot: pages > s.journalSeen, a11y: `Journal. ${pages} of ${JOURNAL.length} pages found${pages > s.journalSeen ? ', one new' : ''}.` },
+            ].map((x) => (
+              <Block key={x.label} tone={x.tone} pad={12} onPress={() => router.push(x.to as Href)} a11y={x.a11y} style={{ flex: 1, gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <x.icon size={20} color={ON_BLOCK.ink} strokeWidth={2.4} />
+                  {x.dot && <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: c.orange, borderWidth: 2, borderColor: ON_BLOCK.ink }} />}
+                </View>
+                <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 19, lineHeight: 24, color: ON_BLOCK.ink }}>{x.value}</Text>
+                <Txt v="caption" color="ink2" numberOfLines={1}>
+                  {x.label}
+                </Txt>
+              </Block>
+            ))}
+          </View>
         </Rise>
 
         {/* Today's three quests. */}

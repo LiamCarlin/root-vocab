@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import { Bell, ChevronRight, Eye, Flame, FlaskConical, Gem, Save, Snowflake, User, Volume2 } from 'lucide-react-native';
+import { Bell, BookOpen, Brain, ChevronRight, Eye, Flame, FlaskConical, Gem, Save, Snowflake, Store, User, Users, Volume2 } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
 import { Peek } from '@/components/Buddy';
@@ -72,7 +72,7 @@ export default function You() {
           const level = levelOf(s.skill[k]);
           const pct = Math.round(levelProgress(s.skill[k]) * 100);
           return (
-            <Block key={k} tone={st.tone} pad={14} onPress={() => router.push('/insights' as Href)} a11y={`${st.label}: level ${level}, ${pct} percent of the way to the next. Open your map.`} style={{ flex: 1, alignItems: 'center', gap: 10 }}>
+            <Block key={k} tone={st.tone} pad={14} onPress={() => router.push('/insights' as Href)} a11y={`${st.label}: level ${level}, ${pct} percent of the way to the next. Open what Root knows.`} style={{ flex: 1, alignItems: 'center', gap: 10 }}>
               <Ring value={levelProgress(s.skill[k])} size={76} stroke={7}>
                 <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 28, lineHeight: 32, color: ON_BLOCK.ink }}>{level}</Text>
               </Ring>
@@ -110,6 +110,13 @@ export default function You() {
         </Txt>
         <Btn icon={Gem} label={`${GEMS.freeze}`} small kind="brand" disabled={!canBuy} onPress={buy} a11y={s.freezes >= MAX_FREEZES ? 'You hold the most freezes you can' : s.gems < GEMS.freeze ? `A streak freeze costs ${GEMS.freeze} gems. You have ${s.gems}.` : `Buy a streak freeze for ${GEMS.freeze} gems. It covers one missed day.`} />
       </View>
+
+      <Group>
+        <Row title="Friends" sub={s.friends.length ? `${s.friends.length} added` : undefined} icon={Users} iconTone="pink" chevron onPress={() => router.push('/friends' as Href)} />
+        <Row title="Shop" icon={Store} iconTone="mint" chevron onPress={() => router.push('/shop' as Href)} />
+        <Row title="Journal" icon={BookOpen} iconTone="butter" chevron onPress={() => router.push('/journal' as Href)} />
+        <Row title="What Root knows" icon={Brain} iconTone="lilac" chevron onPress={() => router.push('/insights' as Href)} last />
+      </Group>
 
       <Group>
         <Row title="Reminders" icon={Bell} iconTone="orange" chevron onPress={() => router.push('/settings/check-ins')} />

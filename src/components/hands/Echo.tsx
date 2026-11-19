@@ -6,7 +6,8 @@ import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, wi
 import { SylWord } from '@/components/learn';
 import { Txt } from '@/components/ui';
 import { beatMs, buzz, hum, humWord, listenOnce, micAvailable, sayBeat, sayHum, stopListening, stopSpeaking } from '@/lib/audio';
-import { judgeSpoken } from '@/lib/lexicon';
+import { judgeSpoken, slug } from '@/lib/lexicon';
+import { note } from '@/lib/signals';
 import { ON_BLOCK, useTheme, wordSize } from '@/theme';
 
 // ── Echo: my turn, your turn ──────────────────────────────────────────────
@@ -104,7 +105,13 @@ export function Echo({ text, parts, says, onDone, whole, quiet }: { text: string
     // The hum under the thumb lasts about as long as the beat does, so its length is felt while it is said.
     stopHum.current = isWhole ? humWord(says, true, text) : hum(beatMs(says[i], true));
     if (isWhole && mic) {
-      listening.current = listenOnce({ hints: [text], maxMs: 6000 }).then((h) => (h.ok ? judgeSpoken(h.transcript, text) !== 'miss' : h.reason === 'nothing' ? false : null));
+      listening.current = listenOnce({ hints: [text], maxMs: 6000 }).then((h) => {
+        if (!h.ok) return h.reason === 'nothing' ? false : null;
+        // How the word came out is kept for the model: a word that came out wrong comes back to be said again.
+        const res = judgeSpoken(h.transcript, text);
+        note({ k: 'say', id: slug(text), res });
+        return res !== 'miss';
+      });
     }
   };
 

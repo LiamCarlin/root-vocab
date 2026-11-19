@@ -15,6 +15,8 @@ export type GameResult = {
   /** How many cues were used. */
   cue?: number;
   skipped?: boolean;
+  /** What the learner wrote or picked, when it was a spelling. The model reads the letters that were off; it is never shown again. */
+  attempt?: string;
   /** Optional correction to show in the feedback bar: the right spelling, the reason, etc. */
   note?: ReactNode;
 };
