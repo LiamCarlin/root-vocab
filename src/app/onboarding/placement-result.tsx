@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { Figure } from '@/components/Buddy';
@@ -8,7 +8,7 @@ import { CountUp, Pop } from '@/components/fx';
 import { Block, Btn, Chip, ChipRow, Ring, Rise, Screen, SectionLabel, TopBar, Txt } from '@/components/ui';
 import { STRANDS, STRAND_ORDER } from '@/data/profile';
 import { buzz } from '@/lib/audio';
-import { stopWords } from '@/lib/journey';
+import { pickNewWords } from '@/lib/engine';
 import { sfx } from '@/lib/sfx';
 import { levelOf, lexOf, useStore } from '@/lib/store';
 import { ON_BLOCK, SYLLABLE_TONES, useTheme } from '@/theme';
@@ -18,15 +18,13 @@ export default function PlacementResult() {
   const { c } = useTheme();
   const skill = useStore((s) => s.skill);
   const onboarded = useStore((s) => s.onboarded);
-  const stops = useStore((s) => s.journey.stops);
-  const words = useStore((s) => s.words);
-
-  const first = stops
-    .filter((st) => st.kind === 'learn')
-    .flatMap(stopWords)
-    .slice(0, 4)
-    .map((id) => lexOf({ words }, id))
-    .filter((l) => !!l);
+  // The words the model would pick today. They are chosen for real as each stop is opened, so these may change as it learns more.
+  const [first] = useState(() => {
+    const st = useStore.getState();
+    return pickNewWords(st, 4)
+      .map((id) => lexOf(st, id))
+      .filter((l) => !!l);
+  });
 
   useEffect(() => {
     sfx.play('win');

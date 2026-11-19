@@ -12,6 +12,7 @@ import { STRAND_ORDER, STRANDS, TOPICS } from '@/data/profile';
 import { PATTERNS } from '@/data/words';
 import { buzz, sayBeat, sayByParts, stopSpeaking } from '@/lib/audio';
 import { sfx } from '@/lib/sfx';
+import { noteUi } from '@/lib/signals';
 import { relDay } from '@/lib/dates';
 import { canPlay } from '@/lib/engine';
 import { exampleFor, lexemeFor, meaningOf, plain } from '@/lib/lexicon';
@@ -41,6 +42,11 @@ export default function WordPage() {
   const updateWord = useStore((s) => s.updateWord);
 
   const lex = useMemo(() => (id ? lexemeFor(id, w) : null), [id, w]);
+  // Choosing to look a word up says something about what the learner cares for.
+  const lexId = lex?.id;
+  useEffect(() => {
+    if (lexId) noteUi('wordpage', { topics: lexemeFor(lexId, useStore.getState().words[lexId])?.topics });
+  }, [lexId]);
   const [playing, setPlaying] = useState(-1);
   const cancel = useRef<(() => void) | null>(null);
   const alive = useRef(true);

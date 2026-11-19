@@ -11,7 +11,8 @@ import { Block, Btn, Chip, ChipRow, Field, Group, IconBtn, Rise, Row, Screen, Sh
 import { BANK_BY_ID } from '@/data/words';
 import { buzz, listenOnce, micAvailable, say, speakable, stopListening, stopSpeaking } from '@/lib/audio';
 import { findWord, type FindMode, type FindResult, type Found } from '@/lib/finder';
-import { syllabify } from '@/lib/lexicon';
+import { lexemeFor, syllabify } from '@/lib/lexicon';
+import { noteUi } from '@/lib/signals';
 import { sfx } from '@/lib/sfx';
 import { growth, useStore, type UserWord } from '@/lib/store';
 import { ON_BLOCK, radius, useTheme, wordSize } from '@/theme';
@@ -149,6 +150,8 @@ export default function Finder() {
     const mine = s.words[f.id];
     const inList = !!mine && mine.status !== 'removed';
     if (!inList) s.addWord(f.text, f.inBank ? { origin: 'finder' } : { origin: 'finder', meaning: f.meaning || undefined, pos: f.pos });
+    // A word they went looking for: the clearest sign there is of what they want words for.
+    noteUi('lookup', { topics: lexemeFor(f.id)?.topics });
     s.bump('finder');
     buzz.good();
     sfx.play('good');

@@ -6,6 +6,7 @@ import { Controls, MicButton } from '@/components/learn';
 import { Block, Btn, Chip, ChipRow, Field, IconBtn, Txt } from '@/components/ui';
 import { buzz, listenOnce, micAvailable, say, speakable, stopListening } from '@/lib/audio';
 import { gapped, judgeSpoken, meaningOf, plain, shuffled, splitAround } from '@/lib/lexicon';
+import { note, noteUi } from '@/lib/signals';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, useTheme } from '@/theme';
 import { StepScreen, Why } from './Frame';
@@ -81,6 +82,9 @@ export function Use({ lex, top, next, skip }: StepProps) {
     if (r.ok) {
       setHeard(r.transcript);
       const ok = has(r.transcript) || judgeSpoken(r.transcript, lex.text) !== 'miss';
+      note({ k: 'say', id: lex.id, res: has(r.transcript) ? 'exact' : judgeSpoken(r.transcript, lex.text) });
+      // A sentence of their own with the word in it: this is a word they want to use.
+      if (ok) noteUi('own', { topics: lex.topics });
       setSpoken(ok ? 'ok' : 'miss');
       if (!ok) buzz.nudge();
     } else buzz.nudge();

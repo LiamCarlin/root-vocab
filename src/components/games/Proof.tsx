@@ -37,7 +37,7 @@ export function Proof({ lex, onResult, done }: GameProps) {
     setPicked(opt);
     if (right) sfx.play('pop');
     else setShake((n) => n + 1);
-    report({ r: right ? 1 : 0, note: right ? undefined : <SpellNote lex={lex} attempt={opt} /> });
+    report({ r: right ? 1 : 0, attempt: opt, note: right ? undefined : <SpellNote lex={lex} attempt={opt} /> });
   };
 
   const size = lex.text.length > 13 ? 21 : lex.text.length > 10 ? 24 : 28;

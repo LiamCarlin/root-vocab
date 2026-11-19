@@ -43,7 +43,7 @@ export function Dictate({ lex, onResult, done }: GameProps) {
     const ok = sameWord(attempt, lex.text);
     const near = !ok && editsFrom(attempt, lex.text) <= 1;
     setChecked(attempt);
-    report({ r: ok ? 1 : near ? 0.5 : 0, note: ok ? undefined : <SpellNote lex={lex} attempt={attempt} /> });
+    report({ r: ok ? 1 : near ? 0.5 : 0, attempt, note: ok ? undefined : <SpellNote lex={lex} attempt={attempt} /> });
   };
 
   return (

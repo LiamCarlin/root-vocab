@@ -8,6 +8,7 @@ import { Pop } from '@/components/fx';
 import { Controls, SylWord } from '@/components/learn';
 import { Btn, IconBtn, Tap, Txt } from '@/components/ui';
 import { buzz, say, speakable, stopSpeaking } from '@/lib/audio';
+import { noteUi } from '@/lib/signals';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, useTheme, wordSize, type BlockTone } from '@/theme';
 import { StepScreen } from './Frame';
@@ -105,6 +106,7 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
 
   const pick = (emoji: string) => {
     if (hook) return;
+    noteUi('hook', { topics: lex.topics });
     pickHook(emoji);
     buzz.good();
     sfx.play('good');

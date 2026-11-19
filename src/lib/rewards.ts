@@ -1,6 +1,6 @@
 // Badges and daily quests: definitions and maths only. The components that draw them live in components/rewards.tsx.
 
-import { BookOpen, CircleDot, Compass, Flame, Hand, Map, PenLine, Puzzle, Repeat, ScanSearch, Search, Sprout, Target, type LucideIcon } from 'lucide-react-native';
+import { BookOpen, CircleDot, Compass, FastForward, Flame, Hammer, Hand, Handshake, Map, PenLine, Puzzle, Repeat, ScanSearch, Search, Sprout, Target, Users, type LucideIcon } from 'lucide-react-native';
 
 import type { BlockTone } from '@/theme/tokens';
 import { HANDS, dayOf, patternsMastered, streakOf } from './engine';
@@ -35,6 +35,10 @@ export const BADGES: BadgeDef[] = [
   { id: 'pattern', name: 'Pattern spotter', icon: Puzzle, tone: 'lilac', tiers: [1, 3, 6], unit: 'spelling patterns mastered', value: (s) => patternsMastered(s) },
   { id: 'sleuth', name: 'Word sleuth', icon: ScanSearch, tone: 'brand', tiers: [1, 10, 30], unit: 'words tracked down', value: (s) => count(s, 'finder') },
   { id: 'marble', name: 'Steady hands', icon: CircleDot, tone: 'butter', tiers: [3, 15], unit: 'marble runs', value: (s) => count(s, 'marble') },
+  { id: 'builder', name: 'Valley builder', icon: Hammer, tone: 'mint', tiers: [1, 6, 12, 18], unit: 'things rebuilt', value: (s) => s.built.length },
+  { id: 'pledge', name: 'Kept my word', icon: Handshake, tone: 'orange', tiers: [1, 3, 10], unit: 'pledges kept', value: (s) => count(s, 'pledges') },
+  { id: 'ahead', name: 'Ahead already', icon: FastForward, tone: 'butter', tiers: [1, 5, 20], unit: 'words already known', value: (s) => count(s, 'testedOut') },
+  { id: 'friends', name: 'Better together', icon: Users, tone: 'pink', tiers: [1, 3], unit: 'friends added', value: (s) => s.friends.length, hidden: true },
   { id: 'hands', name: 'Hands-on', icon: Hand, tone: 'pink', tiers: [5, 25, 100], unit: 'words tapped, traced, rolled, written or said', value: (s) => HANDS.reduce((n, g) => n + count(s, g), 0) },
 ];
 export const BADGE_BY_ID: Record<string, BadgeDef> = Object.fromEntries(BADGES.map((b) => [b.id, b]));

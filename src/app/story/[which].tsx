@@ -12,6 +12,7 @@ import { KEEPSAKES, PROLOGUE, chapterOf } from '@/data/story';
 import { buzz } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/unlocks';
 import { sfx } from '@/lib/sfx';
+import { clock, note } from '@/lib/signals';
 import { currentStop, useStore } from '@/lib/store';
 import { ON_BLOCK, useTheme } from '@/theme';
 
@@ -45,6 +46,11 @@ function Story({ which }: { which: Which }) {
   const [i, setI] = useState(0);
   const [cleared, setCleared] = useState(false);
   const gone = useRef(false);
+  // How long a page is open before it is turned: reading pace, for the model. Never shown, and nothing waits on it.
+  const pageAt = useRef(0);
+  useEffect(() => {
+    pageAt.current = clock();
+  }, []);
   const beat = beats[Math.min(i, beats.length - 1)];
   const last = i >= beats.length - 1;
 
@@ -82,6 +88,8 @@ function Story({ which }: { which: Which }) {
   };
 
   const advance = () => {
+    if (pageAt.current) note({ k: 'read', words: beat.line.split(/\s+/).length, ms: clock() - pageAt.current });
+    pageAt.current = clock();
     if (last) return finish();
     sfx.play('pop');
     buzz.tap();
