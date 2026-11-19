@@ -172,7 +172,7 @@ export default function Friends() {
                   </Txt>
                   {!mine && (
                     <Txt v="caption" color="ink2" numberOfLines={1}>
-                      Card from {cardWhen(f, now)}
+                      Sent {cardWhen(f, now)}
                     </Txt>
                   )}
                 </View>
