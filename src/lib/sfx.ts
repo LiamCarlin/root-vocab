@@ -1,5 +1,6 @@
 import { buddy } from './buddy';
 import { useStore } from './store';
+import { audioLib, clipPlaying, type ClipPlayer } from './voice';
 
 // Interface sounds: ten short, quiet mallet tones (see assets/sfx/make.py).
 // `sfx.play` is fire-and-forget. It is silent when sound is switched off, when
@@ -22,31 +23,11 @@ const FILES: Record<SfxName, number> = {
 
 const VOLUME: Record<SfxName, number> = { tap: 0.5, pop: 0.7, good: 0.8, miss: 0.6, combo: 0.8, win: 0.85, unlock: 0.85, gem: 0.7, whoosh: 0.5, chest: 0.85 };
 
-type Player = { play(): void; seekTo(seconds: number): Promise<void> | void; volume: number };
-type AudioLib = {
-  createAudioPlayer(source: number): Player;
-  setAudioModeAsync(mode: { playsInSilentMode?: boolean; interruptionMode?: 'mixWithOthers' | 'doNotMix' | 'duckOthers' }): Promise<void>;
-};
 type SpeechLib = { isSpeakingAsync(): Promise<boolean> };
-
-let audio: AudioLib | null | undefined;
-function lib(): AudioLib | null {
-  if (audio === undefined) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const m = require('expo-audio') as Partial<AudioLib>;
-      audio = typeof m?.createAudioPlayer === 'function' ? (m as AudioLib) : null;
-      // Follow the ringer switch and never interrupt music or speech.
-      audio?.setAudioModeAsync?.({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => {});
-    } catch {
-      audio = null;
-    }
-  }
-  return audio;
-}
 
 let speech: SpeechLib | null | undefined;
 function speaking(): Promise<boolean> {
+  if (clipPlaying()) return Promise.resolve(true);
   if (speech === undefined) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -59,10 +40,10 @@ function speaking(): Promise<boolean> {
   return speech.isSpeakingAsync().catch(() => false);
 }
 
-const players: Partial<Record<SfxName, Player>> = {};
+const players: Partial<Record<SfxName, ClipPlayer>> = {};
 
 function fire(name: SfxName) {
-  const a = lib();
+  const a = audioLib();
   if (!a) return;
   let p = players[name];
   if (!p) {

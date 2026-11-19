@@ -5,7 +5,7 @@ import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, wi
 
 import { SylWord } from '@/components/learn';
 import { Txt } from '@/components/ui';
-import { beatMs, buzz, hum, humWord, listenOnce, micAvailable, say, speakable, stopListening, stopSpeaking } from '@/lib/audio';
+import { beatMs, buzz, hum, humWord, listenOnce, micAvailable, sayBeat, sayHum, stopListening, stopSpeaking } from '@/lib/audio';
 import { judgeSpoken } from '@/lib/lexicon';
 import { ON_BLOCK, useTheme, wordSize } from '@/theme';
 
@@ -76,14 +76,12 @@ export function Echo({ text, parts, says, onDone, whole, quiet }: { text: string
       stopHum.current?.();
       const next = () => alive.current && setTurn('you');
       if (idx >= beats) {
-        stopHum.current = humWord(says);
-        say(speakable(text), { onDone: next });
+        stopHum.current = sayHum(text, says, { onDone: next });
       } else {
-        stopHum.current = hum(beatMs(says[idx]));
-        say(says[idx], { onDone: next });
+        stopHum.current = sayBeat(parts, says, idx, { onDone: next });
       }
     },
-    [beats, says, text],
+    [beats, parts, says, text],
   );
 
   useEffect(() => {
@@ -104,7 +102,7 @@ export function Echo({ text, parts, says, onDone, whole, quiet }: { text: string
     setMiss(false);
     stopHum.current?.();
     // The hum under the thumb lasts about as long as the beat does, so its length is felt while it is said.
-    stopHum.current = isWhole ? humWord(says, true) : hum(beatMs(says[i], true));
+    stopHum.current = isWhole ? humWord(says, true, text) : hum(beatMs(says[i], true));
     if (isWhole && mic) {
       listening.current = listenOnce({ hints: [text], maxMs: 6000 }).then((h) => (h.ok ? judgeSpoken(h.transcript, text) !== 'miss' : h.reason === 'nothing' ? false : null));
     }

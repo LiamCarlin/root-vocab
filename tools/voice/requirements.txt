@@ -1,0 +1,9 @@
+# Python 3.12 (spaCy, pulled in by kokoro, does not build on 3.13 yet).
+# Install the CPU build of torch first:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+kokoro>=0.9.4
+transformers
+soundfile
+scipy
+numpy
+matplotlib

@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { Pop, Wiggle } from '@/components/fx';
 import { Controls } from '@/components/learn';
 import { Tap } from '@/components/ui';
-import { buzz, say, sayHum, speakable } from '@/lib/audio';
+import { buzz, say, sayBeat, sayHum, speakable } from '@/lib/audio';
 import { shuffled } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
@@ -68,7 +68,7 @@ export function Scramble({ lex, onResult, done }: GameProps) {
     const next = [...used, u.key];
     setUsed(next);
     if (next.length < units.length) {
-      if (want.says) say(want.says);
+      if (want.says && want.beat !== undefined) sayBeat(lex.parts, lex.says, want.beat, { hum: false });
       return;
     }
     // Last piece: let it land, then the whole word.

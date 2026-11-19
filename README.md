@@ -152,12 +152,13 @@ The first time, Root asks whether it may search online. If yes, it uses the free
 | Companion, effects, rewards, sound | `src/components/Buddy.tsx`, `src/components/fx.tsx`, `src/components/rewards.tsx`, `src/lib/buddy.ts`, `src/lib/sfx.ts` |
 | Mascot | `src/components/Mascot.tsx`, `assets/mascot/*`, `tools/mascot/*` |
 | Shared lesson pieces, audio and haptics | `src/components/learn.tsx`, `src/lib/audio.ts` |
+| Recorded words and beats | `src/lib/voice.ts`, `src/data/voice.ts`, `assets/voice/*`, `tools/voice/*` |
 | Reminders | `src/lib/checkins.ts`, `src/components/CheckInEditor.tsx` |
 
 ## What is simulated, and what is not verified
 
 - **Accounts.** There is no server. Everything is stored on the device; Backup moves it by copy and paste.
-- **Part audio.** Speech is synthesized on the device. Whole words are accurate; single beats are a best effort from the respelling, and borrowed words (bourgeois, zeitgeist) are approximate.
+- **Voices.** Bank words and their beats are recordings: each word is said once by a neural voice and cut at the beat boundaries (`tools/voice`), so a beat on its own is the sound it has inside the word. Sentences, meanings, letter names and the learner's own words are still spoken by the phone, so two voices can be heard on one screen, and the beats of a learner's own word are a best effort from its spelling.
 - **The hum on iPhone** is a fast run of soft ticks, because the haptics API has no continuous buzz. Android gets a true buzz.
 - **Finger writing** (the sand tray, and the finger option in Spell) is checked by the learner, by eye, against the word. Nothing reads handwriting. Typed spelling is checked letter by letter.
 - **Tracing** checks that the finger travels each stroke from its start to its end within a finger's width. It does not judge how neat the line is.

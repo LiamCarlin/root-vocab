@@ -4,28 +4,66 @@ import { Platform, Vibration } from 'react-native';
 
 import { buddy } from './buddy';
 import { useStore } from './store';
+import { clipFor, playClip, primeClip, stopClips } from './voice';
 
-// ── Speaking (text to speech) ─────────────────────────────────────────────
+// ── Speaking ──────────────────────────────────────────────────────────────
+// Bank words and their beats are recordings (voice.ts). Everything else, and every word on a
+// phone where the recording cannot play, is spoken by the phone's own voice.
 const RATE = { normal: Platform.OS === 'ios' ? 0.92 : 0.95, slow: Platform.OS === 'ios' ? 0.62 : 0.6 };
 
 export function stopSpeaking() {
+  stopClips();
   try {
     Speech.stop();
   } catch {}
 }
 
-export function say(text: string, opts: { slow?: boolean; onDone?: () => void } = {}) {
-  const slow = opts.slow ?? useStore.getState().slowAudio;
+function speak(text: string, slow: boolean, onDone?: () => void) {
   try {
     Speech.stop();
-    Speech.speak(text, { language: 'en-US', rate: slow ? RATE.slow : RATE.normal, pitch: 1, onDone: opts.onDone, onStopped: opts.onDone, onError: opts.onDone });
+    Speech.speak(text, { language: 'en-US', rate: slow ? RATE.slow : RATE.normal, pitch: 1, onDone, onStopped: onDone, onError: onDone });
   } catch {
-    opts.onDone?.();
+    onDone?.();
   }
+}
+
+export function say(text: string, opts: { slow?: boolean; onDone?: () => void } = {}) {
+  const slow = opts.slow ?? useStore.getState().slowAudio;
+  stopSpeaking();
+  const clip = clipFor(text);
+  if (clip && playClip(slow ? clip.slow : clip.word, slow ? clip.ms.slow : clip.ms.word, opts.onDone)) {
+    primeClip(clip);
+    return;
+  }
+  speak(text, slow, opts.onDone);
 }
 
 /** Letters are read as letters ("R F I"), everything else as written. */
 export const speakable = (text: string) => (/^[A-Z]{2,5}$/.test(text) ? text.split('').join(' ') : text);
+
+/** Every clip starts and ends with a little silence. */
+const CLIP_AIR = 50;
+
+/**
+ * Says one beat of a word, exactly as it sounds inside the word, and hums it. A word with no
+ * recording gets the phone's best reading of the respelling. Returns a function that stops the hum.
+ */
+export function sayBeat(parts: string[], says: string[], i: number, opts: { onDone?: () => void; hum?: boolean } = {}): () => void {
+  return beat(parts.join(''), says, i, says[i] ?? parts[i] ?? '', opts);
+}
+
+function beat(word: string, says: string[], i: number, fallback: string, opts: { onDone?: () => void; hum?: boolean; slow?: boolean }): () => void {
+  stopSpeaking();
+  const clip = clipFor(word, says.length);
+  if (clip && playClip(clip.beats[i], clip.ms.beats[i], opts.onDone)) {
+    return opts.hum === false ? () => {} : hum(Math.max(60, clip.ms.beats[i] - CLIP_AIR));
+  }
+  const slow = opts.slow ?? useStore.getState().slowAudio;
+  const stop = opts.hum === false ? () => {} : hum(beatMs(fallback, slow));
+  if (fallback) speak(fallback, slow, opts.onDone);
+  else opts.onDone?.();
+  return stop;
+}
 
 let seq = 0;
 /**
@@ -44,12 +82,11 @@ export function sayByParts(text: string, says: string[], onPart: (i: number) => 
       return;
     }
     onPart(i);
-    stopHum = hum(beatMs(says[i], slow));
-    say(says[i], { slow: opts.slow, onDone: () => setTimeout(() => step(i + 1), 220) });
+    stopHum = beat(text, says, i, says[i], { slow: opts.slow, onDone: () => setTimeout(() => step(i + 1), 220) });
   };
   if (opts.wholeFirst === false) step(0);
   else {
-    stopHum = humWord(says, slow);
+    stopHum = humWord(says, slow, text);
     say(speakable(text), { slow: opts.slow, onDone: () => setTimeout(() => step(0), 320) });
   }
   return () => {
@@ -65,7 +102,7 @@ export function sayByParts(text: string, says: string[], onPart: (i: number) => 
 /** Says a word while the phone hums its rhythm. */
 export function sayHum(text: string, says: string[], opts: { slow?: boolean; onDone?: () => void } = {}): () => void {
   const slow = opts.slow ?? useStore.getState().slowAudio;
-  const stop = humWord(says, slow);
+  const stop = humWord(says, slow, text);
   say(speakable(text), opts);
   return stop;
 }
@@ -114,16 +151,30 @@ export function hum(ms: number): () => void {
   };
 }
 
-/** One hum per beat, with a short breath between beats. */
-export function humWord(says: string[], slow = false): () => void {
+/**
+ * One hum per beat, with a short breath between beats. Pass the word as `text` and a recorded
+ * word is hummed on its real beats rather than on a guess from the respelling.
+ */
+export function humWord(says: string[], slow = false, text?: string): () => void {
   if (!on()) return () => {};
   const stops: (() => void)[] = [];
   const timers: ReturnType<typeof setTimeout>[] = [];
-  let at = 60;
-  for (const sy of says) {
-    const ms = Math.round(beatMs(sy, slow) * 0.62);
-    timers.push(setTimeout(() => stops.push(hum(ms)), at));
-    at += ms + (slow ? 110 : 70);
+  const clip = text ? clipFor(text, says.length) : undefined;
+  if (clip) {
+    // `at` marks the beats inside the careful recording; the quick one keeps the same proportions.
+    const k = slow ? 1 : clip.ms.word / clip.ms.slow;
+    const ends = [...clip.ms.at.slice(1), clip.ms.slow - CLIP_AIR];
+    clip.ms.at.forEach((from, i) => {
+      const ms = Math.max(40, Math.round((ends[i] - from) * k) - (slow ? 60 : 40));
+      timers.push(setTimeout(() => stops.push(hum(ms)), Math.round(from * k)));
+    });
+  } else {
+    let at = 60;
+    for (const sy of says) {
+      const ms = Math.round(beatMs(sy, slow) * 0.62);
+      timers.push(setTimeout(() => stops.push(hum(ms)), at));
+      at += ms + (slow ? 110 : 70);
+    }
   }
   return () => {
     timers.forEach(clearTimeout);

@@ -4,7 +4,7 @@ import { Text, View, type GestureResponderEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Tap } from '@/components/ui';
-import { beatMs, buzz, hum, say } from '@/lib/audio';
+import { buzz, sayBeat } from '@/lib/audio';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
 
 // ── Tap and sweep ─────────────────────────────────────────────────────────
@@ -46,8 +46,7 @@ export function TapSweep({ parts, says, onBeat, onDone }: { parts: string[]; say
       return;
     }
     stopHum.current?.();
-    stopHum.current = hum(beatMs(says[i] ?? parts[i]));
-    say(says[i] ?? parts[i]);
+    stopHum.current = sayBeat(parts, says, i);
     onBeat?.(i);
     setTapped(i + 1);
   };

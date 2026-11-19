@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { Controls, PartTiles } from '@/components/learn';
 import { Btn, Chip, ChipRow } from '@/components/ui';
-import { beatMs, buzz, hum, say, sayByParts, sayHum, speakable } from '@/lib/audio';
+import { buzz, say, sayBeat, sayByParts, sayHum, speakable } from '@/lib/audio';
 import { buildPieces, shuffled, type Lexeme, type Piece } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
 import { StepScreen, Why } from './Frame';
@@ -75,8 +75,7 @@ export function Build({ lex, top, next, skip, addHint }: StepProps) {
       say(slots[i].toLowerCase());
       return;
     }
-    stopHum.current = hum(beatMs(lex.says[i]));
-    say(lex.says[i]);
+    stopHum.current = sayBeat(lex.parts, lex.says, i);
   };
 
   const whole = () => {
