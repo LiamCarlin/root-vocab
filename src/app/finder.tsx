@@ -4,12 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ScrollView, View } from 'react-native';
 
 import { Reaction } from '@/components/Buddy';
+import { HoldSheet } from '@/components/journey/Sheets';
 import { Burst } from '@/components/fx';
 import { SylWord } from '@/components/learn';
 import { Growth, Mascot } from '@/components/Mascot';
 import { Block, Btn, Chip, ChipRow, Field, Group, IconBtn, Rise, Row, Screen, Sheet, Tag, Tap, TopBar, Txt, useToast } from '@/components/ui';
 import { BANK_BY_ID } from '@/data/words';
 import { buzz, listenOnce, micAvailable, say, speakable, stopListening, stopSpeaking } from '@/lib/audio';
+import { holdNew } from '@/lib/engine';
 import { findWord, type FindMode, type FindResult, type Found } from '@/lib/finder';
 import { syllabify } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
@@ -415,6 +417,9 @@ function Card({ f, open, status, stage, onToggle, onHear, onYes, onNo }: { f: Fo
 function Won({ found: f, fresh, status, stage, onAgain }: { found: Found; fresh: boolean; status: UserWord['status']; stage: 0 | 1 | 2 | 3; onAgain: () => void }) {
   const learned = status === 'learning' || status === 'known';
   const tone = fresh ? 'mint' : 'brand';
+  // A new word waits while a lot is due. It is already saved, so it will be first in line after the warm-up.
+  const held = useStore((st) => holdNew(st));
+  const [holdOpen, setHoldOpen] = useState(false);
   return (
     <Rise>
       <Block tone={tone} pad={20} style={{ gap: 14, alignItems: 'center' }} a11y={`Found: ${f.text}`}>
@@ -437,10 +442,11 @@ function Won({ found: f, fresh, status, stage, onAgain }: { found: Found; fresh:
         {learned ? (
           <Btn icon={Play} label="Practice" a11y={`Practice ${f.text}`} onPress={() => router.replace(`/play/find?words=${f.id}`)} />
         ) : (
-          <Btn icon={Play} label="Learn now" a11y={`Learn ${f.text} now`} onPress={() => router.replace(`/mission/${f.id}`)} />
+          <Btn icon={Play} label="Learn now" a11y={`Learn ${f.text} now`} onPress={() => (held ? setHoldOpen(true) : router.replace(`/mission/${f.id}`))} />
         )}
         <Btn kind="soft" icon={RotateCcw} label="Find another" onPress={onAgain} />
       </View>
+      <HoldSheet visible={holdOpen} onClose={() => setHoldOpen(false)} word={f.text} />
     </Rise>
   );
 }

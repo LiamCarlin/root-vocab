@@ -129,7 +129,7 @@ export default function Play() {
       return;
     }
     // `right` counts answers that got there, with or without a cue; `clean` only those right first time, for a perfect round.
-    const tally = { kind, total: first.length, right: first.filter((p) => p.r > 0).length, clean: first.filter((p) => p.r === 1).length, ms: Date.now() - startedAt };
+    const tally = { kind, total: first.length, right: first.filter((p) => p.r > 0).length, clean: first.filter((p) => p.r === 1).length, ms: Date.now() - startedAt, stop: !!outcome };
     const summary = st.finishSession(tally);
     setEnd({ summary, outcome });
     setPhase('done');

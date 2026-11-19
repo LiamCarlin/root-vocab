@@ -1,4 +1,5 @@
-import { Check, Gift, Snowflake } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { ArrowRight, Check, Gift, Snowflake, Sprout, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 
@@ -11,7 +12,7 @@ import { buzz } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/buddy';
 import { weekOf } from '@/lib/dates';
 import { sfx } from '@/lib/sfx';
-import { GEMS, MAX_FREEZES, streak, today, useStore } from '@/lib/store';
+import { GEMS, MAX_FREEZES, dueCount, streak, today, useStore } from '@/lib/store';
 import { ON_BLOCK, useTheme } from '@/theme';
 
 // Two letters each: a lone T or S could be either day.
@@ -126,6 +127,47 @@ export function ChestSheet({ index, onClose }: { index: number | null; onClose: 
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
         {index !== null && <Reaction key={won === null ? 'wait' : 'won'} pose={won === null ? 'gasp' : 'cheer'} size={104} pokable={false} />}
         <View style={{ flex: 1 }}>{won === null ? <Btn icon={Gift} label="Open" onPress={open} /> : <Btn kind="soft" icon={Check} label="Done" onPress={close} />}</View>
+      </View>
+    </Sheet>
+  );
+}
+
+/**
+ * A new word is waiting because a lot is due. The sheet shows the trade without a sentence:
+ * the warm-up and how many words are in it, an arrow, then the word that comes after.
+ */
+export function HoldSheet({ visible, onClose, word }: { visible: boolean; onClose: () => void; word?: string }) {
+  const { c } = useTheme();
+  const due = useStore((s) => dueCount(s));
+  const go = () => {
+    onClose();
+    router.push('/play/mix');
+  };
+
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Warm up first">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} accessible accessibilityLabel={`${due} ${due === 1 ? 'word is' : 'words are'} due. One warm-up round${word ? `, then ${word}` : ', then the new word'}.`}>
+        <Block tone="pink" pad={14} round={999} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 20 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center' }}>
+            <Zap size={20} color="#FFFFFF" fill="#FFFFFF" />
+          </View>
+          <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 30, lineHeight: 36, color: ON_BLOCK.ink }}>{due}</Text>
+        </Block>
+        <ArrowRight size={22} color={c.ink3} strokeWidth={2.8} />
+        <Block tone="butter" pad={14} round={999} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 18 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(14,14,19,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+            <Sprout size={22} color={ON_BLOCK.ink} strokeWidth={2.4} />
+          </View>
+          <Txt v="heading" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ flex: 1 }}>
+            {word ?? 'New word'}
+          </Txt>
+        </Block>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
+        {visible && <Reaction pose="water" size={104} pokable={false} />}
+        <View style={{ flex: 1 }}>
+          <Btn icon={Zap} label="Warm up" a11y="Start the warm-up" onPress={go} />
+        </View>
       </View>
     </Sheet>
   );

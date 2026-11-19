@@ -1,4 +1,4 @@
-import { Check, Flag, Lock, PenLine, Play, Search } from 'lucide-react-native';
+import { Check, Flag, Lock, PenLine, Play, Search, Zap } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
@@ -31,7 +31,7 @@ const stopX = (i: number, width: number) => width / 2 + Math.min(width * 0.26, 9
 
 export type StopFace = { text?: string; hook?: string };
 
-export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces: StopFace[]; /** The stop Root is standing on: the next one to do, or -1 when the chapter is finished. */ at: number; tone: BlockTone; onOpen: (i: number) => void }) {
+export function Path({ stops, faces, at, tone, held, onOpen }: { stops: Stop[]; faces: StopFace[]; /** The stop Root is standing on: the next one to do, or -1 when the chapter is finished. */ at: number; tone: BlockTone; /** The next stop is a new word that is waiting for a warm-up. */ held?: boolean; onOpen: (i: number) => void }) {
   const { c, reduceMotion } = useTheme();
   const [width, setWidth] = useState(340);
   const [nudged, setNudged] = useState<Record<number, number>>({});
@@ -121,7 +121,7 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
         const ink = done || now ? ON_BLOCK.ink : c.ink3;
         const bg = done ? c[tone] : now ? c[nowTone] : c.surface;
         const lip = done ? LIP[tone] : now ? LIP[nowTone] : c.line;
-        const a11y = `${st.kind === 'learn' ? `New word: ${label}` : label}${done ? ', done' : now ? ', next' : ', locked'}`;
+        const a11y = `${st.kind === 'learn' ? `New word: ${label}` : label}${done ? ', done' : now ? (held ? ', waiting for a warm-up' : ', next') : ', locked'}`;
         const room = right ? width - (x + size / 2 + 12) : x - size / 2 - 12;
 
         return (
@@ -154,9 +154,9 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
                   </View>
                 </Pulse>
                 {now && (
-                  <View style={{ marginTop: 8, height: 34, borderRadius: 17, paddingHorizontal: 13, backgroundColor: c.ink, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Play size={13} color={c.onInk} fill={c.onInk} />
-                    <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 14, color: c.onInk }}>Start</Text>
+                  <View style={{ marginTop: 8, height: 34, borderRadius: 17, paddingHorizontal: 13, marginHorizontal: -24, backgroundColor: c.ink, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {held ? <Zap size={13} color={c.onInk} fill={c.onInk} /> : <Play size={13} color={c.onInk} fill={c.onInk} />}
+                    <Text numberOfLines={1} style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 14, color: c.onInk }}>{held ? 'Warm up' : 'Start'}</Text>
                   </View>
                 )}
               </Tap>

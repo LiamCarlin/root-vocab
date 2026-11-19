@@ -6,12 +6,12 @@ import { Image, ScrollView, Text, View, type ScrollViewInstance } from 'react-na
 import { Peek } from '@/components/Buddy';
 import { MascotBadge } from '@/components/Mascot';
 import { KIND_LABEL, Path, stopY, type StopFace } from '@/components/journey/Path';
-import { ChestSheet, StreakSheet } from '@/components/journey/Sheets';
+import { ChestSheet, HoldSheet, StreakSheet } from '@/components/journey/Sheets';
 import { GemPill, GoalRing, QuestRow, Scene } from '@/components/rewards';
 import { Bar, Block, Btn, Rise, Screen, Stat, Tap, Txt } from '@/components/ui';
 import { SCENES, chapterOf } from '@/data/story';
 import { refreshCheckIns } from '@/lib/checkins';
-import { dueItems } from '@/lib/engine';
+import { holdNew } from '@/lib/engine';
 import { questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
 import { currentStop, dueCount, goalProgress, lexOf, streak, today, useStore } from '@/lib/store';
@@ -31,6 +31,7 @@ export default function Journey() {
   const [focused, setFocused] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
   const [chest, setChest] = useState<number | null>(null);
+  const [holdOpen, setHoldOpen] = useState(false);
   const pathTop = useRef(0);
 
   const { journey } = s;
@@ -42,9 +43,9 @@ export default function Journey() {
   const fire = streak(s);
   const lit = s.practiceDays.includes(today(s));
   const due = dueCount(s);
-  // When a lot is due, the main button warms up first: new words wait until the old ones are watered.
-  // The path below still opens the next stop directly, so nothing is ever blocked.
-  const heavy = dueItems(s) > 12 && stops[cur]?.kind === 'learn';
+  // When a lot is due, a new word waits until the old ones are watered: one warm-up round lets it through.
+  // The main button becomes the warm-up, and the stop on the path says the same.
+  const held = holdNew(s) && stops[cur]?.kind === 'learn' && !!stops[cur]?.wordId;
   const quests = questsToday(s);
 
   // Root only moves on while this screen is in view and no chest is being opened,
@@ -93,7 +94,8 @@ export default function Journey() {
       return;
     }
     sfx.play('pop');
-    if (st.kind === 'learn' && st.wordId) router.push(`/mission/${st.wordId}?stop=${i}`);
+    if (held && i === cur) setHoldOpen(true);
+    else if (st.kind === 'learn' && st.wordId) router.push(`/mission/${st.wordId}?stop=${i}`);
     else if (st.kind === 'chest') setChest(i);
     else if (st.kind === 'find' || st.kind === 'spell' || st.kind === 'challenge') router.push(`/play/${st.kind}?stop=${i}`);
     // A learn stop with no word left to give (the whole bank is learned) becomes a mixed round.
@@ -133,8 +135,8 @@ export default function Journey() {
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 }}>
-                {next && heavy ? (
-                  <Btn icon={Zap} label="Warm up" a11y={`Warm up first. ${due} ${due === 1 ? 'word is' : 'words are'} due.`} onPress={() => router.push('/play/mix')} flex={1} />
+                {next && held ? (
+                  <Btn icon={Zap} label="Warm up" a11y={`Warm up first, then ${nextLabel}. ${due} ${due === 1 ? 'word is' : 'words are'} due.`} onPress={() => router.push('/play/mix')} flex={1} />
                 ) : next ? (
                   <Btn icon={Play} label="Start" a11y={`Start the next stop: ${nextLabel}`} onPress={() => open(cur)} flex={1} />
                 ) : (
@@ -181,7 +183,7 @@ export default function Journey() {
         <View onLayout={(e) => {
             pathTop.current = e.nativeEvent.layout.y;
           }}>
-          <Path key={journey.chapter} stops={stops} faces={faces} at={shown} tone={ch.tone} onOpen={open} />
+          <Path key={journey.chapter} stops={stops} faces={faces} at={shown} tone={ch.tone} held={held} onOpen={open} />
         </View>
 
         {/* What each cleared place gave back. */}
@@ -212,6 +214,7 @@ export default function Journey() {
 
       <StreakSheet visible={streakOpen} onClose={() => setStreakOpen(false)} />
       <ChestSheet index={chest} onClose={() => setChest(null)} />
+      <HoldSheet visible={holdOpen} onClose={() => setHoldOpen(false)} word={held ? nextLabel : undefined} />
     </Screen>
   );
 }
