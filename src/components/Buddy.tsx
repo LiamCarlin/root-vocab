@@ -4,12 +4,11 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useStore } from '@/lib/store';
 import { useTheme } from '@/theme';
 import { Mascot, poseWidth, type Pose } from './Mascot';
-import { STILLS } from './mascotStills';
 
 // Root in the interface. Root is always a still picture; these are the three ways it is placed:
 //
 //   <Peek>    looking over an edge of a card
-//   <Perch>   sitting (or standing) on the top edge of a card
+//   <Perch>   standing on the top edge of a card
 //   <Figure>  the full Root, for openers, interstitials and end screens
 //
 // Nothing here moves. A picture fades in when its screen appears and that is all.
@@ -19,9 +18,7 @@ import { STILLS } from './mascotStills';
 /** True unless the learner has switched Root's appearances off. */
 export const useShowRoot = () => useStore((s) => s.display.companion !== 'off');
 
-/** Where things are in a pose's layout box, as fractions of its height (see Mascot). */
-const SIT = STILLS.sit;
-const SEAT: Partial<Record<Pose, number>> = { sit: (SIT.seat! - SIT.top) / SIT.stand, sleep: 0.97, read: 0.97 };
+/** Where a standing Root's soles are in its layout box, as a fraction of its height. */
 const FEET = 0.985;
 
 function useEntering() {
@@ -32,16 +29,15 @@ function useEntering() {
 // ── Peek ──────────────────────────────────────────────────────────────────
 export type PeekProps = {
   /** The edge of the parent Root looks out from behind. */
-  from?: 'top' | 'bottom' | 'left' | 'right';
-  /** Defaults: `peek` from the top (hands on the edge), `hang` from the bottom (dangling), `wave` from the sides. */
+  from?: 'top' | 'left' | 'right';
   pose?: Pose;
-  /** Root's full height in points. */
+  /** Root's full height in points. Only part of it shows. */
   size?: number;
   /** Where along the edge. */
   align?: 'start' | 'center' | 'end';
   /** Distance from the aligned corner. */
   inset?: number;
-  /** How much of Root shows, 0..1, for poses other than `peek` and `hang`. */
+  /** How much of Root shows, 0..1: from the leaf tips down (from the top), or from one side in. */
   show?: number;
   /** Makes the picture a button (used where Root is covering something and a tap uncovers it). */
   onPress?: () => void;
@@ -49,38 +45,36 @@ export type PeekProps = {
 };
 
 /**
- * Root looking out from behind one edge of its parent. The parent must be `position: 'relative'`
- * with visible overflow, so wrap a `Block` (which clips) in a plain `View` and put the Peek
- * beside the Block, not inside it. Nothing is laid out: the Peek takes no space.
+ * Root looking out from behind one edge of its parent: from the top it is seen down to
+ * the chin, as if standing behind the card. The parent must be `position: 'relative'` with
+ * visible overflow, so wrap a `Block` (which clips) in a plain `View` and put the Peek beside
+ * the Block, not inside it. Nothing is laid out: the Peek takes no space.
  */
-export function Peek({ from = 'top', pose, size = 96, align = 'end', inset = 22, show, onPress, a11y }: PeekProps) {
+export function Peek({ from = 'top', pose = 'wave', size = 170, align = 'end', inset = 22, show, onPress, a11y }: PeekProps) {
   const on = useShowRoot();
   const entering = useEntering();
   if (!on && !onPress) return null;
 
-  const p: Pose = pose ?? (from === 'top' ? 'peek' : from === 'bottom' ? 'hang' : 'wave');
-  const w = poseWidth(p, size);
-  const vertical = from === 'top' || from === 'bottom';
-  const hanging = from === 'bottom' && p === 'hang';
+  const w = poseWidth(pose, size);
+  const vertical = from === 'top';
   // Points of Root in view, measured away from the edge.
-  const vis = from === 'top' && p === 'peek' ? size - 3 : hanging ? size * 0.97 : (vertical ? size : w) * (show ?? 0.62);
+  const vis = (vertical ? size : w) * (show ?? (vertical ? 0.6 : 0.62));
 
   const justify = align === 'start' ? 'flex-start' : align === 'center' ? 'center' : 'flex-end';
   const outer: ViewStyle = vertical
-    ? { position: 'absolute', left: 0, right: 0, height: vis, flexDirection: 'row', justifyContent: justify, paddingHorizontal: inset, ...(from === 'top' ? { bottom: '100%' } : { top: '100%' }) }
+    ? { position: 'absolute', left: 0, right: 0, height: vis, flexDirection: 'row', justifyContent: justify, paddingHorizontal: inset, bottom: '100%' }
     : { position: 'absolute', top: 0, bottom: 0, width: vis, flexDirection: 'column', justifyContent: justify, paddingVertical: inset, ...(from === 'left' ? { right: '100%' } : { left: '100%' }) };
-  const win: ViewStyle = vertical ? { width: w, height: vis, overflow: 'hidden' } : { width: vis, height: size, overflow: 'hidden' };
+  // The window clips at the parent's edge only: a waving hand may reach past the layout box sideways.
+  const win: ViewStyle = vertical ? { width: w * 1.5, marginHorizontal: -w * 0.25, height: vis, overflow: 'hidden', alignItems: 'center' } : { width: vis, height: size, overflow: 'hidden' };
   // Where the full picture sits inside the window, so the right part of it is what shows.
   const place: ViewStyle =
     from === 'top'
-      ? { position: 'absolute', left: 0, top: 0 }
-      : from === 'bottom'
-        ? { position: 'absolute', left: 0, top: hanging ? -size * 0.02 : -(size - vis), transform: hanging ? undefined : [{ rotate: '180deg' }] }
-        : from === 'left'
-          ? { position: 'absolute', left: 0, top: 0, transformOrigin: '100% 100%', transform: [{ rotate: '-10deg' }] }
-          : { position: 'absolute', left: vis - w, top: 0, transformOrigin: '0% 100%', transform: [{ rotate: '10deg' }] };
+      ? { position: 'absolute', top: 0 }
+      : from === 'left'
+        ? { position: 'absolute', left: 0, top: 0, transformOrigin: '100% 100%', transform: [{ rotate: '-10deg' }] }
+        : { position: 'absolute', left: vis - w, top: 0, transformOrigin: '0% 100%', transform: [{ rotate: '10deg' }] };
 
-  const picture = <Mascot pose={p} size={size} a11y={a11y} />;
+  const picture = <Mascot pose={pose} size={size} a11y={a11y} />;
   return (
     <View pointerEvents="box-none" style={outer}>
       <Animated.View entering={entering} pointerEvents="box-none" style={win}>
@@ -99,18 +93,14 @@ export function Peek({ from = 'top', pose, size = 96, align = 'end', inset = 22,
 }
 
 // ── Perch ─────────────────────────────────────────────────────────────────
-/**
- * Root sitting on the top edge of its parent with its legs over the front (pose `sit`), or
- * standing on it (any standing pose). Same parent rule as Peek: relative, not clipped.
- */
-export function Perch({ pose = 'sit', size = 84, side = 'right', inset = 18, seat }: { pose?: Pose; size?: number; side?: 'left' | 'right'; inset?: number; seat?: number }) {
+/** Root standing on the top edge of its parent. Same parent rule as Peek: relative, not clipped. */
+export function Perch({ pose = 'wave', size = 84, side = 'right', inset = 18 }: { pose?: Pose; size?: number; side?: 'left' | 'right'; inset?: number }) {
   const on = useShowRoot();
   const entering = useEntering();
   if (!on) return null;
   const w = poseWidth(pose, size);
-  const seatAt = seat ?? SEAT[pose] ?? FEET;
   return (
-    <Animated.View entering={entering} pointerEvents="none" style={[{ position: 'absolute', top: -size * seatAt, width: w, height: size }, side === 'left' ? { left: inset } : { right: inset }]}>
+    <Animated.View entering={entering} pointerEvents="none" style={[{ position: 'absolute', top: -size * FEET, width: w, height: size }, side === 'left' ? { left: inset } : { right: inset }]}>
       <Mascot pose={pose} size={size} />
     </Animated.View>
   );

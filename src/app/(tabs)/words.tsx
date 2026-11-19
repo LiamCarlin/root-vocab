@@ -59,7 +59,7 @@ export default function Garden() {
         <View style={{ position: 'absolute', right: -40, top: -50, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(255,255,255,0.22)' }} />
         <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
           <View style={{ paddingLeft: 8, paddingTop: 14 }}>
-            <Mascot pose="water" size={144} />
+            <Mascot pose="wave" size={144} />
           </View>
           <View style={{ flex: 1, padding: 18, paddingLeft: 6, gap: 12, alignSelf: 'center' }} accessible accessibilityLabel={`${count('known')} rooted, ${count('learning')} growing, ${count('queued')} waiting`}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
@@ -127,7 +127,7 @@ export default function Garden() {
 
   const empty = (
     <Block tone="butter" pad={16} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Mascot pose={needle ? 'search' : 'sit'} size={116} />
+      <Mascot pose={needle ? 'think' : 'wave'} size={116} />
       <View style={{ flex: 1, gap: 12, alignItems: 'flex-start' }}>
         {needle ? (
           <>

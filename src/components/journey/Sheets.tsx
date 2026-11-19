@@ -38,7 +38,7 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
     <Sheet visible={visible} onClose={onClose}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingTop: 4 }}>
         {visible && <StreakFlame n={n} lit={lit} size={104} count />}
-        {visible && <Figure pose={n >= 3 ? 'flex' : lit ? 'thumbs' : 'wave'} size={118} />}
+        {visible && <Figure pose={n >= 3 ? 'cheer' : lit ? 'cheer' : 'wave'} size={118} />}
       </View>
 
       <Block pad={14} round={999} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 18 }}>
@@ -124,7 +124,7 @@ export function ChestSheet({ index, onClose }: { index: number | null; onClose: 
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
-        {index !== null && <Figure key={won === null ? 'wait' : 'won'} pose={won === null ? 'gasp' : 'cheer'} size={104} />}
+        {index !== null && <Figure key={won === null ? 'wait' : 'won'} pose={won === null ? 'think' : 'cheer'} size={104} />}
         <View style={{ flex: 1 }}>{won === null ? <Btn icon={Gift} label="Open" onPress={open} /> : <Btn kind="soft" icon={Check} label="Done" onPress={close} />}</View>
       </View>
     </Sheet>

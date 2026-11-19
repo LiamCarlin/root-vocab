@@ -206,7 +206,7 @@ export default function Finder() {
           })}
         </View>
         <View pointerEvents="none" style={{ position: 'absolute', right: 2, bottom: -10 }}>
-          <Mascot pose={mode === 'describe' ? 'search' : 'listen'} size={roomy ? 104 : 136} />
+          <Mascot pose={mode === 'describe' ? 'think' : 'think'} size={roomy ? 104 : 136} />
         </View>
       </Block>
 
@@ -347,7 +347,7 @@ export default function Finder() {
       {/* Asked once, before the first search. Reachable again from the button in the top bar. */}
       <Sheet visible={consent} onClose={() => answerConsent(null)} title="Search online?">
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Mascot pose="search" size={108} />
+          <Mascot pose="think" size={108} />
           <View style={{ flex: 1, gap: 12 }}>
             <Line icon={Send} text="Sends your typing" a11y="Sent: only the words you type here, to api.datamuse.com." />
             <Line icon={ShieldCheck} text="Nothing else, ever" a11y="Never sent: your name, your word list or anything else. No account." />
@@ -420,7 +420,7 @@ function Won({ found: f, fresh, status, stage, onAgain }: { found: Found; fresh:
       <Block tone={tone} pad={20} style={{ gap: 14, alignItems: 'center' }} a11y={`Found: ${f.text}`}>
         <View style={{ height: 172, alignItems: 'center', justifyContent: 'flex-end' }}>
           <Burst size={220} count={14} />
-          <Figure pose={fresh ? 'trophy' : 'cheer'} size={164} />
+          <Figure pose={fresh ? 'cheer' : 'cheer'} size={164} />
         </View>
         <SylWord text={f.text} parts={partsOf(f)} size={wordSize(f.text, 38, 280)} color={ON_BLOCK.ink} on={tone} />
         {!!f.meaning && (

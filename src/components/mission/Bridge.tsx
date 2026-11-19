@@ -18,7 +18,7 @@ export function Bridge({ done, next, at, of, pattern, top, onNext }: { done: Lex
   return (
     <Screen top={top} gap={16} footer={<Btn icon={ArrowRight} label="Next word" onPress={onNext} />}>
       <View style={{ alignItems: 'center', marginTop: 8 }}>
-        <Figure pose="thumbs" size={128} />
+        <Figure pose="cheer" size={128} />
       </View>
 
       <Block pad={20} style={{ gap: 12 }}>

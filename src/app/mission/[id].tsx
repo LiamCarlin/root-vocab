@@ -174,7 +174,7 @@ export default function Mission() {
     return (
       <Screen top={<TopBar back="close" onBack={leave} />} footer={<Btn icon={Home} a11y="Back to the journey" onPress={() => router.replace('/(tabs)')} />}>
         <View style={{ alignItems: 'center', gap: 18, marginTop: 60 }}>
-          <Mascot pose="search" size={200} />
+          <Mascot pose="think" size={200} />
           <Txt v="title" center>
             Not found
           </Txt>
@@ -230,7 +230,7 @@ export default function Mission() {
 
       <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave?">
         <View style={{ alignItems: 'center' }}>
-          <Mascot pose="oops" size={130} />
+          <Mascot pose="think" size={130} />
         </View>
         <Btn icon={Play} label="Stay" onPress={() => setLeaving(false)} />
         <Btn

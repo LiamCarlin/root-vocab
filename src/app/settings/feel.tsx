@@ -18,7 +18,7 @@ export default function Feel() {
   return (
     <Screen top={<TopBar center={<Txt v="heading">Sound and feel</Txt>} />}>
       <Block tone="brand" pad={18} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 14 }}>
-        <Mascot pose={display.companion === 'off' ? 'sleep' : 'headphones'} size={112} />
+        <Mascot pose={display.companion === 'off' ? 'think' : 'think'} size={112} />
         <View style={{ flex: 1, paddingBottom: 6 }}>
           <Toggle value={display.companion !== 'off'} onChange={(v) => setDisplay({ companion: v ? 'on' : 'off' })} label="Show Root" a11y="Show Root on cards and corners" />
         </View>

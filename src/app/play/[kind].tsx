@@ -185,7 +185,7 @@ export default function Play() {
   const leaveSheet = (
     <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave?">
       <View style={{ alignItems: 'center' }}>
-        <Mascot pose="oops" size={130} />
+        <Mascot pose="think" size={130} />
       </View>
       <Btn icon={PlayIcon} label="Stay" onPress={() => setLeaving(false)} />
       <Btn
@@ -204,7 +204,7 @@ export default function Play() {
     return (
       <Screen top={<TopBar back="close" onBack={leave} />} footer={<Btn icon={House} a11y="Back" onPress={leave} />}>
         <View style={{ alignItems: 'center', gap: 18, marginTop: 60 }}>
-          <Mascot pose="sleep" size={190} />
+          <Mascot pose="think" size={190} />
           <Txt v="title" center>
             Nothing here yet
           </Txt>

@@ -63,7 +63,7 @@ There are six places (Garden, Orchard, Market, Lantern Woods, Harbor, Summit), t
 
 **A learn stop teaches two words, not one.** Where it can, the pair shares a spelling pattern, so the pattern is met twice in a row in two different words. The stop runs the first word's lesson, a short bridge, the second word's lesson, and then one step that mixes the two and has the learner pull each back out from its meaning. A word is recorded as soon as its own lesson ends, so a stop left half-way picks up at the second word.
 
-The story is told a page at a time, each page a short passage shown whole: a six-page prologue, a four-page opening and a four-page ending for every place, and one more line on the trail after every word set. Each ending also names, in a sentence, the part of the method that made the words stick. Story text is in `src/data/story.ts`. Clearing a place gives back a keepsake (watering can, fruit basket, bunting, lantern, compass, telescope).
+The story is told a page at a time, each page a short passage shown whole: a six-page prologue, a four-page opening and a four-page ending for every place, and one more line on the trail after every word set. Each ending also names, in a sentence, the part of the method that made the words stick. Story text is in `src/data/story.ts`. Clearing a place gives back a named keepsake (watering can, fruit basket, bunting, lantern, compass, telescope).
 
 Reasons to come back: a daily goal (one, two or three stops), a streak with freezes bought with gems, three daily quests, badges with tiers, chests, and reminders that say something specific and never guilt.
 
@@ -118,9 +118,9 @@ The hands-on games are supported practice (the word is in front of the learner),
 
 ## Root, the mascot
 
-Root is a still picture. There is no animated character: Root does not walk in, pop up, react or fidget. It appears as an illustration where a screen has room for one (looking over a card, sitting on its edge, beside a line of the story, on an end screen), and what changes is which picture is shown. *You › Sound and feel › Show Root* hides the pictures on cards and corners.
+Root is a still picture. There is no animated character: Root does not walk in, pop up, react or fidget. It appears as an illustration where a screen has room for one (looking over a card, standing on its edge, beside a line of the story, on an end screen), and what changes is which picture is shown. *You › Sound and feel › Show Root* hides the pictures on cards and corners.
 
-Root is a 3D model built and posed in Blender from code. Each of its 45 poses is rendered once to a still (`assets/mascot/still`, listed in `src/components/mascotStills.ts`, drawn by `src/components/Mascot.tsx` and placed by `src/components/Buddy.tsx`). The scripts are in `tools/mascot`, which also renders the six keepsakes. The story islands and the chest are generated illustrations.
+The pictures are the original character illustrations, not 3D renders. There are three poses so far: **wave**, **cheer** and **think**. The source sheet is `tools/mascot/originals/sheet-1.jpg`; `tools/mascot/cut.py` cuts each figure out of its white background and writes `assets/mascot/<pose>.png` and the manifest `src/components/mascotStills.ts`, and `tools/mascot/icons.py` makes the app icon, splash and favicon from the waving one. To add a pose, put its sheet in `tools/mascot/originals`, add a line to `SHEETS` in `cut.py`, and run both scripts. `src/components/Mascot.tsx` draws a pose and `src/components/Buddy.tsx` places it. The story islands, the chest and the gem are generated illustrations in the same style.
 
 Effects and sounds are in `src/components/fx.tsx`, `src/components/rewards.tsx` and `src/lib/sfx.ts`. `/lab` (linked from *You › Moderator*) is a gallery of every picture and effect.
 

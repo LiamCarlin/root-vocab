@@ -62,7 +62,7 @@ export default function You() {
             {tile(<Growth stage={3} size={32} />, rooted, `${rooted} word${rooted === 1 ? '' : 's'} rooted`)}
           </View>
         </Block>
-        <Peek from="top" size={78} align="end" inset={26} />
+        <Peek from="top" size={130} align="end" inset={26} />
       </View>
 
       {/* The three strands: level in the middle, the ring fills toward the next one. */}

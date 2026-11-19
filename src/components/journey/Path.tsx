@@ -42,7 +42,7 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
   const labelRight = (i: number) => stopX(i, width) <= width / 2 + 1;
 
   // Root stands on the shoulder of its node, on the side away from the label.
-  const rootW = poseWidth(at < 0 ? 'cheer' : 'hike', ROOT);
+  const rootW = poseWidth(at < 0 ? 'cheer' : 'wave', ROOT);
   const rootAt = (i: number) => {
     const r = (i === at ? NOW : NODE) / 2;
     return { x: stopX(i, width) + (labelRight(i) ? -r * 0.5 : r * 0.5) - rootW / 2, y: stopY(i) - r * 0.6 - ROOT * FEET };
@@ -148,7 +148,7 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
       {/* Root, standing on the next stop. */}
       {stops.length > 0 && (
         <Animated.View key={stand} entering={reduceMotion ? undefined : FadeIn.duration(320).delay(240)} pointerEvents="none" style={{ position: 'absolute', left: home.x, top: home.y, width: rootW, height: ROOT }}>
-          <Mascot pose={at < 0 ? 'cheer' : 'hike'} size={ROOT} />
+          <Mascot pose={at < 0 ? 'cheer' : 'wave'} size={ROOT} />
         </Animated.View>
       )}
     </View>

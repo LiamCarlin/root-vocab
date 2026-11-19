@@ -102,7 +102,7 @@ export default function Lab() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
         {POSE_LIST.map((p) => (
           <View key={p} style={{ width: Math.max(96, poseSize * 0.95), height: poseSize * 1.45 + 26, alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-            <Mascot pose={p} size={p === 'peek' ? poseSize * 0.7 : poseSize} />
+            <Mascot pose={p} size={poseSize} />
             <Txt v="caption" color="ink2">
               {p}
             </Txt>
@@ -110,45 +110,38 @@ export default function Lab() {
         ))}
       </View>
 
-      <SectionLabel>Facing left</SectionLabel>
+      <SectionLabel>Facing the other way</SectionLabel>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 150 }}>
-        <Mascot pose="point" size={120} />
-        <Mascot pose="point" size={120} flip />
+        <Mascot pose="wave" size={120} />
+        <Mascot pose="wave" size={120} flip />
       </View>
 
       {/* ── Peek ── */}
       <SectionLabel>Peek · top</SectionLabel>
-      <View style={{ marginTop: 96 }}>
+      <View style={{ marginTop: 110 }}>
         <Card>
           <Txt v="bodyS" color="ink2">
             start · center · end
           </Txt>
         </Card>
-        <Peek from="top" align="start" size={84} />
-        <Peek from="top" align="center" pose="search" size={110} />
-        <Peek from="top" align="end" size={100} />
-      </View>
-
-      <SectionLabel>Peek · bottom</SectionLabel>
-      <View style={{ marginBottom: 124 }}>
-        <Card height={90} />
-        <Peek from="bottom" align="start" size={110} />
-        <Peek from="bottom" align="end" pose="wink" size={110} />
+        <Peek from="top" align="start" size={150} />
+        <Peek from="top" align="center" pose="think" size={190} />
+        <Peek from="top" align="end" pose="cheer" size={170} />
       </View>
 
       <SectionLabel>Peek · sides</SectionLabel>
       <View style={{ marginHorizontal: 78 }}>
         <Card height={150} />
         <Peek from="left" align="end" inset={8} size={110} />
-        <Peek from="right" align="end" inset={8} pose="listen" size={110} />
+        <Peek from="right" align="end" inset={8} pose="think" size={110} />
       </View>
 
       {/* ── Perch ── */}
       <SectionLabel>Perch</SectionLabel>
-      <View style={{ marginTop: 92 }}>
+      <View style={{ marginTop: 100 }}>
         <Block tone="brand" style={{ height: 120 }} />
         <Perch side="right" size={96} />
-        <Perch side="left" pose="read" size={88} />
+        <Perch side="left" pose="think" size={88} />
       </View>
 
       <SectionLabel>Figure</SectionLabel>
@@ -156,8 +149,8 @@ export default function Lab() {
         {() => (
           <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 170 }}>
             <Figure pose="cheer" size={130} />
-            <Figure pose="proud" size={130} delay={200} />
-            <Figure pose="oops" size={130} delay={400} />
+            <Figure pose="cheer" size={130} delay={200} />
+            <Figure pose="think" size={130} delay={400} />
           </View>
         )}
       </Replay>

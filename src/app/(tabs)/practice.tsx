@@ -86,10 +86,10 @@ export default function Practice() {
         Arcade
       </Txt>
 
-      {/* Daily mix. Root sits on top of it, so the wrapper leaves him headroom and is not clipped. */}
+      {/* Daily mix. Root stands on top of it, so the wrapper leaves headroom and is not clipped. */}
       <Rise>
-        {/* Room for Root to sit on the card; none is kept when the companion is switched off. */}
-        <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 58 }}>
+        {/* Room for Root to stand on the card; none is kept when Root is switched off. */}
+        <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 80 }}>
           <Block tone="brand" pad={22} onPress={() => router.push('/play/mix')} a11y={due ? `Daily mix. ${due} ${due === 1 ? 'word' : 'words'} due.` : 'Daily mix'} style={{ minHeight: 168, justifyContent: 'space-between', borderBottomWidth: 6, borderBottomColor: LIP.brand }}>
             <Shine round={radius.xl} />
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -108,7 +108,7 @@ export default function Practice() {
               </View>
             </View>
           </Block>
-          <Perch pose="sit" size={92} side="right" inset={26} />
+          <Perch pose="wave" size={84} side="right" inset={26} />
         </View>
       </Rise>
 

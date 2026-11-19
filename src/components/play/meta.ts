@@ -14,20 +14,20 @@ export type SessionMeta = { icon: LucideIcon; name: string; a11y: string; tone: 
 export function sessionMeta(kind: SessionKind, game?: GameId): SessionMeta {
   switch (kind) {
     case 'find':
-      return { icon: Search, name: 'Find', a11y: 'Find round: get the words out', tone: 'pink', pose: 'search' };
+      return { icon: Search, name: 'Find', a11y: 'Find round: get the words out', tone: 'pink', pose: 'think' };
     case 'spell':
-      return { icon: PenLine, name: 'Spell', a11y: 'Spelling round', tone: 'mint', pose: 'write' };
+      return { icon: PenLine, name: 'Spell', a11y: 'Spelling round', tone: 'mint', pose: 'think' };
     case 'hands':
-      return { icon: Hand, name: 'Hands-on', a11y: 'Hands-on round: tap, trace, say, roll and write this chapter’s words', tone: 'butter', pose: 'trace' };
+      return { icon: Hand, name: 'Hands-on', a11y: 'Hands-on round: tap, trace, say, roll and write this chapter’s words', tone: 'butter', pose: 'think' };
     case 'challenge':
-      return { icon: Flag, name: 'Clear the fog', a11y: 'Chapter challenge', tone: 'orange', pose: 'lantern' };
+      return { icon: Flag, name: 'Clear the fog', a11y: 'Chapter challenge', tone: 'orange', pose: 'think' };
     case 'game': {
       const g = GAMES[game ?? 'clue'];
-      return { icon: g.icon, name: g.name, a11y: g.a11y, tone: g.tone, pose: 'wink' };
+      return { icon: g.icon, name: g.name, a11y: g.a11y, tone: g.tone, pose: 'cheer' };
     }
     case 'mix':
     default:
-      return { icon: Shuffle, name: 'Daily mix', a11y: 'A mix of everything', tone: 'brand', pose: 'flex' };
+      return { icon: Shuffle, name: 'Daily mix', a11y: 'A mix of everything', tone: 'brand', pose: 'cheer' };
   }
 }
 

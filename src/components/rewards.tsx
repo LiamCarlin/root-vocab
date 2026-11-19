@@ -391,17 +391,17 @@ function lookFor(u: Unlock): Look {
   switch (u.kind) {
     case 'badge': {
       const def = BADGES.find((b) => b.id === u.id);
-      return { tone: def?.tone ?? 'brand', pose: 'trophy', title: def?.name ?? 'New badge', sub: def ? unitFor(def.tiers[Math.max(0, u.tier - 1)], def.unit) : '', say: `Badge earned: ${def?.name ?? 'new badge'}, level ${u.tier}` };
+      return { tone: def?.tone ?? 'brand', pose: 'cheer', title: def?.name ?? 'New badge', sub: def ? unitFor(def.tiers[Math.max(0, u.tier - 1)], def.unit) : '', say: `Badge earned: ${def?.name ?? 'new badge'}, level ${u.tier}` };
     }
     case 'chapter': {
       const ch = chapterOf(u.n);
-      return { tone: ch.tone, pose: 'dance', title: ch.name, sub: 'Fog cleared', say: `${ch.name}: the fog has cleared` };
+      return { tone: ch.tone, pose: 'cheer', title: ch.name, sub: 'Fog cleared', say: `${ch.name}: the fog has cleared` };
     }
     case 'streak':
-      return { tone: 'orange', pose: 'flex', title: `${u.n} days`, sub: 'In a row', say: `${u.n} day streak` };
+      return { tone: 'orange', pose: 'cheer', title: `${u.n} days`, sub: 'In a row', say: `${u.n} day streak` };
     case 'level': {
       const st = STRANDS[u.strand];
-      return { tone: st.tone, pose: 'proud', title: `${st.label} level ${u.level}`, sub: 'Level up', say: `Level up: ${st.label} is now level ${u.level}` };
+      return { tone: st.tone, pose: 'cheer', title: `${st.label} level ${u.level}`, sub: 'Level up', say: `Level up: ${st.label} is now level ${u.level}` };
     }
   }
 }

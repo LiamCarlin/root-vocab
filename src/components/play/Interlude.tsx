@@ -103,7 +103,7 @@ export function HalfwayCard({ done, total, onDone }: { done: number; total: numb
               <Dots total={total} done={done} onBlock />
             </View>
           </Pop>
-          <Peek from="top" size={128} align="center" />
+          <Peek from="top" size={200} align="center" />
         </View>
       </View>
     </Animated.View>

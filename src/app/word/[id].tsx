@@ -22,7 +22,7 @@ type Stage = UserWord['status'] | 'new';
 const HERO: Record<Stage, Tone> = { new: 'butter', queued: 'butter', learning: 'brand', known: 'mint', removed: 'soft' };
 const STATE: Record<Stage, string> = { new: 'Not started', queued: 'Waiting', learning: 'Growing', known: 'Rooted', removed: 'Removed' };
 /** Root keeps the word company: how it sits says how the word is doing. */
-const ROOT: Record<Stage, Pose> = { new: 'sit', queued: 'sit', learning: 'read', known: 'proud', removed: 'sleep' };
+const ROOT: Record<Stage, Pose> = { new: 'wave', queued: 'wave', learning: 'think', known: 'cheer', removed: 'think' };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Everything Root knows about one word. Works for a bank word that has not been started yet, too. */
@@ -134,7 +134,7 @@ export default function WordPage() {
       footer={footer}
       keyboard={lex.custom}>
       {/* The word, with Root perched on its card. */}
-      <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 44 }}>
+      <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 72 }}>
       <Block tone={tone} style={{ gap: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Growth stage={w ? growth(w) : 0} size={56} />
@@ -156,7 +156,7 @@ export default function WordPage() {
           <IconBtn icon={Snail} label={slow ? 'Slower speech is on' : 'Slower speech'} kind={coloured ? 'glass' : 'ghost'} active={slow} onPress={() => patch({ slowAudio: !slow })} />
         </View>
       </Block>
-        <Perch pose={ROOT[stage]} size={78} side="left" inset={96} />
+        <Perch pose={ROOT[stage]} size={74} side="left" inset={96} />
       </View>
 
       <Rise i={1}>

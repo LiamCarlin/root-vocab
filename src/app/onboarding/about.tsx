@@ -27,7 +27,7 @@ export default function About() {
 
   const picks = profile.days.length + profile.interests.length;
   // Root warms up as it gets to know you.
-  const pose: Pose = picks === 0 ? 'listen' : picks < 3 ? 'thumbs' : picks < 6 ? 'laugh' : 'love';
+  const pose: Pose = picks === 0 ? 'think' : picks < 3 ? 'wave' : 'cheer';
 
   const toggleDay = (id: DayId) => {
     const on = profile.days.includes(id);
@@ -52,7 +52,7 @@ export default function About() {
       </Rise>
 
       {/* Root sits on the first card and reacts as things are picked. */}
-      <Rise i={1} style={{ marginTop: 44 }}>
+      <Rise i={1} style={{ marginTop: 78 }}>
         <View style={{ position: 'relative' }}>
           <Block pad={18} style={{ gap: 14 }}>
             <Field
@@ -76,7 +76,7 @@ export default function About() {
               ))}
             </ChipRow>
           </Block>
-          <Perch pose={pose} size={86} side="right" inset={20} />
+          <Perch pose={pose} size={80} side="right" inset={20} />
         </View>
       </Rise>
 

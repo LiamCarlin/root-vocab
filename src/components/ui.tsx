@@ -442,7 +442,7 @@ export function Field({ right, left, style, big, ...rest }: TextInputProps & { r
 }
 
 // ── Root speaking: only for things worth reading (a meaning, why a piece is off) ──
-export function Bubble({ text, pose = 'point', tone = 'surface', size = 84 }: { text: string; pose?: Pose; tone?: 'surface' | 'error' | 'success' | 'butter'; size?: number }) {
+export function Bubble({ text, pose = 'wave', tone = 'surface', size = 84 }: { text: string; pose?: Pose; tone?: 'surface' | 'error' | 'success' | 'butter'; size?: number }) {
   const { c, e1, reduceMotion } = useTheme();
   const bg = tone === 'surface' ? c.surface : tone === 'error' ? c.errorTint : tone === 'success' ? c.mintTint : c.sun;
   return (
