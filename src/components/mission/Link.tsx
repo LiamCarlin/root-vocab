@@ -4,11 +4,10 @@ import { Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Line } from 'react-native-svg';
 
-import { Burst, Pop } from '@/components/fx';
+import { Pop } from '@/components/fx';
 import { Controls, SylWord } from '@/components/learn';
 import { Btn, IconBtn, Tap, Txt } from '@/components/ui';
 import { buzz, say, speakable, stopSpeaking } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, useTheme, wordSize, type BlockTone } from '@/theme';
 import { StepScreen } from './Frame';
@@ -98,7 +97,6 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
     if (phase === 'web' && hasPics) {
       timers.current.forEach(clearTimeout);
       stopSpeaking();
-      buddy.react('correct');
       setPhase('pic');
       return;
     }
@@ -110,7 +108,6 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
     pickHook(emoji);
     buzz.good();
     sfx.play('good');
-    buddy.react('unlock');
   };
 
   const cx = w / 2;
@@ -225,7 +222,6 @@ function PicTile({ emoji, tone, state, onPress, word }: { emoji: string; tone: B
           {emoji}
         </Text>
       </Tap>
-      {state === 'picked' && <Burst size={200} count={12} />}
     </Animated.View>
   );
 }

@@ -6,7 +6,7 @@ import type { DayId, Strand } from '@/data/profile';
 import type { Topic } from '@/data/words';
 import type { FontId } from '@/theme/tokens';
 import { addDays, diffDays } from './dates';
-import { bumpSkill, dayOf, difficulty, emptyMem, levelOf, nextMem, SKILL_MAX, SKILL_MIN, STRAND_LIST, streakOf, type GameId, type SessionKind } from './engine';
+import { bumpSkill, dayOf, difficulty, emptyMem, levelOf, nextMem, SKILL_MAX, SKILL_MIN, STRAND_LIST, stopTodo, stopWords, streakOf, type GameId, type SessionKind } from './engine';
 import { buildChapter, refreshStops } from './journey';
 import { lexemeFor, slug, type Lexeme } from './lexicon';
 import { newBadgeUnlocks, QUEST_BY_ID, questsFor, questState } from './rewards';
@@ -48,13 +48,23 @@ export type SlotId = 'morning' | 'lunch' | 'evening';
 export const SLOT_LABEL: Record<SlotId, string> = { morning: 'Morning', lunch: 'Midday', evening: 'Evening' };
 
 export type Profile = { name: string; guest: boolean; days: DayId[]; interests: Topic[]; goals: Strand[] };
-export type Display = { font: FontId; size: 0 | 1 | 2; spacing: 0 | 1; theme: 'system' | 'light' | 'paper' | 'dark'; reduceMotion: boolean; haptics: boolean; sound: boolean; companion: 'lively' | 'calm' | 'off' };
+export type Display = { font: FontId; size: 0 | 1 | 2; spacing: 0 | 1; theme: 'system' | 'light' | 'paper' | 'dark'; reduceMotion: boolean; haptics: boolean; sound: boolean; /** Whether Root's pictures appear on cards and corners. */ companion: 'on' | 'off' };
 export type CheckIn = { freq: 'daily' | 'three' | 'off'; days: number[]; slots: SlotId[]; times: Record<SlotId, string> };
 export type Moderator = { micMiss: boolean; dayOffset: number };
 
 export type Attempt = { d: string; id: string; strand: Strand; r: 0 | 0.5 | 1; game: GameId; ms?: number; cue?: number };
-export type StopKind = 'learn' | 'find' | 'spell' | 'chest' | 'challenge';
-export type Stop = { kind: StopKind; wordId?: string; /** Day key it was finished. */ done?: string };
+export type StopKind = 'learn' | 'find' | 'spell' | 'chest' | 'hands' | 'challenge';
+export type Stop = {
+  kind: StopKind;
+  /** A learn stop teaches a small set of words, one after the other. */
+  words?: string[];
+  /** The words of this stop already taught, so a stop left half-way picks up where it stopped. */
+  got?: string[];
+  /** How a learn stop was saved before stops held a set of words. Read through `stopWords`. */
+  wordId?: string;
+  /** Day key it was finished. */
+  done?: string;
+};
 export type Journey = { chapter: number; stops: Stop[]; prologueSeen: boolean; introSeen: boolean; cleared: number[] };
 export type Unlock = { kind: 'badge'; id: string; tier: number } | { kind: 'chapter'; n: number } | { kind: 'streak'; n: number } | { kind: 'level'; strand: Strand; level: number };
 export type Session = { day: string; kind: SessionKind; total: number; right: number; ms: number };
@@ -141,7 +151,7 @@ type Actions = {
   seeStory: (which: 'prologue' | 'intro') => void;
   /** After the outro: the place is cleared and the next chapter's stops are built. */
   nextChapter: () => void;
-  /** Adds to a lifetime and a daily counter ('pokes', 'finder', 'marble', 'sky', 'trace', 'combo5', …). */
+  /** Adds to a lifetime and a daily counter ('finder', 'trace', 'marble', 'sand', 'tap', 'echo', 'combo5', …). */
   bump: (counter: string, by?: number) => void;
   /** Rolls the day over if it has changed (fresh quests and daily counters, streak freezes) and repairs any stop that can no longer be played. Cheap; call on app focus. */
   tick: () => void;
@@ -181,7 +191,7 @@ const initial: Data = {
   checkIn: { freq: 'daily', days: [1, 3, 5], slots: ['evening'], times: { morning: '07:45', lunch: '12:30', evening: '19:00' } },
   voice: 'coach',
   slowAudio: false,
-  display: { font: 'lexend', size: 0, spacing: 0, theme: 'system', reduceMotion: false, haptics: true, sound: true, companion: 'lively' },
+  display: { font: 'lexend', size: 0, spacing: 0, theme: 'system', reduceMotion: false, haptics: true, sound: true, companion: 'on' },
   mod: { micMiss: false, dayOffset: 0 },
   words: {},
   skill: { know: 2, find: 2, spell: 2 },
@@ -319,8 +329,8 @@ function finishStop(s0: Data, index: number): { s: Data; chapterDone: boolean } 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const STATUSES: WordStatus[] = ['queued', 'learning', 'known', 'removed'];
 const ORIGINS: Origin[] = ['path', 'finder', 'assess', 'typed'];
-const STOP_KINDS: StopKind[] = ['learn', 'find', 'spell', 'chest', 'challenge'];
-const SESSION_KINDS: SessionKind[] = ['find', 'spell', 'mix', 'challenge', 'game'];
+const STOP_KINDS: StopKind[] = ['learn', 'find', 'spell', 'chest', 'hands', 'challenge'];
+const SESSION_KINDS: SessionKind[] = ['find', 'spell', 'mix', 'challenge', 'game', 'hands'];
 const SLOTS: SlotId[] = ['morning', 'lunch', 'evening'];
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -395,7 +405,7 @@ export function sanitizeImport(raw: unknown): Data | null {
     reduceMotion: flag(di.reduceMotion, initial.display.reduceMotion),
     haptics: flag(di.haptics, initial.display.haptics),
     sound: flag(di.sound, initial.display.sound),
-    companion: pick<Display['companion']>(di.companion, ['lively', 'calm', 'off'], initial.display.companion),
+    companion: di.companion === 'off' ? 'off' : 'on',
   };
 
   const ci = isObj(d.checkIn) ? d.checkIn : {};
@@ -427,7 +437,10 @@ export function sanitizeImport(raw: unknown): Data | null {
     .filter((st) => STOP_KINDS.includes(st.kind as StopKind))
     .map((st) => {
       const stop: Stop = { kind: st.kind as StopKind };
-      if (typeof st.wordId === 'string' && slug(st.wordId)) stop.wordId = slug(st.wordId);
+      const ids = uniq([...strList(st.words), ...(typeof st.wordId === 'string' ? [st.wordId] : [])].map(slug).filter(Boolean)).slice(0, 4);
+      if (ids.length) stop.words = ids;
+      const got = strList(st.got).map(slug).filter((id) => ids.includes(id));
+      if (got.length) stop.got = got;
       const done = dayKeyOf(st.done);
       if (done) stop.done = done;
       return stop;
@@ -621,6 +634,9 @@ export const useStore = create<State>()(
           const rooted = STRAND_LIST.every((k) => mem[k].box >= 3);
           s = { ...s, words: { ...s.words, [id]: { ...w, status: rooted ? 'known' : 'learning', prevStatus: undefined, learnedOn: w.learnedOn ?? t, lesson: stats, mem } } };
           if (first) s = { ...count(s, 'lessons'), gems: s.gems + GEMS.lesson };
+          // The stop this word belongs to remembers it, so a set left half-way carries on with the next word.
+          const stops = s.journey.stops.map((st) => (st.kind === 'learn' && !st.done && stopWords(st).includes(id) && !st.got?.includes(id) ? { ...st, got: [...(st.got ?? []), id] } : st));
+          s = { ...s, journey: { ...s.journey, stops } };
         }
         set(celebrate(before, practised(s)));
       },
@@ -693,7 +709,7 @@ export const useStore = create<State>()(
         const before = roll(data(get()));
         const s = count(before, counter, by);
         // Things that happen outside a lesson or a round still deserve their badge straight away.
-        set(counter === 'pokes' || counter === 'finder' ? celebrate(before, s) : s);
+        set(counter === 'finder' ? celebrate(before, s) : s);
       },
 
       tick: () => {
@@ -739,7 +755,8 @@ export const useStore = create<State>()(
           ...current,
           ...p,
           profile: { ...current.profile, ...p.profile },
-          display: { ...current.display, ...p.display },
+          // Older saves had three companion modes; anything that was not `off` is `on`.
+          display: { ...current.display, ...p.display, companion: p.display?.companion === 'off' ? 'off' : 'on' },
           checkIn: { ...current.checkIn, ...p.checkIn },
           mod: { ...current.mod, ...p.mod },
           skill: { ...current.skill, ...p.skill },
@@ -805,4 +822,4 @@ export function goalProgress(s: Pick<Data, 'daily' | 'goal' | 'mod'>): { done: n
 export const currentStop = (s: Pick<Data, 'journey'>) => s.journey.stops.findIndex((st) => !st.done);
 
 /** Index of the stop still waiting to teach this word, -1 if there is none. */
-export const stopForWord = (s: Pick<Data, 'journey'>, id: string) => s.journey.stops.findIndex((st) => st.kind === 'learn' && !st.done && st.wordId === id);
+export const stopForWord = (s: Pick<Data, 'journey'>, id: string) => s.journey.stops.findIndex((st) => st.kind === 'learn' && !st.done && stopTodo(st).includes(id));

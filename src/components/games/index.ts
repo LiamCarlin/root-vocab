@@ -1,4 +1,4 @@
-import { ArrowLeftRight, BookOpen, CircleDot, Ear, EyeOff, Network, PenLine, Puzzle, Search, Shuffle, SpellCheck, TextCursorInput, WandSparkles, type LucideIcon } from 'lucide-react-native';
+import { ArrowLeftRight, AudioLines, BookOpen, CircleDot, Ear, EyeOff, Fingerprint, Hand, Network, PenLine, Puzzle, Search, Shuffle, SpellCheck, TextCursorInput, type LucideIcon } from 'lucide-react-native';
 import type { ComponentType } from 'react';
 
 import type { Strand } from '@/data/profile';
@@ -13,7 +13,7 @@ import { Missing } from './Missing';
 import { Pair } from './Pair';
 import { Proof } from './Proof';
 import { Scramble } from './Scramble';
-import { MarbleGame, SkyGame, TraceGame } from './Sensory';
+import { EchoGame, MarbleGame, SandGame, TapGame, TraceGame } from './Sensory';
 import type { GameProps } from './types';
 import { Web } from './Web';
 
@@ -45,8 +45,10 @@ export const GAMES: Record<GameId, GameDef> = {
   proof: { Comp: Proof, name: 'Spot it', a11y: 'Pick the correct spelling', icon: SpellCheck, strand: 'spell', tone: 'mint' },
   dictate: { Comp: Dictate, name: 'Hear and write', a11y: 'Hear the word and write it', icon: Ear, strand: 'spell', tone: 'mint' },
   scramble: { Comp: Scramble, name: 'Unscramble', a11y: 'Put the beats in order', icon: Shuffle, strand: 'spell', tone: 'mint' },
-  // Spell, with the whole body
-  trace: { Comp: TraceGame, name: 'Trace', a11y: 'Trace the letters with a finger', icon: PenLine, strand: 'spell', tone: 'butter' },
-  marble: { Comp: MarbleGame, name: 'Marble', a11y: 'Tilt the phone to roll a marble through the letters', icon: CircleDot, strand: 'spell', tone: 'butter' },
-  sky: { Comp: SkyGame, name: 'Sky writing', a11y: 'Write the letters in the air with your phone', icon: WandSparkles, strand: 'spell', tone: 'butter' },
+  // Hands-on: the word through the hand, the arm and the voice
+  tap: { Comp: TapGame, name: 'Tap and sweep', a11y: 'Tap one key for each beat, then sweep across to blend them', icon: Fingerprint, strand: 'spell', tone: 'butter' },
+  trace: { Comp: TraceGame, name: 'Trace', a11y: 'Trace each letter the way it is written', icon: PenLine, strand: 'spell', tone: 'butter' },
+  marble: { Comp: MarbleGame, name: 'Marble run', a11y: 'Tip the phone to roll a marble along each letter', icon: CircleDot, strand: 'spell', tone: 'butter' },
+  sand: { Comp: SandGame, name: 'Sand tray', a11y: 'Smooth the sand, then write the word from memory with a finger', icon: Hand, strand: 'spell', tone: 'butter' },
+  echo: { Comp: EchoGame, name: 'Echo', a11y: 'Root says it, then you say it back, beat by beat', icon: AudioLines, strand: 'find', tone: 'butter' },
 };

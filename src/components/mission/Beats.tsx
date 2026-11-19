@@ -1,20 +1,26 @@
-import { ArrowRight } from 'lucide-react-native';
+import { ArrowRight, ChevronsRight, MousePointerClick } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
-import { BeatDrum, Controls, SylWord } from '@/components/learn';
+import { Coach } from '@/components/hands/kit';
+import { TapSweep } from '@/components/hands/TapSweep';
+import { Controls, SylWord } from '@/components/learn';
 import { Btn } from '@/components/ui';
-import { buzz, sayHum } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
+import { sayHum } from '@/lib/audio';
 import { sfx } from '@/lib/sfx';
+import { useStore } from '@/lib/store';
 import { wordSize } from '@/theme';
-import { Sparks, StepScreen } from './Frame';
+import { StepScreen } from './Frame';
 import type { StepProps } from './types';
 
-/** Beats: drum the word, one tap for every syllable. The rhythm goes in through the hand. A one-beat word is a single tap. */
+/**
+ * Beats: tap the word out, one finger for every beat, then sweep across them to blend the beats
+ * back into the word. The rhythm goes in through the hand. A one-beat word is a single tap and a sweep.
+ */
 export function Beats({ lex, top, next, skip }: StepProps) {
+  const bump = useStore((s) => s.bump);
   const [done, setDone] = useState(false);
-  const [beat, setBeat] = useState(-1);
+  const [beats, setBeats] = useState(0);
   const stop = useRef<(() => void) | null>(null);
   const after = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -33,13 +39,13 @@ export function Beats({ lex, top, next, skip }: StepProps) {
 
   const finish = () => {
     setDone(true);
-    buzz.good();
+    bump('tap');
     sfx.play('good');
-    buddy.react('correct');
-    // The whole word once more, after the last beat has had its say.
-    after.current = setTimeout(replay, 500);
+    // The sweep ends in the whole word.
+    after.current = setTimeout(replay, 120);
   };
 
+  const sweeping = beats >= lex.parts.length;
   return (
     <StepScreen
       top={top}
@@ -51,12 +57,12 @@ export function Beats({ lex, top, next, skip }: StepProps) {
         </>
       }>
       <View style={{ marginTop: 6 }}>
-        <SylWord text={lex.text} parts={lex.parts} size={wordSize(lex.text, 34, 320)} active={done ? -1 : beat} />
+        <SylWord text={lex.text} parts={lex.parts} size={wordSize(lex.text, 38, 320)} active={done || sweeping ? -1 : beats} />
       </View>
-      <View>
-        <BeatDrum parts={lex.parts} says={lex.says} onBeat={setBeat} onDone={finish} />
-        <Sparks on={done} size={300} />
+      <View pointerEvents={done ? 'none' : 'auto'}>
+        <TapSweep parts={lex.parts} says={lex.says} onBeat={(i) => setBeats(i + 1)} onDone={finish} />
       </View>
+      <Coach icon={sweeping ? ChevronsRight : MousePointerClick} text={done ? 'Tapped and blended.' : sweeping ? 'Now sweep across to blend them.' : 'One tap for each beat, left to right.'} tone={done ? 'good' : 'plain'} />
     </StepScreen>
   );
 }

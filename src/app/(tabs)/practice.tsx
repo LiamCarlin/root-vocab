@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Play, Shuffle, Smartphone, Sparkles, type LucideIcon } from 'lucide-react-native';
+import { Hand, Play, Shuffle, Sparkles, type LucideIcon } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
@@ -10,7 +10,7 @@ import { LIP } from '@/components/rewards';
 import { Block, Ring, Rise, Screen, Txt } from '@/components/ui';
 import { STRANDS, type Strand } from '@/data/profile';
 import { BANK } from '@/data/words';
-import { GAME_STRAND, canPlay, levelProgress, type GameId } from '@/lib/engine';
+import { GAME_STRAND, HANDS, canPlay, levelProgress, type GameId } from '@/lib/engine';
 import { lexemeFor } from '@/lib/lexicon';
 import { dueCount, learnedWords, levelOf, lexOf, today, useStore } from '@/lib/store';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
@@ -18,12 +18,12 @@ import { TAB_SPACE } from './_layout';
 
 type Group = { id: string; label: string; strand?: Strand; icon: LucideIcon; games: GameId[] };
 
-/** Every game, grouped by what it trains. "Move" is spelling with the whole body. */
+/** Every game, grouped by what it trains. "Hands-on" is the word through the hand, the arm and the voice. */
 const GROUPS: Group[] = [
   { id: 'find', label: STRANDS.find.label, strand: 'find', icon: STRANDS.find.icon, games: ['clue', 'gap'] },
   { id: 'know', label: STRANDS.know.label, strand: 'know', icon: STRANDS.know.icon, games: ['web', 'pair', 'meaning'] },
   { id: 'spell', label: STRANDS.spell.label, strand: 'spell', icon: STRANDS.spell.icon, games: ['cover', 'missing', 'proof', 'dictate', 'scramble'] },
-  { id: 'move', label: 'Move', icon: Smartphone, games: ['trace', 'marble', 'sky'] },
+  { id: 'hands', label: 'Hands-on', icon: Hand, games: HANDS },
 ];
 
 /**
@@ -73,10 +73,10 @@ export default function Practice() {
   const counters = useStore((s) => s.counters);
   const companion = useStore((s) => s.display.companion);
 
-  // A game is "new" until it shows up in the attempt log (or, for the moving games, in their counters).
+  // A game is "new" until it shows up in the attempt log (or, for the hands-on games, in their counters).
   const played = useMemo(() => {
     const set = new Set<string>(log.map((a) => a.game));
-    for (const k of ['trace', 'marble', 'sky']) if ((counters[k] ?? 0) > 0) set.add(k);
+    for (const k of HANDS) if ((counters[k] ?? 0) > 0) set.add(k);
     return set;
   }, [log, counters]);
 

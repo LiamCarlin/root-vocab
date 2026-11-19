@@ -3,11 +3,12 @@ import { ArrowRight } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { Reaction } from '@/components/Buddy';
-import { Confetti, CountUp, Pop } from '@/components/fx';
+import { Figure } from '@/components/Buddy';
+import { CountUp, Pop } from '@/components/fx';
 import { Block, Btn, Chip, ChipRow, Ring, Rise, Screen, SectionLabel, TopBar, Txt } from '@/components/ui';
 import { STRANDS, STRAND_ORDER } from '@/data/profile';
 import { buzz } from '@/lib/audio';
+import { stopWords } from '@/lib/journey';
 import { sfx } from '@/lib/sfx';
 import { levelOf, lexOf, useStore } from '@/lib/store';
 import { ON_BLOCK, SYLLABLE_TONES, useTheme } from '@/theme';
@@ -21,9 +22,10 @@ export default function PlacementResult() {
   const words = useStore((s) => s.words);
 
   const first = stops
-    .filter((st) => st.kind === 'learn' && st.wordId)
-    .slice(0, 3)
-    .map((st) => lexOf({ words }, st.wordId!))
+    .filter((st) => st.kind === 'learn')
+    .flatMap(stopWords)
+    .slice(0, 4)
+    .map((id) => lexOf({ words }, id))
     .filter((l) => !!l);
 
   useEffect(() => {
@@ -36,12 +38,11 @@ export default function PlacementResult() {
 
   return (
     <Screen top={<TopBar back={null} steps={{ total: 5, done: 3 }} />} footer={<Btn icon={ArrowRight} a11y="Next" onPress={next} />}>
-      <Confetti />
       <Rise style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <Txt v="display" accessibilityRole="header" style={{ flex: 1, paddingBottom: 12 }}>
           Your starting map
         </Txt>
-        <Reaction pose="proud" size={132} delay={200} />
+        <Figure pose="proud" size={132} delay={200} />
       </Rise>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>

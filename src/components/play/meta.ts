@@ -1,4 +1,4 @@
-import { Flag, PenLine, Search, Shuffle, type LucideIcon } from 'lucide-react-native';
+import { Flag, Hand, PenLine, Search, Shuffle, type LucideIcon } from 'lucide-react-native';
 
 import { GAMES } from '@/components/games';
 import type { Pose } from '@/components/Mascot';
@@ -17,6 +17,8 @@ export function sessionMeta(kind: SessionKind, game?: GameId): SessionMeta {
       return { icon: Search, name: 'Find', a11y: 'Find round: get the words out', tone: 'pink', pose: 'search' };
     case 'spell':
       return { icon: PenLine, name: 'Spell', a11y: 'Spelling round', tone: 'mint', pose: 'write' };
+    case 'hands':
+      return { icon: Hand, name: 'Hands-on', a11y: 'Hands-on round: tap, trace, say, roll and write this chapter’s words', tone: 'butter', pose: 'trace' };
     case 'challenge':
       return { icon: Flag, name: 'Clear the fog', a11y: 'Chapter challenge', tone: 'orange', pose: 'lantern' };
     case 'game': {

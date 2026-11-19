@@ -3,7 +3,7 @@ import { Check, Drum, Ear, Globe, Lightbulb, Map, Mic, Play, RotateCcw, Search, 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ScrollView, View } from 'react-native';
 
-import { Reaction } from '@/components/Buddy';
+import { Figure } from '@/components/Buddy';
 import { Burst } from '@/components/fx';
 import { SylWord } from '@/components/learn';
 import { Growth, Mascot } from '@/components/Mascot';
@@ -420,7 +420,7 @@ function Won({ found: f, fresh, status, stage, onAgain }: { found: Found; fresh:
       <Block tone={tone} pad={20} style={{ gap: 14, alignItems: 'center' }} a11y={`Found: ${f.text}`}>
         <View style={{ height: 172, alignItems: 'center', justifyContent: 'flex-end' }}>
           <Burst size={220} count={14} />
-          <Reaction pose={fresh ? 'trophy' : 'cheer'} size={164} />
+          <Figure pose={fresh ? 'trophy' : 'cheer'} size={164} />
         </View>
         <SylWord text={f.text} parts={partsOf(f)} size={wordSize(f.text, 38, 280)} color={ON_BLOCK.ink} on={tone} />
         {!!f.meaning && (

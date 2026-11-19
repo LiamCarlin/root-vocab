@@ -5,10 +5,9 @@ import { View } from 'react-native';
 import { Controls, PartTiles } from '@/components/learn';
 import { Btn, Chip, ChipRow } from '@/components/ui';
 import { beatMs, buzz, hum, say, sayByParts, sayHum, speakable } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import { buildPieces, shuffled, type Lexeme, type Piece } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
-import { Sparks, StepScreen, Why } from './Frame';
+import { StepScreen, Why } from './Frame';
 import type { StepProps } from './types';
 
 // Letters that get mistaken for each other, by shape or by sound.
@@ -106,14 +105,12 @@ export function Build({ lex, top, next, skip, addHint }: StepProps) {
       if (now.length >= n) {
         setHint(false);
         sfx.play('good');
-        buddy.react('correct');
         whole();
       } else sound(target);
       return;
     }
 
     buzz.nudge();
-    buddy.react('wrong');
     flashWrong(p.key);
     // Only a look-alike of this very slot has a reason worth reading.
     setWhy(!real && p.slot === target && p.why ? p.why : null);
@@ -133,7 +130,6 @@ export function Build({ lex, top, next, skip, addHint }: StepProps) {
     quiet();
     setHint(true);
     setWhy(null);
-    buddy.react('hint');
     if (byLetter) say(speakable(lex.text));
     else cancel.current = sayByParts(lex.text, lex.says, setLit, { wholeFirst: false });
   };
@@ -161,7 +157,6 @@ export function Build({ lex, top, next, skip, addHint }: StepProps) {
           active={lit >= 0 ? lit : done ? -1 : used.length}
           onPress={done ? undefined : remove}
         />
-        <Sparks on={done} size={280} />
       </View>
 
       {!done && (

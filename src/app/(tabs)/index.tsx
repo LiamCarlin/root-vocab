@@ -9,9 +9,10 @@ import { KIND_LABEL, Path, stopY, type StopFace } from '@/components/journey/Pat
 import { ChestSheet, StreakSheet } from '@/components/journey/Sheets';
 import { GemPill, GoalRing, QuestRow, Scene } from '@/components/rewards';
 import { Bar, Block, Btn, Rise, Screen, Stat, Tap, Txt } from '@/components/ui';
-import { SCENES, chapterOf } from '@/data/story';
+import { KEEPSAKES, chapterOf } from '@/data/story';
 import { refreshCheckIns } from '@/lib/checkins';
 import { dueItems } from '@/lib/engine';
+import { stopTodo, stopWords } from '@/lib/journey';
 import { questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
 import { currentStop, dueCount, goalProgress, lexOf, streak, today, useStore } from '@/lib/store';
@@ -19,7 +20,7 @@ import { GUTTER, ON_BLOCK, useTheme } from '@/theme';
 import { TAB_SPACE } from './_layout';
 
 /**
- * The journey: one place in the valley per chapter, nine stops to clear its fog.
+ * The journey: one place in the valley per chapter, ten stops to clear its fog.
  * This is home. Everything that gives a reason to come back is on it: the place
  * getting clearer, today's goal, the streak, the quests, and the next stop with
  * Root already standing on it.
@@ -80,7 +81,14 @@ export default function Journey() {
     return () => clearTimeout(id);
   }, [shown]);
 
-  const faces: StopFace[] = stops.map((st) => (st.wordId ? { text: lexOf(s, st.wordId)?.text, hook: s.words[st.wordId]?.hook } : {}));
+  const faces: StopFace[] = stops.map((st) => {
+    const ids = st.kind === 'learn' ? stopWords(st) : [];
+    if (!ids.length) return {};
+    const texts = ids.map((id) => lexOf(s, id)?.text ?? id);
+    // Inside the node: the picture picked for the first word once there is one, until then the words' first letters.
+    const hook = ids.map((id) => s.words[id]?.hook).find(Boolean);
+    return { text: texts.join(' · '), lines: texts, mark: hook ?? texts.map((t) => t.charAt(0).toUpperCase()).join(''), got: ids.length - stopTodo(st).length, of: ids.length };
+  });
 
   const next = cur >= 0 ? stops[cur] : undefined;
   const nextLabel = next ? (next.kind === 'learn' ? (faces[cur]?.text ?? KIND_LABEL.learn) : KIND_LABEL[next.kind]) : '';
@@ -88,14 +96,18 @@ export default function Journey() {
   const open = (i: number) => {
     const st = stops[i];
     if (!st) return;
+    const ids = st.kind === 'learn' ? stopWords(st) : [];
     if (st.done) {
-      if (st.kind === 'learn' && st.wordId) router.push(`/word/${st.wordId}`);
+      if (ids.length) router.push(`/word/${ids[0]}`);
       return;
     }
     sfx.play('pop');
-    if (st.kind === 'learn' && st.wordId) router.push(`/mission/${st.wordId}?stop=${i}`);
+    const todo = stopTodo(st);
+    if (ids.length && todo.length) router.push(`/mission/${todo[0]}?stop=${i}`);
+    // Every word of the set is learned but the stop was never closed (the app was shut on the last screen): close it now.
+    else if (ids.length) s.completeStop(i);
     else if (st.kind === 'chest') setChest(i);
-    else if (st.kind === 'find' || st.kind === 'spell' || st.kind === 'challenge') router.push(`/play/${st.kind}?stop=${i}`);
+    else if (st.kind === 'find' || st.kind === 'spell' || st.kind === 'hands' || st.kind === 'challenge') router.push(`/play/${st.kind}?stop=${i}`);
     // A learn stop with no word left to give (the whole bank is learned) becomes a mixed round.
     else router.push(`/play/mix?stop=${i}`);
   };
@@ -144,7 +156,7 @@ export default function Journey() {
               </View>
             </View>
           </Block>
-          <Peek from="top" align="start" inset={76} size={96} delay={700} />
+          <Peek from="top" align="start" inset={76} size={96} />
         </Rise>
 
         {/* Today's three quests. */}
@@ -193,11 +205,10 @@ export default function Journey() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
               {journey.cleared.map((n) => {
                 const done = chapterOf(n);
-                const img = SCENES[done.scene];
                 return (
                   <View key={n} style={{ alignItems: 'center', gap: 6, width: 84 }} accessible accessibilityLabel={`${done.keepsake}, from ${done.name}`}>
                     <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: c[done.tone], alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                      <Image source={img.src} style={{ width: 56, height: (56 * img.h) / img.w }} resizeMode="contain" />
+                      <Image source={KEEPSAKES[done.scene]} style={{ width: 54, height: 54 }} resizeMode="contain" />
                     </View>
                     <Txt v="caption" color="ink2" center numberOfLines={2}>
                       {done.keepsake}

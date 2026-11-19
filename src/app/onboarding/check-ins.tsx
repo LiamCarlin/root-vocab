@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { BellOff, Check } from 'lucide-react-native';
 import { View } from 'react-native';
 
-import { Reaction } from '@/components/Buddy';
+import { Figure } from '@/components/Buddy';
 import { CheckInEditor } from '@/components/CheckInEditor';
 import { Btn, IconBtn, Rise, Screen, TopBar, Txt, useToast } from '@/components/ui';
 import { askPermission, checkInsSupported, syncCheckIns } from '@/lib/checkins';
@@ -46,7 +46,7 @@ export default function CheckIns() {
           Reminders
         </Txt>
         <View>
-          <Reaction pose="wave" size={110} />
+          <Figure pose="wave" size={110} />
         </View>
       </Rise>
       <Rise i={1}>

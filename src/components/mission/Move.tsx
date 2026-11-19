@@ -1,62 +1,44 @@
-import { ArrowRight, CircleDot, CircleQuestionMark, Hand, Pencil, Pointer, RotateCcw, RotateCw, Smartphone, Type, Vibrate, WandSparkles, type LucideIcon } from 'lucide-react-native';
+import { ArrowRight, CircleDot, Hand, PenLine, Pointer, RotateCcw, Smartphone, Undo2 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 
-import { Controls, MarbleBoard, SkyPad, TracePad } from '@/components/learn';
-import { Btn, IconBtn, Sheet, Txt } from '@/components/ui';
-import { beatMs, buzz, hum, say, sayHum } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
+import { Coach, Segmented } from '@/components/hands/kit';
+import { MarbleRun } from '@/components/hands/MarbleRun';
+import { SandTray } from '@/components/hands/SandTray';
+import { TracePad, type TraceEvent } from '@/components/hands/TracePad';
+import { Controls } from '@/components/learn';
+import { Btn, IconBtn } from '@/components/ui';
+import { beatMs, hum, say, sayHum } from '@/lib/audio';
+import { canPlay } from '@/lib/engine';
 import { sfx } from '@/lib/sfx';
 import { useStore } from '@/lib/store';
-import { ON_BLOCK, useTheme } from '@/theme';
-import { Sparks, StepScreen } from './Frame';
+import { StepScreen } from './Frame';
 import type { StepProps } from './types';
 
-type Mode = 'trace' | 'marble' | 'sky';
-const MODES: { id: Mode; icon: LucideIcon; label: string }[] = [
-  { id: 'trace', icon: Pencil, label: 'Trace it with a finger' },
-  { id: 'marble', icon: CircleDot, label: 'Roll a marble through it' },
-  { id: 'sky', icon: WandSparkles, label: 'Write it in the air' },
+type Mode = 'trace' | 'marble' | 'sand';
+const MODES: { id: Mode; icon: typeof PenLine; label: string; a11y: string }[] = [
+  { id: 'trace', icon: PenLine, label: 'Trace', a11y: 'Trace each letter with a finger' },
+  { id: 'marble', icon: CircleDot, label: 'Marble', a11y: 'Tip the phone to roll a marble along each letter' },
+  { id: 'sand', icon: Hand, label: 'Sand', a11y: 'Write the word in sand from memory' },
 ];
 
-// How each way works, as pictograms: an icon and a few words, nothing more.
-const HELP: Record<Mode, { icon: LucideIcon; text: string }[]> = {
-  trace: [
-    { icon: Pencil, text: 'Part by part' },
-    { icon: Vibrate, text: 'Buzz: off track' },
-    { icon: Pointer, text: 'Or tap' },
-  ],
-  marble: [
-    { icon: Smartphone, text: 'Lay flat' },
-    { icon: RotateCw, text: 'Tip to roll' },
-    { icon: CircleDot, text: 'Touch each dot' },
-    { icon: Hand, text: 'Or drag' },
-  ],
-  sky: [
-    { icon: Hand, text: 'Thumb down' },
-    { icon: Smartphone, text: 'Sweep the phone' },
-    { icon: Type, text: 'Big letters' },
-    { icon: Pencil, text: 'Or finger-draw' },
-  ],
-};
-
-/** Which way a word starts with. It rotates from word to word, so learners meet all three. */
-const firstMode = (id: string): Mode => MODES[id.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) % MODES.length].id;
-
 /**
- * Move: one word, three ways to move through it. Trace it with a finger,
- * tilt the phone to roll a marble through its letters, or write it in the
- * air with the phone as a wand. Each finished beat is said and hummed.
+ * Move: the word through the hand. Three ways, the learner's choice: trace each letter the way it is
+ * written, tip the phone to roll a marble along the letters, or smooth a tray of sand and write the
+ * word from memory. Each finished beat is said and hummed. The way a word starts with rotates from
+ * word to word, so all three are met.
  */
-export function Move({ lex, top, next, skip }: StepProps) {
-  const { c } = useTheme();
+export function Move({ lex, top, next, skip, addRetry }: StepProps) {
   const { height } = useWindowDimensions();
   const bump = useStore((s) => s.bump);
-  const [mode, setMode] = useState<Mode>(() => firstMode(lex.id));
+  // A word with a character there is no drawing for (or a very long beat) can still be written in sand.
+  const [modes] = useState(() => MODES.filter((m) => canPlay(lex, m.id)));
+  const [mode, setMode] = useState<Mode>(() => (modes.length ? modes[lex.id.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) % modes.length].id : 'sand'));
   const [run, setRun] = useState(0);
   const [done, setDone] = useState(false);
-  const [tapMode, setTapMode] = useState(false);
-  const [help, setHelp] = useState(false);
+  const [assist, setAssist] = useState(false);
+  const [off, setOff] = useState(false);
+  const [input, setInput] = useState<'tilt' | 'touch'>('touch');
   const stopHum = useRef<(() => void) | null>(null);
   const wholeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const says = lex.says;
@@ -73,30 +55,34 @@ export function Move({ lex, top, next, skip }: StepProps) {
   const onPart = useCallback(
     (i: number) => {
       stopHum.current?.();
-      stopHum.current = hum(beatMs(says[i]));
-      say(says[i]);
+      stopHum.current = hum(beatMs(says[i] ?? ''));
+      if (says[i]) say(says[i]);
     },
     [says],
   );
 
-  const onDone = useCallback(() => {
-    setDone(true);
-    // Counts toward the marble and sky-writing badges and the day's quests.
-    bump(mode);
-    buzz.good();
-    sfx.play('good');
-    buddy.react('correct');
-    // Let the last beat (or letter) finish before the whole word.
-    if (wholeTimer.current) clearTimeout(wholeTimer.current);
-    wholeTimer.current = setTimeout(() => {
-      stopHum.current?.();
-      stopHum.current = sayHum(text, says);
-    }, 480);
-  }, [text, says, mode, bump]);
+  const finish = useCallback(
+    (wholeAfter: number) => {
+      setDone(true);
+      // Counts toward the day's quests and the hands-on badge.
+      bump(mode);
+      sfx.play('good');
+      // Let the last beat (or letter) finish before the whole word.
+      if (wholeTimer.current) clearTimeout(wholeTimer.current);
+      wholeTimer.current = setTimeout(() => {
+        stopHum.current?.();
+        stopHum.current = sayHum(text, says);
+      }, wholeAfter);
+    },
+    [text, says, mode, bump],
+  );
+  const onDone = useCallback(() => finish(480), [finish]);
+  const onTrace = useCallback((e: TraceEvent) => setOff(e === 'off'), []);
 
   const restart = () => {
     if (wholeTimer.current) clearTimeout(wholeTimer.current);
     setDone(false);
+    setOff(false);
     setRun((r) => r + 1);
   };
 
@@ -112,63 +98,53 @@ export function Move({ lex, top, next, skip }: StepProps) {
   };
 
   // The pad takes what the screen can spare, so nothing has to scroll under a moving finger.
-  const padH = Math.max(210, Math.min(mode === 'sky' ? 340 : mode === 'marble' ? 300 : 240, height - 520));
-  const padKey = `${mode}-${run}-${tapMode ? 't' : 'f'}`;
+  const padH = Math.max(220, Math.min(mode === 'marble' ? 330 : 300, height - (mode === 'sand' ? 560 : 500)));
+  const padKey = `${mode}-${run}-${assist ? 'a' : 'f'}`;
 
   return (
     <StepScreen
       top={top}
       scroll={false}
-      gap={14}
+      gap={12}
       footer={
         <>
           <Controls onReplay={replay} onSkip={skip} />
           <Btn icon={ArrowRight} a11y="Next" onPress={next} disabled={!done} />
         </>
       }>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        {MODES.map((m) => (
-          <IconBtn key={m.id} icon={m.icon} label={m.label} active={mode === m.id} onPress={() => pick(m.id)} />
-        ))}
-        <View style={{ flex: 1 }} />
-        <IconBtn icon={CircleQuestionMark} label="How it works" kind="soft" size={44} onPress={() => setHelp(true)} />
-      </View>
+      {modes.length > 1 && <Segmented options={modes} value={mode} onChange={pick} a11y="How to move through the word" />}
 
-      <View>
-        {mode === 'trace' && <TracePad key={padKey} text={text} parts={lex.parts} onPart={onPart} onDone={onDone} tapMode={tapMode} height={padH} />}
-        {mode === 'marble' && <MarbleBoard key={padKey} text={text} parts={lex.parts} onPart={onPart} onDone={onDone} height={padH} />}
-        {mode === 'sky' && <SkyPad key={padKey} text={text} onDone={onDone} height={padH} />}
-        <Sparks on={done} size={300} />
-      </View>
-
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, flex: 1 }}>
-        {mode === 'trace' && (
-          <IconBtn
-            icon={Pointer}
-            label="Tap instead of tracing"
-            active={tapMode}
-            size={48}
-            onPress={() => {
-              setTapMode((t) => !t);
-              setDone(false);
-            }}
-          />
-        )}
-        <IconBtn icon={RotateCcw} label="Start again" size={48} onPress={restart} />
-      </View>
-
-      <Sheet visible={help} onClose={() => setHelp(false)} title="How it works">
-        {HELP[mode].map((h) => (
-          <View key={h.text} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center' }}>
-              <h.icon size={24} color={ON_BLOCK.ink} strokeWidth={2.3} />
-            </View>
-            <Txt v="heading" style={{ flex: 1 }}>
-              {h.text}
-            </Txt>
+      {mode === 'sand' ? (
+        <View pointerEvents={done ? 'none' : 'auto'}>
+          <SandTray key={padKey} text={text} parts={lex.parts} height={padH} onDone={() => finish(200)} onRetry={addRetry} />
+        </View>
+      ) : (
+        <>
+          <View pointerEvents={done ? 'none' : 'auto'}>
+            {mode === 'trace' && <TracePad key={padKey} text={text} parts={lex.parts} onPart={onPart} onDone={onDone} onState={onTrace} assist={assist} height={padH} />}
+            {mode === 'marble' && <MarbleRun key={padKey} text={text} parts={lex.parts} onPart={onPart} onDone={onDone} onInput={setInput} height={padH} />}
           </View>
-        ))}
-      </Sheet>
+
+          {mode === 'trace' && <Coach icon={off ? Undo2 : assist ? Pointer : Hand} text={done ? 'Traced.' : off ? 'Back to the dot.' : assist ? 'Touch each letter to write it.' : 'Start at the dot. Follow the arrow.'} tone={done ? 'good' : off ? 'warn' : 'plain'} />}
+          {mode === 'marble' && <Coach icon={input === 'tilt' ? Smartphone : Hand} text={done ? 'Rolled.' : input === 'tilt' ? 'Tip the phone the way the letter goes.' : 'Drag on the board to tip it.'} tone={done ? 'good' : 'plain'} />}
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {mode === 'trace' && (
+              <IconBtn
+                icon={Pointer}
+                label="Touch a letter to write it, instead of tracing"
+                active={assist}
+                size={48}
+                onPress={() => {
+                  setAssist((t) => !t);
+                  setDone(false);
+                }}
+              />
+            )}
+            <IconBtn icon={RotateCcw} label="Start again" size={48} onPress={restart} />
+          </View>
+        </>
+      )}
     </StepScreen>
   );
 }

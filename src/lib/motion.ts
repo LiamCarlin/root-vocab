@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 
-// Motion input for the marble and sky-writing games. Everything here degrades
-// to "not available" (web, simulators, a denied permission), and the games
-// then fall back to touch, so nobody is ever blocked by a sensor.
+// Motion input: tilt for the marble run, a shake to smooth the sand tray. Everything here
+// degrades to "not available" (web, simulators, a denied permission), and the games then
+// fall back to touch, so nobody is ever blocked by a sensor.
 
 type Sensors = typeof import('expo-sensors');
 let cached: Sensors | null | undefined;
@@ -51,19 +51,28 @@ export function watchTilt(cb: (x: number, y: number) => void, hz = 60): () => vo
 }
 
 /**
- * Rotation of the phone used as a wand, in radians per second.
- * dx > 0 = the phone is turning to point right. dy > 0 = it is tipping to point down.
+ * Calls back when the phone is given a short shake: three jolts inside about a second.
+ * Returns an unsubscribe function.
  */
-export function watchWand(cb: (dx: number, dy: number, dt: number) => void, hz = 60): () => void {
+export function watchShake(cb: () => void): () => void {
   const s = lib();
   if (!s) return () => {};
   try {
-    s.Gyroscope.setUpdateInterval(Math.round(1000 / hz));
-    let last = 0;
-    const sub = s.Gyroscope.addListener(({ x, y, timestamp }) => {
-      const dt = last ? Math.min(0.05, Math.max(0.001, timestamp - last)) : 1 / hz;
-      last = timestamp;
-      cb(-y, x, dt);
+    s.Accelerometer.setUpdateInterval(50);
+    let jolts: number[] = [];
+    let quietUntil = 0;
+    const sub = s.Accelerometer.addListener(({ x, y, z }) => {
+      const now = Date.now();
+      if (now < quietUntil) return;
+      // At rest the reading is one g whichever way up the phone is; a jolt is well away from that.
+      if (Math.abs(Math.hypot(x, y, z) - 1) < 0.8) return;
+      jolts = jolts.filter((t) => now - t < 900);
+      if (!jolts.length || now - jolts[jolts.length - 1] > 90) jolts.push(now);
+      if (jolts.length >= 3) {
+        jolts = [];
+        quietUntil = now + 1200;
+        cb();
+      }
     });
     return () => sub.remove();
   } catch {

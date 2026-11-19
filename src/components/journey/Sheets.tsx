@@ -2,13 +2,13 @@ import { Check, Gift, Snowflake } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 
-import { Reaction } from '@/components/Buddy';
+import { Figure } from '@/components/Buddy';
 import { CountUp, Pop } from '@/components/fx';
 import { Chest, StreakFlame } from '@/components/rewards';
 import { Block, Btn, Sheet, Txt } from '@/components/ui';
 import { PROPS } from '@/data/story';
 import { buzz } from '@/lib/audio';
-import { useHoldUnlocks } from '@/lib/buddy';
+import { useHoldUnlocks } from '@/lib/unlocks';
 import { weekOf } from '@/lib/dates';
 import { sfx } from '@/lib/sfx';
 import { GEMS, MAX_FREEZES, streak, today, useStore } from '@/lib/store';
@@ -38,7 +38,7 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
     <Sheet visible={visible} onClose={onClose}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingTop: 4 }}>
         {visible && <StreakFlame n={n} lit={lit} size={104} count />}
-        {visible && <Reaction pose={n >= 3 ? 'flex' : lit ? 'thumbs' : 'wave'} size={118} pokable={false} />}
+        {visible && <Figure pose={n >= 3 ? 'flex' : lit ? 'thumbs' : 'wave'} size={118} />}
       </View>
 
       <Block pad={14} round={999} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 18 }}>
@@ -124,7 +124,7 @@ export function ChestSheet({ index, onClose }: { index: number | null; onClose: 
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
-        {index !== null && <Reaction key={won === null ? 'wait' : 'won'} pose={won === null ? 'gasp' : 'cheer'} size={104} pokable={false} />}
+        {index !== null && <Figure key={won === null ? 'wait' : 'won'} pose={won === null ? 'gasp' : 'cheer'} size={104} />}
         <View style={{ flex: 1 }}>{won === null ? <Btn icon={Gift} label="Open" onPress={open} /> : <Btn kind="soft" icon={Check} label="Done" onPress={close} />}</View>
       </View>
     </Sheet>

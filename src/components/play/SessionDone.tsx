@@ -3,14 +3,13 @@ import { useEffect } from 'react';
 import { Image, Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
-import { Reaction } from '@/components/Buddy';
-import { Confetti, CountUp, Pop } from '@/components/fx';
+import { Figure } from '@/components/Buddy';
+import { CountUp, Pop } from '@/components/fx';
 import { Growth, type Pose } from '@/components/Mascot';
 import { GoalRing, QuestRow, StreakFlame } from '@/components/rewards';
 import { Block, Btn, Ring, Rise, Screen, Tap, Txt } from '@/components/ui';
 import { PROPS } from '@/data/story';
 import { buzz, say, speakable } from '@/lib/audio';
-import { buddy } from '@/lib/buddy';
 import type { SessionKind } from '@/lib/engine';
 import { questState, questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
@@ -52,7 +51,6 @@ export function SessionDone({ kind, meta, played, summary, outcome, questsBefore
   useEffect(() => {
     sfx.play('win');
     buzz.good();
-    buddy.react('finish');
     const t = setTimeout(() => sfx.play('gem'), 900);
     return () => clearTimeout(t);
   }, []);
@@ -64,8 +62,7 @@ export function SessionDone({ kind, meta, played, summary, outcome, questsBefore
   return (
     <Screen gap={14} footer={<Btn label="Continue" iconRight={ArrowRight} onPress={onContinue} />}>
       <View style={{ alignItems: 'center', height: 236, justifyContent: 'flex-end', marginTop: 28 }}>
-        <Confetti count={perfect ? 34 : 22} height={300} />
-        <Reaction pose={pose} size={196} />
+        <Figure pose={pose} size={196} />
       </View>
       <Txt v="display" center accessibilityRole="header">
         {headline}

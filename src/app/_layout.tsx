@@ -10,7 +10,6 @@ import { useEffect, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { BuddyHost } from '@/components/Buddy';
 import { UnlockHost } from '@/components/rewards';
 import { ToastHost } from '@/components/ui';
 import { onCheckInTap } from '@/lib/checkins';
@@ -55,23 +54,21 @@ export default function RootLayout() {
       <View style={{ flex: 1, backgroundColor: dark ? '#07080A' : c.surface2, alignItems: 'center' }}>
         <View style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: c.canvas, overflow: 'hidden' }}>
           <ToastHost>
-            {/* Root lives above every screen: BuddyHost for the odd visit from an edge, UnlockHost for celebrations. */}
-            <BuddyHost>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: c.canvas },
-                  animation: reduceMotion ? 'fade' : 'slide_from_right',
-                  animationDuration: reduceMotion ? 120 : motion.screen,
-                }}>
-                <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-                <Stack.Screen name="finder" options={{ presentation: 'modal', animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
-                <Stack.Screen name="mission/[id]" options={{ gestureEnabled: false }} />
-                <Stack.Screen name="play/[kind]" options={{ gestureEnabled: false }} />
-                <Stack.Screen name="story/[which]" options={{ gestureEnabled: false, animation: 'fade' }} />
-                <Stack.Screen name="lab" />
-              </Stack>
-            </BuddyHost>
+            {/* Celebrations sit above every screen. */}
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: c.canvas },
+                animation: reduceMotion ? 'fade' : 'slide_from_right',
+                animationDuration: reduceMotion ? 120 : motion.screen,
+              }}>
+              <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+              <Stack.Screen name="finder" options={{ presentation: 'modal', animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
+              <Stack.Screen name="mission/[id]" options={{ gestureEnabled: false }} />
+              <Stack.Screen name="play/[kind]" options={{ gestureEnabled: false }} />
+              <Stack.Screen name="story/[which]" options={{ gestureEnabled: false, animation: 'fade' }} />
+              <Stack.Screen name="lab" />
+            </Stack>
             <UnlockHost />
           </ToastHost>
         </View>

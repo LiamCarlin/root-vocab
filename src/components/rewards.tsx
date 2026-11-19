@@ -10,12 +10,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { STRANDS } from '@/data/profile';
 import { PROPS, SCENES, chapterOf, type SceneId } from '@/data/story';
 import { buzz } from '@/lib/audio';
-import { onHoldChange, unlocksHeld } from '@/lib/buddy';
+import { onHoldChange, unlocksHeld } from '@/lib/unlocks';
 import { BADGES, QUESTS, questState } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
 import { useStore, type Unlock } from '@/lib/store';
 import { ON_BLOCK, useTheme, type BlockTone } from '@/theme';
-import { Reaction } from './Buddy';
+import { Figure } from './Buddy';
 import { Burst, Confetti, CountUp, Float, FogVeil, Pop, Rays, Shine } from './fx';
 import type { Pose } from './Mascot';
 import { Bar, Btn, Ring, Txt, useOnBlock } from './ui';
@@ -352,7 +352,7 @@ const NEVER = ['/onboarding/placement'];
 /**
  * Lives in the root layout. Whenever the store has queued unlocks, it plays them one at a time
  * as a full-screen celebration, each kind with its own treatment, and waits while any screen is
- * holding them (`useHoldUnlocks` from lib/buddy), so nothing lands in the middle of an answer.
+ * holding them (`useHoldUnlocks` from lib/unlocks), so nothing lands in the middle of an answer.
  */
 let unlockHosts = 0;
 /** True once an UnlockHost is mounted (the root layout has one). */
@@ -464,7 +464,7 @@ function Celebration({ unlock, onDone }: { unlock: Unlock; onDone: () => void })
             <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 32, lineHeight: 38, color: ON_BLOCK.ink, textAlign: 'center' }}>{look.title}</Text>
             {unlock.kind === 'badge' && <TierDots id={unlock.id} tier={unlock.tier} />}
           </Pop>
-          <Reaction pose={look.pose} size={150} delay={520} pokable={false} />
+          <Figure pose={look.pose} size={150} delay={520} />
         </View>
         <View style={{ paddingHorizontal: 20, paddingBottom: 14 }}>
           <Btn icon={ArrowRight} label="Continue" onPress={go} />

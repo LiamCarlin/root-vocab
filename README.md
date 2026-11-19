@@ -25,15 +25,15 @@ Press `i` for the iOS simulator, `a` for Android, `w` for the browser, or scan t
 
 Two things need a real phone:
 
-- **Tilt and sky-writing** use the accelerometer and gyroscope. Simulators and browsers have neither, so those games fall back to dragging a finger.
-- **Voice input** uses a native module that Expo Go does not include. Make a development build with `npx expo run:ios` for the microphone; everywhere else the app falls back to typing.
+- **Tilt and shake** use the accelerometer. Simulators and browsers have none, so the marble run falls back to dragging on the board and the sand tray to its Smooth button.
+- **Voice input** uses a native module that Expo Go does not include. Make a development build with `npx expo run:ios` for the microphone; everywhere else saying a word is taken on trust, and written answers are typed.
 
 Checks: `npx tsc --noEmit` and `npx eslint src`.
 
 ## The design rules
 
 1. **Icons and gestures carry the interface.** Words on screen are learning content, story lines, or labels of two or three words. No instruction sentences, no captions under buttons. Every icon-only control has a screen-reader label.
-2. **Feedback is felt, not read.** Root's reaction, colour, sound and vibration say how it went.
+2. **Feedback is felt, not read.** Colour, sound and vibration say how it went.
 3. **Each syllable keeps its colour** everywhere the word appears. Each strand keeps its colour too.
 4. **Nothing blocks.** Every step can be skipped, spelling never gates progress, and every sensor has a touch fallback.
 5. **Built for dyslexia.** No timer or countdown is ever shown (answer time may be measured silently). A wrong spelling points at the letter or beat, never red-pens the word. Replay and slow audio are always there. Text is left-aligned, never italic, never all caps in body text. Typeface, size, letter spacing and background are the learner's choice.
@@ -59,21 +59,41 @@ After that every answer in every game updates four things (`src/lib/store.ts`, `
 
 The valley grows words. A fog called **the Hush** has rolled in, and words slip away just as you reach for them. Every word rooted clears a little.
 
-There are six places (Garden, Orchard, Market, Lantern Woods, Harbor, Summit), then the valley carries on. Each place is a chapter of nine stops: five new words, a Find round, a Spell round, a chest, and a challenge that mixes the chapter's words. Finishing the last stop lifts the fog and plays the next story beat. Story text is in `src/data/story.ts`.
+There are six places (Garden, Orchard, Market, Lantern Woods, Harbor, Summit), then the valley carries on. Each place is a chapter of ten stops and ten new words: five word sets, a Find round, a Spell round, a hands-on round, a chest, and a challenge that mixes the chapter's words.
+
+**A learn stop teaches two words, not one.** Where it can, the pair shares a spelling pattern, so the pattern is met twice in a row in two different words. The stop runs the first word's lesson, a short bridge, the second word's lesson, and then one step that mixes the two and has the learner pull each back out from its meaning. A word is recorded as soon as its own lesson ends, so a stop left half-way picks up at the second word.
+
+The story is told a page at a time, each page a short passage shown whole: a six-page prologue, a four-page opening and a four-page ending for every place, and one more line on the trail after every word set. Each ending also names, in a sentence, the part of the method that made the words stick. Story text is in `src/data/story.ts`. Clearing a place gives back a keepsake (watering can, fruit basket, bunting, lantern, compass, telescope).
 
 Reasons to come back: a daily goal (one, two or three stops), a streak with freezes bought with gems, three daily quests, badges with tiers, chests, and reminders that say something specific and never guilt.
 
 ## The lesson: one new word, many senses
 
+Root follows Orton-Gillingham practice: every word goes in through several senses at once, in a fixed order, in small steps, with the learner saying and writing as well as seeing and hearing.
+
 | Step | Sense | What happens |
 | --- | --- | --- |
-| Hear | hearing, touch | The word, then each beat. The phone hums every beat. |
+| Hear | hearing, touch, speech | The word, then each beat. The phone hums every beat. Then it is the learner's turn: hold the button and say it back. |
 | Link | meaning, picture | What the word sits with, and a picture the learner picks as their own hook. |
-| Beats | touch, rhythm | Drum one tap per syllable. |
+| Beats | touch, rhythm | Tap one key for every beat, left to right, then sweep across them to blend the beats back into the word. |
 | Build | sight, logic | Tap the pieces into order. A wrong piece says why it does not fit. |
-| Move | movement | Trace with a finger, roll a marble by tilting the phone, or write the letters in the air. |
+| Move | movement | Trace each letter, roll a marble along the letters by tipping the phone, or write the word in sand from memory. |
 | Spell | recall | Type it or write it. The letter that is off is highlighted. |
 | Use | meaning | Fill the gap in a sentence, then say or type your own. |
+
+### The hands-on pads
+
+All five are in `src/components/hands`. They share one look: a single rounded surface that takes the touch, the word across its top with a colour under each beat, and one short line beneath saying what to do right now. Nothing on a pad moves unless the learner moves it.
+
+| Pad | The classroom technique it comes from | How it works here |
+| --- | --- | --- |
+| **Trace** | Tracing a letter while naming it. | Every letter is drawn as real pen strokes (`src/lib/glyphs.ts`): the finger starts at the dot and follows the arrow, stroke by stroke, the way the letter is written. One beat at a time so the letters are big. Ink fills in behind the finger; a soft tick on the stroke, one firm buzz off it. Each finished letter is named, each finished beat is said. Anyone who cannot drag accurately can switch to touching each letter. |
+| **Marble run** | Large-muscle movement: forming the letter with the whole arm. | The same strokes are grooves in a board and a marble runs along them. Tipping the phone moves it; it cannot leave the groove or roll back. "Level" is however the phone is held when the board appears, with a button to reset it and a small spirit level showing the tip. |
+| **Sand tray** | Writing in a tray of sand with one finger. | The word lies written in the sand. A shake of the phone (or the Smooth button) wipes it; the learner writes it from memory with fine ticks under the fingertip for grain; then the word comes back above the tray and the learner checks their own writing against it. |
+| **Tap and sweep** | Finger tapping: one finger per sound, then a sweep to blend. | One key per beat, tapped in order; each says and hums its beat. Then a handle slides under all the keys and the whole word is said. |
+| **Echo** | "My turn, your turn." | Root says a beat, the learner holds the button and says it back while it hums in the hand, then the next beat, then the whole word. Where the phone can listen it checks the word; where it cannot, saying it is enough. |
+
+There is no sky-writing any more. Steering a cursor by waving the phone was hard to control and the letter it left was not one anybody had written.
 
 ## The games
 
@@ -91,15 +111,18 @@ Every exercise is in the registry at `src/components/games/index.ts`. The runner
 | Spot it | Spell | Pick the right spelling from likely wrong ones. |
 | Hear and write | Spell | Hear it and write it. |
 | Unscramble | Spell | Put the beats in order. |
-| Trace · Marble · Sky writing | Spell | The same letters with a finger, by tilting the phone, or in the air. |
+| Tap and sweep · Trace · Marble run · Sand tray | Spell | The hands-on pads above, on any word. |
+| Echo | Find | Say the word back, beat by beat. |
 
-## Root, the companion
+The hands-on games are supported practice (the word is in front of the learner), so finishing one counts as right-with-help, never as recall. A hands-on round on the journey runs all five, each on a different word of the chapter.
 
-Root is a character in the interface, not a picture on a screen. It peeks over cards, perches on them, watches exercises from a corner and reacts to what happens (`src/components/Buddy.tsx`, driven by `buddy.react(...)` from `src/lib/buddy.ts`). It never moves while someone is answering. *You › Sound and feel* sets it to Lively, Calm or Off.
+## Root, the mascot
 
-The character is animated, not a still image: Root is a 3D model built, posed and animated in Blender from code, and the 33 clips the app plays (walk, wave, jump, peek, dance, …) are rendered from it as sprite sheets and stepped on the UI thread (`src/components/Sprite.tsx`). The scripts are in `tools/mascot`; `render_all.sh` re-renders everything. The story islands and the chest are generated illustrations.
+Root is a still picture. There is no animated character: Root does not walk in, pop up, react or fidget. It appears as an illustration where a screen has room for one (looking over a card, sitting on its edge, beside a line of the story, on an end screen), and what changes is which picture is shown. *You › Sound and feel › Show Root* hides the pictures on cards and corners.
 
-Celebrations, effects and sounds are in `src/components/fx.tsx`, `src/components/rewards.tsx` and `src/lib/sfx.ts`. `/lab` (linked from *You › Moderator*) is a gallery of all of it.
+Root is a 3D model built and posed in Blender from code. Each of its 45 poses is rendered once to a still (`assets/mascot/still`, listed in `src/components/mascotStills.ts`, drawn by `src/components/Mascot.tsx` and placed by `src/components/Buddy.tsx`). The scripts are in `tools/mascot`, which also renders the six keepsakes. The story islands and the chest are generated illustrations.
+
+Effects and sounds are in `src/components/fx.tsx`, `src/components/rewards.tsx` and `src/lib/sfx.ts`. `/lab` (linked from *You › Moderator*) is a gallery of every picture and effect.
 
 ## The Finder
 
@@ -114,6 +137,7 @@ The first time, Root asks whether it may search online. If yes, it uses the free
 | Setup and placement | `src/app/onboarding/*` |
 | Journey, story | `src/app/(tabs)/index.tsx`, `src/app/story/[which].tsx`, `src/components/journey/*` |
 | Lesson | `src/app/mission/[id].tsx`, `src/components/mission/*` |
+| Hands-on pads, letter strokes | `src/components/hands/*`, `src/lib/glyphs.ts`, `src/lib/motion.ts` |
 | Games and the runner | `src/components/games/*`, `src/components/play/*`, `src/app/play/*` |
 | Arcade, Garden, Finder, word page | `src/app/(tabs)/practice.tsx`, `src/app/(tabs)/words.tsx`, `src/app/finder.tsx`, `src/app/word/[id].tsx` |
 | You, badges, your map, settings | `src/app/(tabs)/you.tsx`, `src/app/badges.tsx`, `src/app/insights.tsx`, `src/app/settings/*` |
@@ -121,7 +145,7 @@ The first time, Root asks whether it may search online. If yes, it uses the free
 | Words and matching | `src/data/schema.ts`, `src/data/bank/*`, `src/lib/lexicon.ts`, `src/lib/finder.ts` |
 | Companion, effects, rewards, sound | `src/components/Buddy.tsx`, `src/components/fx.tsx`, `src/components/rewards.tsx`, `src/lib/buddy.ts`, `src/lib/sfx.ts` |
 | Mascot | `src/components/Mascot.tsx`, `assets/mascot/*`, `tools/mascot/*` |
-| Pads and sensors | `src/components/learn.tsx`, `src/lib/motion.ts`, `src/lib/audio.ts` |
+| Shared lesson pieces, audio and haptics | `src/components/learn.tsx`, `src/lib/audio.ts` |
 | Reminders | `src/lib/checkins.ts`, `src/components/CheckInEditor.tsx` |
 
 ## What is simulated, and what is not verified
@@ -129,10 +153,11 @@ The first time, Root asks whether it may search online. If yes, it uses the free
 - **Accounts.** There is no server. Everything is stored on the device; Backup moves it by copy and paste.
 - **Part audio.** Speech is synthesized on the device. Whole words are accurate; single beats are a best effort from the respelling, and borrowed words (bourgeois, zeitgeist) are approximate.
 - **The hum on iPhone** is a fast run of soft ticks, because the haptics API has no continuous buzz. Android gets a true buzz.
-- **Finger writing** is checked by eye against the word. Typed spelling is checked letter by letter.
-- **Sky writing** is checked loosely on purpose (distance travelled and coverage of the letter's box), not by recognising the shape.
-- **The learner model** is a simple one: a level per strand and five memory boxes. Its constants were tuned against simulated learners (40%, 65% and 85% right first time), not real ones. A learner who struggles and skips warm-ups will still build up a backlog, because the path keeps offering five new words a chapter; the Journey's main button offers a warm-up first when a lot is due, but nothing is ever blocked.
-- **Not yet watched in motion by a person:** the clips were checked frame by frame and run on web and the iOS simulator, but loop smoothness and timing have not been judged by eye on a phone.
-- **Not yet checked on a device:** tilt and gyroscope directions, the feel of the hum, whether the sounds are audible and well balanced, the microphone, and notifications. Android has not been run.
+- **Finger writing** (the sand tray, and the finger option in Spell) is checked by the learner, by eye, against the word. Nothing reads handwriting. Typed spelling is checked letter by letter.
+- **Tracing** checks that the finger travels each stroke from its start to its end within a finger's width. It does not judge how neat the line is.
+- **Echo** checks the whole word only, and only where speech recognition exists (a development build, or a browser). The beat-by-beat turns are taken on trust everywhere.
+- **The learner model** is a simple one: a level per strand and five memory boxes. Its constants were tuned against simulated learners (40%, 65% and 85% right first time), not real ones. A learner who struggles and skips warm-ups will still build up a backlog, because the path keeps offering ten new words a chapter; the Journey's main button offers a warm-up first when a lot is due, but nothing is ever blocked.
+- **Checked in a browser only:** the hands-on pads, the two-word lesson and the story were run at phone size in a desktop browser, with a script moving the pointer along the real letter strokes. That exercises the touch paths and the marble's drag-to-tip fallback.
+- **Not yet checked on a device:** tilt direction and how fast the marble feels, the shake that smooths the sand, the grain and the hum under a finger, whether the sounds are audible and well balanced, the microphone, and notifications. Android has not been run.
 
 *You › Moderator* can jump a day ahead (to walk a word to rooted in one sitting), make the mic miss once, redo the placement, add gems, and reset everything.
