@@ -35,7 +35,7 @@ Checks: `npx tsc --noEmit` and `npx eslint src`.
 1. **Icons and gestures carry the interface.** Words on screen are learning content, story lines, or labels of two or three words. No instruction sentences, no captions under buttons. Every icon-only control has a screen-reader label.
 2. **Feedback is felt, not read.** Root's reaction, colour, sound and vibration say how it went.
 3. **Each syllable keeps its colour** everywhere the word appears. Each strand keeps its colour too.
-4. **Nothing blocks.** Every step can be skipped, spelling never gates progress, and every sensor has a touch fallback.
+4. **Nothing gates on ability.** Every step can be skipped, spelling never gates progress, and every sensor has a touch fallback. The one thing that waits is a new word while a lot of review is due, and it waits for a round being done, never for how the round went.
 5. **Built for dyslexia.** No timer or countdown is ever shown (answer time may be measured silently). A wrong spelling points at the letter or beat, never red-pens the word. Replay and slow audio are always there. Text is left-aligned, never italic, never all caps in body text. Typeface, size, letter spacing and background are the learner's choice.
 
 Tokens live in `src/theme/tokens.ts`; the kit is `src/components/ui.tsx`.
@@ -52,6 +52,8 @@ After that every answer in every game updates four things (`src/lib/store.ts`, `
 - **Counters** for quests, badges and the streak.
 
 **Which word comes next** (`pickNewWords`): words the learner looked up themselves come first, then words missed in the placement. After that, bank words are ranked by how close they sit to just above the learner's levels (weighted toward the strands they chose as goals), with a boost for their interests, a smaller one for their kind of day, and a boost for spelling patterns they are weak on. A chapter avoids repeating one pattern five times.
+
+**When new words wait** (`holdNew`): with more than 12 word-and-strand pairs due, the next new word is held until one practice round of five or more exercises has been finished since the last new word. With a backlog that makes it one round, one new word, so review always outruns what is added. The Journey's main button and the stop on the path both become the warm-up, the word page and the Finder hold the same way, and a warm-up done while words are held counts towards the daily goal. Looking a word up and saving it is never held, only its lesson.
 
 *You › Your map* shows all of this: the three levels, the patterns being worked on and the strong ones, and the next words.
 
@@ -131,7 +133,7 @@ The first time, Root asks whether it may search online. If yes, it uses the free
 - **The hum on iPhone** is a fast run of soft ticks, because the haptics API has no continuous buzz. Android gets a true buzz.
 - **Finger writing** is checked by eye against the word. Typed spelling is checked letter by letter.
 - **Sky writing** is checked loosely on purpose (distance travelled and coverage of the letter's box), not by recognising the shape.
-- **The learner model** is a simple one: a level per strand and five memory boxes. Its constants were tuned against simulated learners (40%, 65% and 85% right first time), not real ones. A learner who struggles and skips warm-ups will still build up a backlog, because the path keeps offering five new words a chapter; the Journey's main button offers a warm-up first when a lot is due, but nothing is ever blocked.
+- **The learner model** is a simple one: a level per strand and five memory boxes. Its constants were tuned against simulated learners (40%, 65% and 85% right first time), not real ones. The rule that holds new words back while a lot is due (more than 12 pairs, released by one round) was chosen by reasoning, not tested on learners; the threshold may want tuning.
 - **Not yet watched in motion by a person:** the clips were checked frame by frame and run on web and the iOS simulator, but loop smoothness and timing have not been judged by eye on a phone.
 - **Not yet checked on a device:** tilt and gyroscope directions, the feel of the hum, whether the sounds are audible and well balanced, the microphone, and notifications. Android has not been run.
 

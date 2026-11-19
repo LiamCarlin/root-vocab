@@ -6,7 +6,7 @@ import type { DayId, Strand } from '@/data/profile';
 import type { Topic } from '@/data/words';
 import type { FontId } from '@/theme/tokens';
 import { addDays, diffDays } from './dates';
-import { bumpSkill, dayOf, difficulty, emptyMem, levelOf, nextMem, SKILL_MAX, SKILL_MIN, STRAND_LIST, streakOf, type GameId, type SessionKind } from './engine';
+import { bumpSkill, dayOf, difficulty, emptyMem, holdNew, levelOf, nextMem, SKILL_MAX, SKILL_MIN, STRAND_LIST, streakOf, WARM_MIN, type GameId, type SessionKind } from './engine';
 import { buildChapter, refreshStops } from './journey';
 import { lexemeFor, slug, type Lexeme } from './lexicon';
 import { newBadgeUnlocks, QUEST_BY_ID, questsFor, questState } from './rewards';
@@ -102,6 +102,8 @@ export type Data = {
   sessions: Session[];
   /** May the Finder look words up online? null = not asked yet. */
   finderOnline: boolean | null;
+  /** A practice round has been finished since the last new word was learned. See `holdNew` in the engine. */
+  warmed: boolean;
 };
 
 type AddOpts = Partial<Pick<UserWord, 'origin' | 'status' | 'meaning' | 'example' | 'parts' | 'says' | 'pos'>>;
@@ -130,7 +132,8 @@ type Actions = {
   /** Marks a journey stop done. Call this BEFORE finishSession so the session summary sees the goal as met. */
   completeStop: (index: number) => StopOutcome;
   /** `clean` = answers right first time with no cue; a round only counts as perfect when every answer was clean. */
-  finishSession: (meta: { kind: SessionKind; total: number; right: number; ms: number; clean?: number }) => SessionSummary;
+  /** `stop`: this round already cleared a journey stop (so it has been counted towards today's goal). */
+  finishSession: (meta: { kind: SessionKind; total: number; right: number; ms: number; clean?: number; stop?: boolean }) => SessionSummary;
   /** Opens a chest stop (and completes it). Returns the gems inside, 0 if it was not an unopened chest. */
   openChest: (index: number) => number;
   /** Returns the gems paid out, 0 if the quest was not finished or already claimed. */
@@ -202,6 +205,7 @@ const initial: Data = {
   unlocks: [],
   sessions: [],
   finderOnline: null,
+  warmed: false,
 };
 const DATA_KEYS = Object.keys(initial) as (keyof Data)[];
 
@@ -478,6 +482,7 @@ export function sanitizeImport(raw: unknown): Data | null {
     badges,
     sessions,
     finderOnline: typeof d.finderOnline === 'boolean' ? d.finderOnline : null,
+    warmed: flag(d.warmed, false),
   };
   // A path that can be walked: a chapter if there is none, and a word for every learn stop that has lost its own.
   if (!s.journey.stops.length) s = { ...s, journey: { ...s.journey, stops: buildChapter(s, s.journey.chapter) } };
@@ -620,7 +625,8 @@ export const useStore = create<State>()(
           const mem = { know: taught(w.mem.know), find: taught(w.mem.find), spell: taught(w.mem.spell) };
           const rooted = STRAND_LIST.every((k) => mem[k].box >= 3);
           s = { ...s, words: { ...s.words, [id]: { ...w, status: rooted ? 'known' : 'learning', prevStatus: undefined, learnedOn: w.learnedOn ?? t, lesson: stats, mem } } };
-          if (first) s = { ...count(s, 'lessons'), gems: s.gems + GEMS.lesson };
+          // A new word spends the warm-up: with a lot due, the next one waits for another round.
+          if (first) s = { ...count(s, 'lessons'), gems: s.gems + GEMS.lesson, warmed: false };
         }
         set(celebrate(before, practised(s)));
       },
@@ -645,6 +651,11 @@ export const useStore = create<State>()(
         const gems = GEMS.session + GEMS.perRight * right;
         let s: Data = { ...before, gems: before.gems + gems, sessions: [...before.sessions, { day: t, kind: meta.kind, total: meta.total, right, ms: Math.round(meta.ms) }].slice(-60) };
         s = count(practised(s), 'sessions');
+        if (meta.total >= WARM_MIN) {
+          // A warm-up done while new words are being held is a stop's worth of work: it counts towards today's goal.
+          if (!meta.stop && holdNew(before)) s = { ...s, daily: { ...s.daily, stops: s.daily.stops + 1 } };
+          s = { ...s, warmed: true };
+        }
         const clean = meta.clean === undefined ? right : Math.max(0, Math.min(meta.total, meta.clean));
         if (meta.total >= PERFECT_MIN && clean === meta.total) s = count(s, 'perfect');
         const goal = goalCheck(s);

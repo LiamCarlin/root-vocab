@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Perch } from '@/components/Buddy';
+import { HoldSheet } from '@/components/journey/Sheets';
 import { Pop } from '@/components/fx';
 import { PartTiles, SylWord } from '@/components/learn';
 import { Growth, Mascot, type Pose } from '@/components/Mascot';
@@ -13,7 +14,7 @@ import { PATTERNS } from '@/data/words';
 import { beatMs, buzz, hum, say, sayByParts, stopSpeaking } from '@/lib/audio';
 import { sfx } from '@/lib/sfx';
 import { relDay } from '@/lib/dates';
-import { canPlay } from '@/lib/engine';
+import { canPlay, holdNew } from '@/lib/engine';
 import { exampleFor, lexemeFor, meaningOf, plain } from '@/lib/lexicon';
 import { growth, stopForWord, today, useStore, type UserWord } from '@/lib/store';
 import { ON_BLOCK, useTheme, wordSize, type BlockTone } from '@/theme';
@@ -37,6 +38,9 @@ export default function WordPage() {
   const slow = useStore((s) => s.slowAudio);
   const companion = useStore((s) => s.display.companion);
   const onPath = useStore((s) => stopForWord(s, id));
+  // A word that has not had its lesson waits, like the path does, while a lot is due.
+  const held = useStore((s) => holdNew(s));
+  const [holdOpen, setHoldOpen] = useState(false);
   const patch = useStore((s) => s.patch);
   const updateWord = useStore((s) => s.updateWord);
 
@@ -112,7 +116,7 @@ export default function WordPage() {
       </View>
     ) : (
       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-        <Btn icon={Play} label="Learn" a11y={`Learn ${lex.text} now`} onPress={() => router.push(onPath >= 0 ? `/mission/${lex.id}?stop=${onPath}` : `/mission/${lex.id}`)} flex={1} />
+        <Btn icon={Play} label="Learn" a11y={`Learn ${lex.text} now`} onPress={() => (held ? setHoldOpen(true) : router.push(onPath >= 0 ? `/mission/${lex.id}?stop=${onPath}` : `/mission/${lex.id}`))} flex={1} />
       </View>
     );
 
@@ -285,6 +289,7 @@ export default function WordPage() {
           </Block>
         </Rise>
       )}
+      <HoldSheet visible={holdOpen} onClose={() => setHoldOpen(false)} word={lex.text} />
     </Screen>
   );
 }

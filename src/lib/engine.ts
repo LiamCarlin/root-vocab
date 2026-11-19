@@ -226,6 +226,18 @@ export function dueItems(s: Pick<Data, 'words' | 'mod'>): number {
   return n;
 }
 
+/** With more than this many (word, strand) pairs due, new words wait for a warm-up. One warm-up round is 12 at most. */
+export const HOLD_AT = 12;
+/** A round this long or longer counts as a warm-up. Shorter ones (one word practised from its own page) do not. */
+export const WARM_MIN = 5;
+
+/**
+ * Should a new word wait? Yes while a lot is due and no practice round has been finished since the last new word.
+ * So with a backlog it is one round, one new word, one round, one new word: review always outruns what is added.
+ * It never depends on how the round went, only on doing it, so nothing here gates on ability.
+ */
+export const holdNew = (s: Pick<Data, 'words' | 'mod' | 'warmed'>): boolean => !s.warmed && dueItems(s) > HOLD_AT;
+
 /**
  * A list of exercises, built from what most needs practice.
  *
