@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
+import { requireOptionalNativeModule } from 'expo';
 import { Platform, Vibration } from 'react-native';
 
 import { buddy } from './buddy';
@@ -199,6 +200,13 @@ type ESR = {
 let esr: ESR | null | undefined;
 function mod(): ESR | null {
   if (esr !== undefined) return esr;
+  // Check for the native side first. The package calls requireNativeModule as it
+  // loads, and in dev Metro reports that throw as a fatal error instead of
+  // handing it to the catch below, so requiring it in Expo Go crashes the app.
+  if (Platform.OS !== 'web' && !requireOptionalNativeModule('ExpoSpeechRecognition')) {
+    esr = null;
+    return esr;
+  }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     esr = require('expo-speech-recognition').ExpoSpeechRecognitionModule as ESR;
