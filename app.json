@@ -1,25 +1,64 @@
 {
   "expo": {
-    "name": "root",
-    "slug": "root",
+    "name": "Root",
+    "slug": "root-vocab",
+    "scheme": "rootvocab",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "app.rootvocab.prototype",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Root listens only after you tap the mic, to hear the word you say. Nothing is saved.",
+        "NSSpeechRecognitionUsageDescription": "Root turns what you say into a word so you can practice out loud. Nothing is saved."
+      }
     },
     "android": {
+      "package": "app.rootvocab.prototype",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#9DB7FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#9DB7FF",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Root listens only after you tap the mic, to hear the word you say. Nothing is saved.",
+          "speechRecognitionPermission": "Root turns what you say into a word so you can practice out loud. Nothing is saved."
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Root uses motion to let you roll a marble and write letters in the air. Nothing is recorded."
+        }
+      ],
+      "expo-audio",
+      "expo-asset"
+    ]
   }
 }
