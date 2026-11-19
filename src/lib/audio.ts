@@ -46,7 +46,7 @@ export const speakable = (text: string) => (/^[A-Z]{2,5}$/.test(text) ? text.spl
 const CLIP_AIR = 50;
 
 /**
- * Says one beat of a word, exactly as it sounds inside the word, and hums it. A word with no
+ * Says one beat of a word on its own, as a teacher sounds it out, and hums it. A word with no
  * recording gets the phone's best reading of the respelling. Returns a function that stops the hum.
  */
 export function sayBeat(parts: string[], says: string[], i: number, opts: { onDone?: () => void; hum?: boolean } = {}): () => void {

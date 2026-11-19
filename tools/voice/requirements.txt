@@ -7,3 +7,4 @@ soundfile
 scipy
 numpy
 matplotlib
+praat-parselmouth
