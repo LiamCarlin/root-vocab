@@ -42,7 +42,7 @@ export default function PlacementResult() {
         <Txt v="display" accessibilityRole="header" style={{ flex: 1, paddingBottom: 12 }}>
           Your starting map
         </Txt>
-        <Figure pose="cheer" size={132} delay={200} />
+        <Figure pose="proud" size={132} delay={200} />
       </Rise>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>

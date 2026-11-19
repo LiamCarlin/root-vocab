@@ -1,14 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowRight, Gift, SkipForward } from 'lucide-react-native';
+import { ArrowRight, SkipForward } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, View, useWindowDimensions } from 'react-native';
+import { Image, Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Figure } from '@/components/Buddy';
 import { Pop } from '@/components/fx';
 import { Scene } from '@/components/rewards';
 import { Block, IconBtn, Screen, TopBar, Txt } from '@/components/ui';
-import { PROLOGUE, chapterOf } from '@/data/story';
+import { KEEPSAKES, PROLOGUE, chapterOf } from '@/data/story';
 import { buzz } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/unlocks';
 import { sfx } from '@/lib/sfx';
@@ -88,7 +88,7 @@ function Story({ which }: { which: Which }) {
     setI(i + 1);
   };
 
-  const fog = which === 'prologue' ? [0.3, 0.95, 0.95, 0.95, 0.8, 0.68][Math.min(i, 5)] : which === 'intro' ? 0.85 : cleared ? 0 : 0.6;
+  const fog = which === 'prologue' ? [0, 0.9, 0.92, 0.92, 0.75, 0.6][Math.min(i, 5)] : which === 'intro' ? 0.85 : cleared ? 0 : 0.6;
   const sceneSize = Math.max(150, Math.min(260, height * 0.28));
   const kicker = which === 'prologue' ? 'The valley' : `Chapter ${ch.n}`;
   const title = which === 'prologue' ? 'The Hush' : ch.name;
@@ -123,7 +123,7 @@ function Story({ which }: { which: Which }) {
 
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <View>
-            <Scene scene={ch.scene} size={sceneSize} fog={fog} fogColor={c[ch.tone]} float={false} />
+            <Scene scene={which === 'prologue' ? 'valley' : ch.scene} size={sceneSize} fog={fog} fogColor={c[ch.tone]} float={false} />
           </View>
         </View>
 
@@ -143,9 +143,9 @@ function Story({ which }: { which: Which }) {
           <View style={{ alignItems: 'flex-end', gap: 12, flex: 1 }}>
             {which === 'outro' && last && (
               <Pop delay={350}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: 999, paddingVertical: 8, paddingLeft: 8, paddingRight: 16 }} accessible accessibilityLabel={`Keepsake: ${ch.keepsake}`}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center' }}>
-                    <Gift size={20} color="#FFFFFF" strokeWidth={2.4} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: 999, paddingVertical: 6, paddingLeft: 6, paddingRight: 16 }} accessible accessibilityLabel={`Keepsake: ${ch.keepsake}`}>
+                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image source={KEEPSAKES[ch.scene]} style={{ width: 48, height: 48 }} resizeMode="contain" />
                   </View>
                   <Txt v="bodyS">{ch.keepsake}</Txt>
                 </View>

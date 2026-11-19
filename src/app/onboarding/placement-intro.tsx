@@ -39,7 +39,7 @@ export default function PlacementIntro() {
         </>
       }>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 26 }}>
-        <Figure pose="think" size={190} />
+        <Figure pose="search" size={190} />
         <Rise i={1}>
           <Txt v="display" center accessibilityRole="header">
             Quick check

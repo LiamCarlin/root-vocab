@@ -55,7 +55,7 @@ export function SessionDone({ kind, meta, played, summary, outcome, questsBefore
     return () => clearTimeout(t);
   }, []);
 
-  const pose: Pose = perfect ? 'cheer' : score >= 0.6 ? 'cheer' : 'cheer';
+  const pose: Pose = perfect ? 'trophy' : score >= 0.6 ? 'cheer' : 'cheer';
   const headline = kind === 'challenge' ? 'Fog cleared' : perfect ? 'Perfect round' : 'Round done';
   const number = { fontFamily: 'Lexend_700Bold', fontSize: 26, lineHeight: 32, color: c.ink } as const;
 

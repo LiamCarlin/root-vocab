@@ -27,7 +27,7 @@ export default function About() {
 
   const picks = profile.days.length + profile.interests.length;
   // Root warms up as it gets to know you.
-  const pose: Pose = picks === 0 ? 'think' : picks < 3 ? 'wave' : 'cheer';
+  const pose: Pose = picks === 0 ? 'listen' : picks < 3 ? 'thumbs' : picks < 6 ? 'laugh' : 'love';
 
   const toggleDay = (id: DayId) => {
     const on = profile.days.includes(id);
@@ -76,7 +76,7 @@ export default function About() {
               ))}
             </ChipRow>
           </Block>
-          <Perch pose={pose} size={80} side="right" inset={20} />
+          <Perch pose={pose} size={84} side="right" inset={20} />
         </View>
       </Rise>
 

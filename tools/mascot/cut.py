@@ -1,19 +1,24 @@
 """
 python3 cut.py            (needs Pillow and numpy)
 
-Cuts Root out of the original character sheets in ./originals and writes
+Cuts every picture out of the illustrated sheets in ./originals and writes
 
-  assets/mascot/<pose>.png          one transparent picture per pose
+  assets/mascot/<pose>.webp         Root, one transparent picture per pose
+  assets/props/<name>.webp          the keepsakes and the journey objects
+  assets/scenes/valley.webp         the whole valley, for the story's opening
   src/components/mascotStills.ts    the manifest the app reads
   contact.jpg                       every pose on one sheet, for review
 
-The originals are generated illustrations on a white background, several poses to a sheet.
-SHEETS says which sheet each pose is on and which figure it is, counting from the left.
-To add poses: put the new sheet in ./originals, add a line per figure to SHEETS, run this.
+The originals are generated illustrations on a white background, several figures to a sheet,
+laid out in a grid. POSES and OBJECTS below say what is on each sheet.
+
+To add poses: put the new sheet in ./originals, add a line to POSES, run this, look at contact.jpg.
 
 How a figure is cut out: everything white that touches the edge of the sheet is background.
-White that is closed in (the eyes, the teeth) is part of Root and is kept. The outline is then
-softened by one pixel so there is no white fringe on a coloured card.
+White that is closed in (the eyes, a page of a book) is part of the picture and is kept. Each
+figure is whatever lies in its cell of the grid, so a prop that floats free of Root (a
+lightbulb, drops of water) stays with it. The outline is then softened by one pixel and the
+white taken back out of it, so there is no pale fringe on a coloured card.
 """
 import os
 import sys
@@ -24,18 +29,31 @@ from PIL import Image, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
-OUT = os.path.join(ROOT, 'assets', 'mascot')
-
-# pose: (sheet file, which figure from the left, where the middle of the face is as a fraction of the figure's height)
-SHEETS = {
-    'wave': ('sheet-1.jpg', 0, 0.47),
-    'cheer': ('sheet-1.jpg', 1, 0.47),
-    'think': ('sheet-1.jpg', 2, 0.47),
-}
-# A pose that stands on the ground. Every pose is laid out at this one's height, so Root is the same size in all of them.
-STANDING = 'wave'
 WHITE = 236      # a pixel whose darkest channel is at least this is "white"
 PAD = 6
+
+# sheet, rows, columns, the poses in reading order, and which of them is a plain standing Root
+# (nothing above its leaves, both feet down): that one measures how tall Root is on this sheet.
+POSES = [
+    ('sheet-1.jpg', 1, 3, ['wave', 'cheer', 'think'], 'wave'),
+    ('sheet-2.jpg', 2, 3, ['thumbs', 'trophy', 'idea', 'oops', 'gasp', 'sleep'], 'thumbs'),
+    ('sheet-3.jpg', 1, 4, ['read', 'search', 'write', 'listen'], 'read'),
+    ('sheet-4.jpg', 1, 4, ['speak', 'trace', 'tap', 'marble'], 'tap'),
+    ('sheet-5.jpg', 1, 4, ['lantern', 'map', 'water', 'hike'], 'map'),
+    ('sheet-6.jpg', 1, 4, ['shiver', 'telescope', 'compass', 'basket'], 'basket'),
+    ('sheet-7.jpg', 1, 4, ['love', 'proud', 'laugh', 'calm'], 'proud'),
+    ('sheet-8.jpg', 1, 4, ['sit', 'point', 'run', 'peek'], 'point'),
+]
+# A pose stands on the bottom of its picture unless it says otherwise here.
+#   'top'  the leaf tips are the top of the picture and the feet are off the ground (a jump)
+AIRBORNE = {'cheer'}
+# Where Root is sitting, as a fraction of a standing Root's height above the lowest point of the picture.
+SEAT = {'sit': 0.2}
+
+OBJECTS = [
+    ('objects-keepsakes.jpg', 2, 3, ['keepsake-garden', 'keepsake-orchard', 'keepsake-market', 'keepsake-woods', 'keepsake-harbour', 'keepsake-summit'], 420),
+    ('objects-journey.jpg', 2, 3, ['obj-sprout', 'obj-magnifier', 'obj-pencil', 'obj-sand', 'obj-flag', 'obj-book'], 320),
+]
 
 
 def background(rgb):
@@ -78,97 +96,145 @@ def background(rgb):
                             seen[ny, nx] = True; todo.append((ny, nx))
                     else:
                         rim.append(rgb[ny, nx])
-            if len(comp) < 260 and rim and np.mean([c.max() for c in rim]) > 190 and np.mean([c[2] for c in rim]) < 150:
+            if len(comp) < 260 and rim and np.mean([c.max() for c in rim]) > 190 and np.mean([c[2] for c in rim]) < 150 and np.mean([c[1] for c in rim]) < 190:
                 for y, x in comp:
                     bg[y, x] = True
     return bg
 
 
-def figures(bg):
-    """Column ranges of the figures on a sheet, left to right."""
-    cols = (~bg).sum(axis=0) > 2
-    out, start = [], None
-    for x, on in enumerate(list(cols) + [False]):
-        if on and start is None:
-            start = x
-        if not on and start is not None:
-            if x - start > 40:
-                out.append((start, x))
-            start = None
+def pieces(fg):
+    """The separate blobs of a sheet: a list of (pixel count, row centroid, column centroid, label), and the label image."""
+    h, w = fg.shape
+    label = np.zeros((h, w), np.int32)
+    out = []
+    n = 0
+    for sy in range(h):
+        row = fg[sy]
+        for sx in np.nonzero(row & (label[sy] == 0))[0]:
+            if label[sy, sx]:
+                continue
+            n += 1
+            label[sy, sx] = n
+            todo = deque([(sy, sx)])
+            count = ys = xs = 0
+            while todo:
+                y, x = todo.popleft()
+                count += 1; ys += y; xs += x
+                for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                    if 0 <= ny < h and 0 <= nx < w and fg[ny, nx] and not label[ny, nx]:
+                        label[ny, nx] = n; todo.append((ny, nx))
+            out.append((count, ys / count, xs / count, n))
+    return out, label
+
+
+def cut_sheet(name, rows, cols):
+    """Every figure on a sheet, in reading order, as RGBA pictures."""
+    im = Image.open(os.path.join(HERE, 'originals', name)).convert('RGB')
+    rgb = np.asarray(im).astype(np.float32)
+    bg = background(rgb)
+    blobs, label = pieces(~bg)
+    cells = {}
+    for count, cy, cx, n in blobs:
+        if count < 14:
+            continue  # a speck
+        cell = (min(rows - 1, int(cy * rows / im.height)), min(cols - 1, int(cx * cols / im.width)))
+        cells.setdefault(cell, []).append(n)
+    out = []
+    for r in range(rows):
+        for c in range(cols):
+            mine = np.isin(label, cells.get((r, c), []))
+            ys, xs = np.where(mine)
+            y0, y1, x0, x1 = max(0, ys.min() - PAD), min(im.height, ys.max() + 1 + PAD), max(0, xs.min() - PAD), min(im.width, xs.max() + 1 + PAD)
+            part, solid_np = rgb[y0:y1, x0:x1], mine[y0:y1, x0:x1]
+            # Solid inside, clear outside, and a soft one-pixel edge between them.
+            solid = Image.fromarray((solid_np * 255).astype(np.uint8))
+            alpha = np.asarray(solid.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.9))).astype(np.float32) / 255
+            # The outermost pixels were blended with the white sheet. Take the white back out, using the colour
+            # just inside the edge, so nothing pale is left around the outline.
+            inner = np.asarray(Image.fromarray(part.astype(np.uint8)).filter(ImageFilter.MinFilter(5))).astype(np.float32)
+            edge = np.asarray(solid.filter(ImageFilter.MinFilter(7))).astype(np.float32) / 255 < 0.5
+            paint = np.where(edge[..., None], inner, part)
+            out.append(Image.fromarray(np.dstack([paint, alpha * 255]).clip(0, 255).astype(np.uint8), 'RGBA'))
     return out
 
 
-def cut(sheet, index):
-    im = Image.open(os.path.join(HERE, 'originals', sheet)).convert('RGB')
-    rgb = np.asarray(im).astype(np.float32)
-    bg = background(rgb)
-    x0, x1 = figures(bg)[index]
-    ys = np.where((~bg[:, x0:x1]).any(axis=1))[0]
-    y0, y1 = ys.min(), ys.max() + 1
-    x0, x1, y0, y1 = max(0, x0 - PAD), min(im.width, x1 + PAD), max(0, y0 - PAD), min(im.height, y1 + PAD)
-    rgb, bg = rgb[y0:y1, x0:x1], bg[y0:y1, x0:x1]
-
-    # Solid inside, clear outside, and a soft one-pixel edge between them.
-    solid = Image.fromarray(((~bg) * 255).astype(np.uint8))
-    alpha = np.asarray(solid.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.9))).astype(np.float32) / 255
-    # The outermost pixels of the figure were blended with the white sheet. Take the white back out,
-    # using the colour just inside the edge, so nothing pale is left around the outline.
-    inner = np.asarray(Image.fromarray(rgb.astype(np.uint8)).filter(ImageFilter.MinFilter(5))).astype(np.float32)
-    edge = np.asarray(solid.filter(ImageFilter.MinFilter(7))).astype(np.float32) / 255 < 0.5
-    paint = np.where(edge[..., None], inner, rgb)
-    out = np.dstack([paint, alpha * 255]).clip(0, 255).astype(np.uint8)
-    return Image.fromarray(out, 'RGBA')
+def save(im, path):
+    im.save(path, 'WEBP', quality=92, method=6, alpha_quality=100)
 
 
 def main():
-    os.makedirs(OUT, exist_ok=True)
-    cuts = {pose: cut(sheet, i) for pose, (sheet, i, _) in SHEETS.items()}
-    stand = cuts[STANDING].height - 2 * PAD   # leaf tips to soles, in sheet pixels
-    rows = []
-    for pose, im in cuts.items():
-        im.save(os.path.join(OUT, pose + '.png'), optimize=True)
-        face = SHEETS[pose][2]
-        figure_h = im.height - 2 * PAD
-        # Fractions of the picture height, from the top. The layout box starts at the leaf tips and is one standing Root tall.
-        top = PAD / im.height
-        # The middle of the head, sideways: the forehead band, which a raised hand never reaches.
-        a = np.asarray(im)[:, :, 3]
-        band = a[PAD + int(figure_h * 0.24):PAD + int(figure_h * 0.34)]
-        xs = np.where(band.max(axis=0) > 128)[0]
-        cx = (xs.min() + xs.max()) / 2 / im.width
-        rows.append("  %s: { src: require('../../assets/mascot/%s.png'), w: %d, h: %d, top: %.4f, stand: %.4f, aspect: %.3f, face: %.4f, cx: %.4f },"
-                    % (pose, pose, im.width, im.height, top, stand / im.height, (im.width - 2 * PAD) / stand, (PAD + face * figure_h) / im.height, cx))
-        print('%-6s %dx%d' % (pose, im.width, im.height))
-    ts = """// GENERATED by tools/mascot/cut.py. Do not edit by hand: change SHEETS there and run it again.
+    mascot = os.path.join(ROOT, 'assets', 'mascot')
+    os.makedirs(mascot, exist_ok=True)
+    rows_ts, tiles, names = [], [], []
+    for sheet, rows, cols, poses, standing in POSES:
+        cuts = dict(zip(poses, cut_sheet(sheet, rows, cols)))
+        stand = cuts[standing].height - 2 * PAD   # leaf tips to soles on this sheet, in its own pixels
+        for pose, im in cuts.items():
+            save(im, os.path.join(mascot, pose + '.webp'))
+            h, w = im.height, im.width
+            # The ground line, as a fraction of the picture height from the top.
+            base = (PAD + stand) / h if pose in AIRBORNE else (h - PAD) / h
+            a = np.asarray(im)[:, :, 3]
+            # The middle of the head, sideways: the forehead band, which a raised hand rarely reaches.
+            band = a[max(0, int(base * h - stand * 0.76)):max(1, int(base * h - stand * 0.66))]
+            xs = np.where(band.max(axis=0) > 128)[0]
+            cx = (xs.min() + xs.max()) / 2 / w if len(xs) else 0.5
+            extra = ', seat: %.4f' % (base - SEAT[pose] * stand / h) if pose in SEAT else ''
+            rows_ts.append("  %s: { src: require('../../assets/mascot/%s.webp'), w: %d, h: %d, stand: %.4f, base: %.4f, aspect: %.3f, face: %.4f, cx: %.4f%s },"
+                           % (pose, pose, w, h, stand / h, base, (w - 2 * PAD) / stand, base - 0.53 * stand / h, cx, extra))
+            names.append(pose)
+            # for the contact sheet: every pose at the same scale, standing on the same line
+            k = 300 / stand
+            tiles.append((pose, im.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS), round((base * h) * k)))
+        print('%-12s %s' % (sheet, ' '.join(poses)))
+
+    ts = """// GENERATED by tools/mascot/cut.py. Do not edit by hand: change POSES there and run it again.
 //
 // One entry per picture of Root. w × h is the picture in pixels. Fractions are of the picture's height, from the top:
-//   top    where Root's leaf tips are: the top of the layout box
-//   stand  the height of a standing Root: what a Mascot `size` maps to. The same in sheet pixels for every pose,
-//          so Root is the same size whichever picture is showing. A pose that is off the ground ends above the box bottom.
-//   face   the middle of the face, for the round avatar crop (`cx` is the middle of the head sideways, as a fraction of the width)
+//   stand  the height of a standing Root, leaf tips to soles: what a Mascot `size` maps to. Root is the same size
+//          whichever picture is showing.
+//   base   the ground line. It is the bottom of the layout box. (For a jump it lies below the feet.)
+//   seat   (sit only) the line Root is sitting on
+//   face   the middle of the face, and `cx` the middle of the head sideways as a fraction of the width: for the round avatar crop
 // `aspect` is the layout box's width over its height.
 
 export type Pose = %s;
 
-export type Still = { src: number; w: number; h: number; top: number; stand: number; aspect: number; face: number; cx: number };
+export type Still = { src: number; w: number; h: number; stand: number; base: number; aspect: number; face: number; cx: number; seat?: number };
 
 export const STILLS: Record<Pose, Still> = {
 %s
 };
-""" % (' | '.join("'%s'" % p for p in cuts), '\n'.join(rows))
+""" % (' | '.join("'%s'" % p for p in names), '\n'.join(rows_ts))
     open(os.path.join(ROOT, 'src', 'components', 'mascotStills.ts'), 'w').write(ts)
 
-    # contact sheet: on the app's periwinkle and on black, to check the outline on both
-    H = 420
-    tiles = [im.resize((round(im.width * H / im.height), H), Image.LANCZOS) for im in cuts.values()]
-    W = sum(t.width + 20 for t in tiles) + 20
-    sheet = Image.new('RGB', (W, 2 * (H + 20) + 20), (157, 183, 255))
-    sheet.paste((14, 14, 19), (0, H + 30, W, 2 * (H + 20) + 20))
-    for row in range(2):
-        x = 20
-        for t in tiles:
-            sheet.paste(t, (x, 20 + row * (H + 20)), t); x += t.width + 20
-    sheet.save(os.path.join(HERE, 'contact.jpg'), quality=90)
+    props = os.path.join(ROOT, 'assets', 'props')
+    for sheet, rows, cols, objs, size in OBJECTS:
+        for name, im in zip(objs, cut_sheet(sheet, rows, cols)):
+            # every object on a square canvas, so the app can lay them out without knowing their shapes
+            k = (size - 16) / max(im.size)
+            im = im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
+            sq = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+            sq.alpha_composite(im, ((size - im.width) // 2, (size - im.height) // 2))
+            save(sq, os.path.join(props, name + '.webp'))
+        print('%-12s %s' % (sheet, ' '.join(objs)))
+
+    valley = cut_sheet('scene-valley.jpg', 1, 1)[0]
+    k = 760 / valley.width
+    valley = valley.resize((760, round(valley.height * k)), Image.LANCZOS)
+    save(valley, os.path.join(ROOT, 'assets', 'scenes', 'valley.webp'))
+    print('valley       %dx%d' % valley.size)
+
+    # contact sheet: every pose on the app's periwinkle, to check the outlines and that Root is one size
+    per = 9
+    cell_w, cell_h = 330, 430
+    n_rows = -(-len(tiles) // per)
+    sheet_im = Image.new('RGB', (per * cell_w, n_rows * cell_h), (157, 183, 255))
+    for i, (pose, t, ground) in enumerate(tiles):
+        x = (i % per) * cell_w + (cell_w - t.width) // 2
+        y = (i // per) * cell_h + cell_h - 30 - ground
+        sheet_im.paste(t, (x, y), t)
+    sheet_im.save(os.path.join(HERE, 'contact.jpg'), quality=88)
 
 
 if __name__ == '__main__':

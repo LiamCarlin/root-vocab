@@ -27,7 +27,7 @@ const K = 0.6;
 /** The first few items of each part move it faster still, so a strong learner can place high and a new one low. */
 const K_EARLY = 1.0;
 const EARLY = 3;
-const POSE: Record<Strand, Pose> = { know: 'think', find: 'wave', spell: 'think' };
+const POSE: Record<Strand, Pose> = { know: 'read', find: 'search', spell: 'write' };
 
 type Item = { word: BankWord; /** Know only: three meanings, one of them right. */ options: string[] };
 type Result = { r: 0 | 0.5 | 1; skipped?: boolean };

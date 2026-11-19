@@ -5,9 +5,10 @@ import { useTheme } from '@/theme';
 import { STILLS, type Pose } from './mascotStills';
 
 /**
- * Root, the mascot, as a still picture. The pictures are the original character illustrations,
- * cut out of their sheets by tools/mascot/cut.py. Root never moves on its own: what changes is
- * which picture is on screen.
+ * Root, the mascot, as a still picture. The pictures are illustrations of the original
+ * character, cut out of their sheets by tools/mascot/cut.py. Root never moves on its own: what
+ * changes is which picture is on screen, and there is one for most things Root does with the
+ * learner (reading, listening, tapping, tracing, searching, celebrating, getting it wrong).
  */
 export type { Pose } from './mascotStills';
 
@@ -18,10 +19,10 @@ export const POSE_LIST = Object.keys(STILLS) as Pose[];
 export const poseWidth = (pose: Pose, height: number) => height * STILLS[pose].aspect;
 
 /**
- * `size` is the height of a standing Root in points, feet to leaf tips. The layout box is
- * `poseWidth(pose, size)` × `size`: leaf tips touch its top and a standing Root's feet sit on its
- * bottom edge. Root is the same size in every pose, so a pose that is off the ground (`cheer`)
- * simply ends a little above the bottom. `flip` faces Root the other way.
+ * `size` is the height of a standing Root in points, soles to leaf tips. The layout box is
+ * `poseWidth(pose, size)` × `size` and its bottom edge is the ground: Root is the same size in
+ * every pose, a pose that jumps ends above the ground, and anything held overhead (a trophy, a
+ * lightbulb) draws above the box without moving the layout. `flip` faces Root the other way.
  */
 export function Mascot({ pose = 'wave', size = 120, style, a11y = 'Root', flip }: { pose?: Pose; size?: number; style?: StyleProp<ViewStyle>; a11y?: string; flip?: boolean }) {
   const s = STILLS[pose];
@@ -29,7 +30,7 @@ export function Mascot({ pose = 'wave', size = 120, style, a11y = 'Root', flip }
   const pt = size / (s.stand * s.h); // points per picture pixel: the same for every pose
   return (
     <View style={[{ width, height: size }, style]} accessible accessibilityRole="image" accessibilityLabel={a11y}>
-      <Image source={s.src} fadeDuration={0} style={[{ position: 'absolute', left: (width - s.w * pt) / 2, top: -s.top * s.h * pt, width: s.w * pt, height: s.h * pt }, flip ? { transform: [{ scaleX: -1 }] } : null]} />
+      <Image source={s.src} fadeDuration={0} style={[{ position: 'absolute', left: (width - s.w * pt) / 2, top: size - s.base * s.h * pt, width: s.w * pt, height: s.h * pt }, flip ? { transform: [{ scaleX: -1 }] } : null]} />
     </View>
   );
 }

@@ -22,7 +22,7 @@ type Stage = UserWord['status'] | 'new';
 const HERO: Record<Stage, Tone> = { new: 'butter', queued: 'butter', learning: 'brand', known: 'mint', removed: 'soft' };
 const STATE: Record<Stage, string> = { new: 'Not started', queued: 'Waiting', learning: 'Growing', known: 'Rooted', removed: 'Removed' };
 /** Root keeps the word company: how it sits says how the word is doing. */
-const ROOT: Record<Stage, Pose> = { new: 'wave', queued: 'wave', learning: 'think', known: 'cheer', removed: 'think' };
+const ROOT: Record<Stage, Pose> = { new: 'sit', queued: 'sit', learning: 'read', known: 'proud', removed: 'sleep' };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Everything Root knows about one word. Works for a bank word that has not been started yet, too. */

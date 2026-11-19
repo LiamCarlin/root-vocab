@@ -112,8 +112,8 @@ export default function Lab() {
 
       <SectionLabel>Facing the other way</SectionLabel>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 150 }}>
-        <Mascot pose="wave" size={120} />
-        <Mascot pose="wave" size={120} flip />
+        <Mascot pose="point" size={120} />
+        <Mascot pose="point" size={120} flip />
       </View>
 
       {/* ── Peek ── */}
@@ -125,15 +125,15 @@ export default function Lab() {
           </Txt>
         </Card>
         <Peek from="top" align="start" size={150} />
-        <Peek from="top" align="center" pose="think" size={190} />
-        <Peek from="top" align="end" pose="cheer" size={170} />
+        <Peek from="top" align="center" pose="search" size={190} show={0.5} />
+        <Peek from="top" align="end" size={170} />
       </View>
 
       <SectionLabel>Peek · sides</SectionLabel>
       <View style={{ marginHorizontal: 78 }}>
         <Card height={150} />
         <Peek from="left" align="end" inset={8} size={110} />
-        <Peek from="right" align="end" inset={8} pose="think" size={110} />
+        <Peek from="right" align="end" inset={8} pose="listen" size={110} />
       </View>
 
       {/* ── Perch ── */}
@@ -141,7 +141,7 @@ export default function Lab() {
       <View style={{ marginTop: 100 }}>
         <Block tone="brand" style={{ height: 120 }} />
         <Perch side="right" size={96} />
-        <Perch side="left" pose="think" size={88} />
+        <Perch side="left" pose="read" size={88} />
       </View>
 
       <SectionLabel>Figure</SectionLabel>
@@ -149,8 +149,8 @@ export default function Lab() {
         {() => (
           <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 170 }}>
             <Figure pose="cheer" size={130} />
-            <Figure pose="cheer" size={130} delay={200} />
-            <Figure pose="think" size={130} delay={400} />
+            <Figure pose="proud" size={130} delay={200} />
+            <Figure pose="oops" size={130} delay={400} />
           </View>
         )}
       </Replay>

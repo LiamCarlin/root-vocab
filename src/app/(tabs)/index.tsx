@@ -9,7 +9,7 @@ import { KIND_LABEL, Path, stopY, type StopFace } from '@/components/journey/Pat
 import { ChestSheet, StreakSheet } from '@/components/journey/Sheets';
 import { GemPill, GoalRing, QuestRow, Scene } from '@/components/rewards';
 import { Bar, Block, Btn, Rise, Screen, Stat, Tap, Txt } from '@/components/ui';
-import { SCENES, chapterOf } from '@/data/story';
+import { KEEPSAKES, chapterOf } from '@/data/story';
 import { refreshCheckIns } from '@/lib/checkins';
 import { dueItems } from '@/lib/engine';
 import { stopTodo, stopWords } from '@/lib/journey';
@@ -208,7 +208,7 @@ export default function Journey() {
                 return (
                   <View key={n} style={{ alignItems: 'center', gap: 6, width: 84 }} accessible accessibilityLabel={`${done.keepsake}, from ${done.name}`}>
                     <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: c[done.tone], alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                      <Image source={SCENES[done.scene].src} style={{ width: 56, height: (56 * SCENES[done.scene].h) / SCENES[done.scene].w }} resizeMode="contain" />
+                      <Image source={KEEPSAKES[done.scene]} style={{ width: 54, height: 54 }} resizeMode="contain" />
                     </View>
                     <Txt v="caption" color="ink2" center numberOfLines={2}>
                       {done.keepsake}

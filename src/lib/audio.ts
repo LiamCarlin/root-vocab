@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import { Platform, Vibration } from 'react-native';
 
+import { buddy } from './buddy';
 import { useStore } from './store';
 
 // ── Speaking (text to speech) ─────────────────────────────────────────────
@@ -83,7 +84,11 @@ export const buzz = {
   /** Tracing: finger left the letters. */
   strong: () => safe(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)),
   good: () => safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),
-  nudge: () => safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)),
+  /** Not quite. Root winces too, if it is on screen. */
+  nudge: () => {
+    buddy.react('wrong');
+    safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
+  },
 };
 
 // Humming: the phone buzzes for as long as a syllable is voiced, so a word can

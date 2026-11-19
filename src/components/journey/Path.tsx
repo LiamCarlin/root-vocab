@@ -1,4 +1,4 @@
-import { Check, Flag, Hand, Lock, PenLine, Play, Search } from 'lucide-react-native';
+import { Check, Lock, Play } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -8,7 +8,7 @@ import { Mascot, poseWidth } from '@/components/Mascot';
 import { Pulse, Wiggle } from '@/components/fx';
 import { LIP } from '@/components/rewards';
 import { Rise, Tap, Txt } from '@/components/ui';
-import { PROPS } from '@/data/story';
+import { OBJECTS, PROPS } from '@/data/story';
 import { buzz } from '@/lib/audio';
 import type { Stop, StopKind } from '@/lib/store';
 import { ON_BLOCK, useTheme, type BlockTone } from '@/theme';
@@ -21,6 +21,9 @@ const NODE = 70;
 const NOW = 88;
 const ROOT = 74;
 const FEET = 0.965;
+
+/** The object in the node of each kind of practice stop. (A set of new words shows its letters; a chest is a chest.) */
+const STOP_OBJECT: Record<StopKind, number> = { learn: OBJECTS.sprout, find: OBJECTS.magnifier, spell: OBJECTS.pencil, hands: OBJECTS.sand, challenge: OBJECTS.flag, chest: PROPS.chest.src };
 
 export const KIND_LABEL: Record<StopKind, string> = { learn: 'New words', find: 'Find', spell: 'Spell', chest: 'Chest', hands: 'Hands-on', challenge: 'Challenge' };
 
@@ -109,14 +112,8 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
                         <Image source={done ? PROPS.chestOpen.src : PROPS.chest.src} style={{ width: size * 0.62, height: size * 0.62, opacity: done || now ? 1 : 0.55 }} resizeMode="contain" />
                       ) : st.kind === 'learn' ? (
                         <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: (face.mark ?? '?').length > 2 ? size * 0.26 : size * 0.36, letterSpacing: 0.5, color: ink }}>{face.mark ?? '?'}</Text>
-                      ) : st.kind === 'find' ? (
-                        <Search size={size * 0.38} color={ink} strokeWidth={2.6} />
-                      ) : st.kind === 'spell' ? (
-                        <PenLine size={size * 0.38} color={ink} strokeWidth={2.6} />
-                      ) : st.kind === 'hands' ? (
-                        <Hand size={size * 0.38} color={ink} strokeWidth={2.6} />
                       ) : (
-                        <Flag size={size * 0.38} color={ink} strokeWidth={2.6} fill={now ? ink : 'none'} />
+                        <Image source={STOP_OBJECT[st.kind]} style={{ width: size * 0.66, height: size * 0.66, opacity: now ? 1 : 0.5 }} resizeMode="contain" />
                       )}
                     </View>
                     {!done && !now && (
@@ -148,7 +145,7 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
       {/* Root, standing on the next stop. */}
       {stops.length > 0 && (
         <Animated.View key={stand} entering={reduceMotion ? undefined : FadeIn.duration(320).delay(240)} pointerEvents="none" style={{ position: 'absolute', left: home.x, top: home.y, width: rootW, height: ROOT }}>
-          <Mascot pose={at < 0 ? 'cheer' : 'wave'} size={ROOT} />
+          <Mascot pose={at < 0 ? 'cheer' : 'hike'} size={ROOT} />
         </Animated.View>
       )}
     </View>

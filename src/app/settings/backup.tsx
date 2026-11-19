@@ -43,7 +43,7 @@ export default function Backup() {
   return (
     <Screen top={<TopBar center={<Txt v="heading">Backup</Txt>} right={<Tag icon={Smartphone} label="On this phone" />} />} keyboard>
       <Block tone="butter" style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Mascot pose="cheer" size={110} />
+        <Mascot pose="thumbs" size={110} />
         <View style={{ flex: 1 }}>
           <Btn icon={Copy} label="Copy code" onPress={copy} a11y="Copy a backup code with your words, progress and settings" />
         </View>

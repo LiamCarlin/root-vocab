@@ -104,6 +104,7 @@ export function Move({ lex, top, next, skip, addRetry }: StepProps) {
   return (
     <StepScreen
       top={top}
+      pose={mode === 'trace' ? 'trace' : mode === 'marble' ? 'marble' : 'write'}
       scroll={false}
       gap={12}
       footer={

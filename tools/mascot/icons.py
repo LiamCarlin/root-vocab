@@ -1,8 +1,8 @@
 """
 python3 icons.py          (needs Pillow; run cut.py first)
 
-Makes the app icon, the Android adaptive foreground, the splash picture and the favicon
-from the waving Root in assets/mascot.
+Makes the app icon and favicon from the close-up portrait in ./originals, and the Android
+adaptive foreground and the splash picture from the waving Root in assets/mascot.
 """
 import os
 from PIL import Image
@@ -10,7 +10,8 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.abspath(os.path.join(HERE, '..', '..', 'assets'))
 PERIWINKLE = (157, 183, 255)
-root = Image.open(os.path.join(ASSETS, 'mascot', 'wave.png')).convert('RGBA')
+root = Image.open(os.path.join(ASSETS, 'mascot', 'wave.webp')).convert('RGBA')
+portrait = Image.open(os.path.join(HERE, 'originals', 'icon-portrait.jpg')).convert('RGB')
 
 
 def canvas(size, figure_h, bg=None, dy=0.0):
@@ -22,8 +23,8 @@ def canvas(size, figure_h, bg=None, dy=0.0):
     return im
 
 
-canvas(1024, 0.70, PERIWINKLE, 0.01).convert('RGB').save(os.path.join(ASSETS, 'icon.png'), optimize=True)
+portrait.resize((1024, 1024), Image.LANCZOS).save(os.path.join(ASSETS, 'icon.png'), optimize=True)
+portrait.resize((192, 192), Image.LANCZOS).save(os.path.join(ASSETS, 'favicon.png'), optimize=True)
 # Android crops the adaptive foreground to its middle two thirds.
-canvas(1024, 0.50).save(os.path.join(ASSETS, 'android-icon-foreground.png'), optimize=True)
+canvas(1024, 0.54).save(os.path.join(ASSETS, 'android-icon-foreground.png'), optimize=True)
 canvas(1024, 0.92).save(os.path.join(ASSETS, 'splash-icon.png'), optimize=True)
-canvas(192, 0.96).save(os.path.join(ASSETS, 'favicon.png'), optimize=True)

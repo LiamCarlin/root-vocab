@@ -113,7 +113,7 @@ export default function Insights() {
         </>
       ) : (
         <Block tone="soft" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }} a11y="Root is still learning how you spell. Patterns show up after a few rounds.">
-          <Mascot pose="think" size={110} />
+          <Mascot pose="search" size={110} />
           <Txt v="heading" style={{ flex: 1 }}>
             Still looking
           </Txt>

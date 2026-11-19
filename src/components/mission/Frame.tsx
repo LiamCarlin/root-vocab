@@ -3,13 +3,30 @@ import { useEffect, type ReactNode } from 'react';
 import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { Companion } from '@/components/Buddy';
+import type { Pose } from '@/components/Mascot';
 import { Screen, Txt } from '@/components/ui';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
 
-/** A lesson step's screen: the kit's Screen with the step's controls in the footer. */
-export function StepScreen({ top, footer, children, scroll = true, gap = 16, keyboard }: { top: ReactNode; footer: ReactNode; children: ReactNode; scroll?: boolean; gap?: number; keyboard?: boolean }) {
+/**
+ * A lesson step's screen: the kit's Screen with the step's controls in the footer, and Root
+ * standing on the main button in the corner, doing whatever this step is about (`pose`).
+ */
+export function StepScreen({ top, footer, children, scroll = true, gap = 16, keyboard, pose }: { top: ReactNode; footer: ReactNode; children: ReactNode; scroll?: boolean; gap?: number; keyboard?: boolean; /** What Root is doing alongside the learner on this step. */ pose?: Pose }) {
   return (
-    <Screen top={top} scroll={scroll} gap={gap} keyboard={keyboard} footer={<View style={{ gap: 10 }}>{footer}</View>}>
+    <Screen
+      top={top}
+      scroll={scroll}
+      gap={gap}
+      keyboard={keyboard}
+      bottomSpace={pose && scroll ? 22 : 0}
+      footer={
+        <View style={{ gap: 10 }}>
+          {footer}
+          {/* The footer is the audio controls, then the main button: Root stands on the button, beside the controls. */}
+          {pose && <Companion pose={pose} size={84} style={{ position: 'absolute', right: -6, bottom: 75 }} />}
+        </View>
+      }>
       {children}
     </Screen>
   );

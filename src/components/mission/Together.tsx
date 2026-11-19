@@ -59,6 +59,7 @@ export function Together({ words, pattern, top, next, skip }: { words: Lexeme[];
   return (
     <StepScreen
       top={top}
+      pose="search"
       gap={16}
       footer={
         <>

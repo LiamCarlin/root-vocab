@@ -5,8 +5,9 @@ import { BackHandler, Keyboard, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Companion } from '@/components/Buddy';
 import { GAMES, type GameResult } from '@/components/games';
-import { Mascot } from '@/components/Mascot';
+import { Mascot, type Pose } from '@/components/Mascot';
 import { ComboFlame, ComboPop } from '@/components/play/Combo';
 import { FeedbackBar } from '@/components/play/FeedbackBar';
 import { HalfwayCard, StartCard } from '@/components/play/Interlude';
@@ -31,6 +32,8 @@ type Phase = 'start' | 'play' | 'half' | 'done';
 const LEDGE = 58;
 /** The hands-on games are supported practice, not recall: finishing one is simply done. */
 const SENSORY: GameId[] = HANDS;
+/** What Root is doing in the corner during each exercise. */
+const GAME_POSE: Record<GameId, Pose> = { clue: 'think', gap: 'read', web: 'idea', pair: 'think', meaning: 'read', cover: 'calm', missing: 'search', proof: 'search', dictate: 'listen', scramble: 'think', tap: 'tap', trace: 'trace', marble: 'marble', sand: 'write', echo: 'speak' };
 
 /**
  * The session runner: /play/find, /play/spell, /play/mix, /play/hands, /play/challenge, /play/game?game=clue.
@@ -185,7 +188,7 @@ export default function Play() {
   const leaveSheet = (
     <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave?">
       <View style={{ alignItems: 'center' }}>
-        <Mascot pose="think" size={130} />
+        <Mascot pose="oops" size={130} />
       </View>
       <Btn icon={PlayIcon} label="Stay" onPress={() => setLeaving(false)} />
       <Btn
@@ -204,7 +207,7 @@ export default function Play() {
     return (
       <Screen top={<TopBar back="close" onBack={leave} />} footer={<Btn icon={House} a11y="Back" onPress={leave} />}>
         <View style={{ alignItems: 'center', gap: 18, marginTop: 60 }}>
-          <Mascot pose="think" size={190} />
+          <Mascot pose="sleep" size={190} />
           <Txt v="title" center>
             Nothing here yet
           </Txt>
@@ -270,9 +273,11 @@ export default function Play() {
           {pop && <ComboPop key={pop.id} n={pop.n} />}
         </View>
 
-        {/* The ledge: skip sits here, under the play area. */}
+        {/* The ledge: skip on the left, Root on the right, under the play area. */}
         <View style={{ height: LEDGE + Math.max(insets.bottom, 8), flexDirection: 'row', alignItems: 'flex-start' }}>
           <IconBtn icon={SkipForward} label="Skip this one" size={46} disabled={!!res} onPress={() => advance(true)} />
+          {/* Root stands in the other corner, doing what this exercise is about. */}
+          {ex && <Companion pose={GAME_POSE[ex.game]} size={84} style={{ position: 'absolute', right: -4, bottom: Math.max(insets.bottom, 8) + 2 }} />}
         </View>
       </Screen>
 

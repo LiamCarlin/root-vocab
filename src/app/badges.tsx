@@ -32,7 +32,7 @@ export default function Badges() {
   return (
     <Screen top={<TopBar center={<Txt v="heading">Badges</Txt>} />} gap={14}>
       <Block tone="butter" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 150 }} a11y={`${held} of ${total} badge levels earned`}>
-        <Mascot pose="cheer" size={128} />
+        <Mascot pose="trophy" size={128} />
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 54, lineHeight: 60, color: ON_BLOCK.ink }}>{held}</Text>
           <Txt v="bodyS" color="ink2">
@@ -79,7 +79,7 @@ export default function Badges() {
           <>
             {shown.hidden && st.tier === 0 ? (
               <View style={{ alignItems: 'center', gap: 14, paddingVertical: 10 }}>
-                <Mascot pose="cheer" size={150} />
+                <Mascot pose="thumbs" size={150} />
                 <Txt v="title" center>
                   A secret
                 </Txt>

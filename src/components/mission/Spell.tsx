@@ -145,6 +145,7 @@ export function Spell({ lex, top, next, skip, addRetry }: StepProps) {
   return (
     <StepScreen
       top={top}
+      pose="write"
       scroll={!onPad}
       keyboard
       gap={16}

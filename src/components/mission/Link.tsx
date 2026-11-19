@@ -118,6 +118,7 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
   return (
     <StepScreen
       top={top}
+      pose={phase === 'web' ? 'idea' : 'point'}
       gap={18}
       footer={
         <>

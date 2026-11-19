@@ -59,7 +59,7 @@ export function Done({ taught, outcome, story }: { taught: Taught[]; outcome: St
   return (
     <Screen tone="brand" gap={14} footer={<Btn icon={ArrowRight} a11y="Continue" onPress={leave} />}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: 8, minHeight: 150 }}>
-        <Figure pose={outcome?.chapterDone ? 'cheer' : many ? 'cheer' : 'cheer'} size={132} />
+        <Figure pose={outcome?.chapterDone ? 'trophy' : many ? 'proud' : 'thumbs'} size={132} />
         <View style={{ flex: 1, gap: 10, paddingBottom: 8, alignItems: 'flex-start' }}>
           {taught.map((t) => (
             <View key={t.lex.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

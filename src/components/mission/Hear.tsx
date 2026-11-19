@@ -78,6 +78,7 @@ export function Hear({ lex, top, next, skip }: StepProps) {
   return (
     <StepScreen
       top={top}
+      pose="listen"
       keyboard={lex.custom}
       gap={18}
       footer={
