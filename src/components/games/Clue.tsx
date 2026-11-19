@@ -7,7 +7,7 @@ import { PartTiles, SylWord } from '@/components/learn';
 import { useElapsed } from '@/components/play/hooks';
 import { Block, Field, IconBtn, Tag, Txt } from '@/components/ui';
 import { TOPICS } from '@/data/profile';
-import { buzz, listenOnce, micAvailable, say, stopListening } from '@/lib/audio';
+import { buzz, listenOnce, micAvailable, say, sayBeat, stopListening } from '@/lib/audio';
 import { closeEnough } from '@/lib/lexicon';
 import { useStore } from '@/lib/store';
 import { wordSize } from '@/theme';
@@ -133,8 +133,11 @@ export function Clue({ lex, onResult, done }: GameProps) {
       return;
     }
     // The second cue is the first sound, said aloud.
-    if (n === 2) say(lex.parts.length >= 2 ? lex.says[0] : lex.text[0]);
-  }, [cues, rungs, lex.parts.length, lex.says, lex.text, report]);
+    if (n === 2) {
+      if (lex.parts.length >= 2) sayBeat(lex.parts, lex.says, 0, { hum: false });
+      else say(lex.text[0]);
+    }
+  }, [cues, rungs, lex.parts, lex.says, lex.text, report]);
 
   useShake(!done && !solved, nextCue);
 

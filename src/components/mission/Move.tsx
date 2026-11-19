@@ -8,7 +8,7 @@ import { SandTray } from '@/components/hands/SandTray';
 import { TracePad, type TraceEvent } from '@/components/hands/TracePad';
 import { Controls } from '@/components/learn';
 import { Btn, IconBtn } from '@/components/ui';
-import { beatMs, hum, say, sayHum } from '@/lib/audio';
+import { sayBeat, sayHum } from '@/lib/audio';
 import { canPlay } from '@/lib/engine';
 import { sfx } from '@/lib/sfx';
 import { useStore } from '@/lib/store';
@@ -55,10 +55,9 @@ export function Move({ lex, top, next, skip, addRetry }: StepProps) {
   const onPart = useCallback(
     (i: number) => {
       stopHum.current?.();
-      stopHum.current = hum(beatMs(says[i] ?? ''));
-      if (says[i]) say(says[i]);
+      if (says[i]) stopHum.current = sayBeat(lex.parts, says, i);
     },
-    [says],
+    [lex.parts, says],
   );
 
   const finish = useCallback(

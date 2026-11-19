@@ -10,7 +10,7 @@ import { Growth, Mascot, type Pose } from '@/components/Mascot';
 import { Block, Btn, Chip, ChipRow, Field, Group, IconBtn, Ring, Rise, Row, Screen, SectionLabel, Tag, Tap, TopBar, Txt, useToast, type Tone } from '@/components/ui';
 import { STRAND_ORDER, STRANDS, TOPICS } from '@/data/profile';
 import { PATTERNS } from '@/data/words';
-import { beatMs, buzz, hum, say, sayByParts, stopSpeaking } from '@/lib/audio';
+import { buzz, sayBeat, sayByParts, stopSpeaking } from '@/lib/audio';
 import { sfx } from '@/lib/sfx';
 import { relDay } from '@/lib/dates';
 import { canPlay } from '@/lib/engine';
@@ -166,9 +166,9 @@ export default function WordPage() {
         active={playing}
         onPress={(i) => {
           cancel.current?.();
+          // Stopping the beat before this one runs its onDone, so the new tile is lit after.
+          sayBeat(lex.parts, lex.says, i, { onDone: () => alive.current && setPlaying(-1) });
           setPlaying(i);
-          hum(beatMs(lex.says[i]));
-          say(lex.says[i], { onDone: () => alive.current && setPlaying(-1) });
         }}
       />
       </Rise>

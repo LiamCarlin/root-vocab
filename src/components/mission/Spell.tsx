@@ -5,7 +5,7 @@ import { Text, View } from 'react-native';
 import { Controls, DrawPad, PartTiles, SpellingMarks } from '@/components/learn';
 import { Block, Btn, Field, IconBtn, Tag, Txt } from '@/components/ui';
 import { PATTERNS } from '@/data/words';
-import { beatMs, buzz, hum, say, sayHum } from '@/lib/audio';
+import { buzz, sayBeat, sayHum } from '@/lib/audio';
 import { alignSpelling, partOfLetter, type Lexeme, type Mark } from '@/lib/lexicon';
 import { sfx } from '@/lib/sfx';
 import { ON_BLOCK, useTheme } from '@/theme';
@@ -196,8 +196,7 @@ export function Spell({ lex, top, next, skip, addRetry }: StepProps) {
             parts={lex.parts}
             says={lex.custom ? undefined : lex.says}
             onPress={(i) => {
-              hum(beatMs(lex.says[i]));
-              say(lex.says[i]);
+              sayBeat(lex.parts, lex.says, i);
             }}
           />
           <Tricky lex={lex} />

@@ -7,8 +7,10 @@
 //
 // Words are split by SYLLABLE (one piece per beat), never by spelling pattern,
 // so the tiles, the "sounds like" line and the audio always agree. `says` is a
-// plain respelling: what the learner reads under each tile and what the speech
-// engine is asked to say for a single part.
+// plain respelling: what the learner reads under each tile. The audio for a beat
+// is a recording cut out of the whole word (tools/voice), and `says` also tells
+// that tool which consonants each beat keeps. After adding or changing a word,
+// run tools/voice/build.py for it.
 
 /** 1 everyday · 2 common · 3 educated everyday · 4 formal · 5 advanced · 6 rare. */
 export type Level = 1 | 2 | 3 | 4 | 5 | 6;

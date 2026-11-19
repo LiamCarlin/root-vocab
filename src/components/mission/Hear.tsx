@@ -6,7 +6,7 @@ import { Echo } from '@/components/hands/Echo';
 import { Controls, PartTiles, SylWord } from '@/components/learn';
 import { Block, Btn, Field, IconBtn, Tag, Tap } from '@/components/ui';
 import { TOPICS } from '@/data/profile';
-import { beatMs, hum, say, sayByParts } from '@/lib/audio';
+import { say, sayBeat, sayByParts } from '@/lib/audio';
 import { exampleFor, plain, splitAround } from '@/lib/lexicon';
 import { useStore } from '@/lib/store';
 import { ON_BLOCK, useTheme, wordSize } from '@/theme';
@@ -61,8 +61,7 @@ export function Hear({ lex, top, next, skip }: StepProps) {
   const hearPart = (i: number) => {
     quiet();
     setActive(i);
-    stopHum.current = hum(beatMs(lex.says[i]));
-    say(lex.says[i], { onDone: () => setActive((a) => (a === i ? -1 : a)) });
+    stopHum.current = sayBeat(lex.parts, lex.says, i, { onDone: () => setActive((a) => (a === i ? -1 : a)) });
   };
 
   const hearExample = () => {

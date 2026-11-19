@@ -10,7 +10,7 @@ import { TapSweep } from '@/components/hands/TapSweep';
 import { TracePad, type TraceEvent } from '@/components/hands/TracePad';
 import { Controls, SylWord } from '@/components/learn';
 import { IconBtn } from '@/components/ui';
-import { beatMs, hum, say, sayHum } from '@/lib/audio';
+import { sayBeat, sayHum } from '@/lib/audio';
 import { useStore } from '@/lib/store';
 import { wordSize } from '@/theme';
 import { useReport } from './spellkit';
@@ -50,10 +50,9 @@ function Sensory({ kind, lex, onResult, done }: GameProps & { kind: Kind }) {
   const onPart = useCallback(
     (i: number) => {
       stopHum.current?.();
-      stopHum.current = hum(beatMs(says[i] ?? ''));
-      if (says[i]) say(says[i]);
+      if (says[i]) stopHum.current = sayBeat(parts, says, i);
     },
-    [says],
+    [parts, says],
   );
 
   /** `wholeAfter` is how long to wait before the whole word is said: long enough for the last beat or letter to finish. */

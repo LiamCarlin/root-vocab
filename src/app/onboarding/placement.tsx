@@ -10,7 +10,7 @@ import { Controls, SylWord } from '@/components/learn';
 import { Block, Btn, Field, IconBtn, Rise, Screen, Sheet, Tag, TopBar, Txt } from '@/components/ui';
 import { STRANDS, TOPICS, type Strand } from '@/data/profile';
 import { BANK, type BankWord } from '@/data/words';
-import { buzz, listenOnce, micAvailable, say, speakable, stopListening, stopSpeaking } from '@/lib/audio';
+import { buzz, listenOnce, micAvailable, say, sayBeat, speakable, stopListening, stopSpeaking } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/unlocks';
 import { assessNext, bumpSkill, difficulty } from '@/lib/engine';
 import { closeEnough, gapped, judgeSpoken, levenshtein, plain } from '@/lib/lexicon';
@@ -343,7 +343,7 @@ function FindItem({ item, res, onAnswer }: ItemProps) {
   const giveCue = () => {
     setCue(true);
     sfx.play('pop');
-    say(w.says[0]);
+    sayBeat(w.parts, w.says, 0, { hum: false });
   };
 
   return (
