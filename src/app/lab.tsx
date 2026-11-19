@@ -102,7 +102,7 @@ export default function Lab() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
         {POSE_LIST.map((p) => (
           <View key={p} style={{ width: Math.max(96, poseSize * 0.95), height: poseSize * 1.45 + 26, alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-            <Mascot pose={p} size={p === 'peek' ? poseSize * 0.7 : poseSize} />
+            <Mascot pose={p} size={poseSize} />
             <Txt v="caption" color="ink2">
               {p}
             </Txt>
@@ -110,7 +110,7 @@ export default function Lab() {
         ))}
       </View>
 
-      <SectionLabel>Facing left</SectionLabel>
+      <SectionLabel>Facing the other way</SectionLabel>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 150 }}>
         <Mascot pose="point" size={120} />
         <Mascot pose="point" size={120} flip />
@@ -118,22 +118,15 @@ export default function Lab() {
 
       {/* ── Peek ── */}
       <SectionLabel>Peek · top</SectionLabel>
-      <View style={{ marginTop: 96 }}>
+      <View style={{ marginTop: 110 }}>
         <Card>
           <Txt v="bodyS" color="ink2">
             start · center · end
           </Txt>
         </Card>
-        <Peek from="top" align="start" size={84} />
-        <Peek from="top" align="center" pose="search" size={110} />
-        <Peek from="top" align="end" size={100} />
-      </View>
-
-      <SectionLabel>Peek · bottom</SectionLabel>
-      <View style={{ marginBottom: 124 }}>
-        <Card height={90} />
-        <Peek from="bottom" align="start" size={110} />
-        <Peek from="bottom" align="end" pose="wink" size={110} />
+        <Peek from="top" align="start" size={150} />
+        <Peek from="top" align="center" pose="search" size={190} show={0.5} />
+        <Peek from="top" align="end" size={170} />
       </View>
 
       <SectionLabel>Peek · sides</SectionLabel>
@@ -145,7 +138,7 @@ export default function Lab() {
 
       {/* ── Perch ── */}
       <SectionLabel>Perch</SectionLabel>
-      <View style={{ marginTop: 92 }}>
+      <View style={{ marginTop: 100 }}>
         <Block tone="brand" style={{ height: 120 }} />
         <Perch side="right" size={96} />
         <Perch side="left" pose="read" size={88} />

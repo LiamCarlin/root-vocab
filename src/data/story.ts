@@ -23,7 +23,9 @@ export type Chapter = {
   keepsake: string;
 };
 
-export const SCENES: Record<SceneId, { src: number; w: number; h: number }> = {
+/** The six places, and the whole valley they sit in (shown while the story sets the scene). */
+export const SCENES: Record<SceneId | 'valley', { src: number; w: number; h: number }> = {
+  valley: { src: require('../../assets/scenes/valley.webp'), w: 760, h: 774 },
   garden: { src: require('../../assets/scenes/garden.png'), w: 490, h: 467 },
   orchard: { src: require('../../assets/scenes/orchard.png'), w: 502, h: 563 },
   market: { src: require('../../assets/scenes/market.png'), w: 506, h: 508 },
@@ -41,6 +43,16 @@ export const KEEPSAKES: Record<SceneId, number> = {
   harbour: require('../../assets/props/keepsake-harbour.webp'),
   summit: require('../../assets/props/keepsake-summit.webp'),
 };
+
+/** Small objects in the same clay as everything else: one for each kind of thing the learner does. Square pictures. */
+export const OBJECTS = {
+  sprout: require('../../assets/props/obj-sprout.webp'),
+  magnifier: require('../../assets/props/obj-magnifier.webp'),
+  pencil: require('../../assets/props/obj-pencil.webp'),
+  sand: require('../../assets/props/obj-sand.webp'),
+  flag: require('../../assets/props/obj-flag.webp'),
+  book: require('../../assets/props/obj-book.webp'),
+} as const;
 
 export const PROPS = {
   chest: { src: require('../../assets/props/chest.png'), w: 472, h: 479 },
@@ -118,7 +130,7 @@ const STORY: Chapter[] = [
       'Last corner of the market. One lap to make sure it sticks.',
     ],
     outro: [
-      { pose: 'dance', line: 'Hear that? Haggling. The best sound there is.' },
+      { pose: 'cheer', line: 'Hear that? Haggling. The best sound there is.' },
       { pose: 'laugh', line: 'They gave us the bunting. I tried to say no. I did not try very hard.' },
       { pose: 'tap', line: 'What worked here was the beats. A long word is short pieces said in a row. Nobody can hold “extraordinary”. Anybody can hold five small beats.' },
       { pose: 'lantern', line: 'The woods are next, and it gets dark in there. Bring a light.' },
@@ -174,7 +186,7 @@ const STORY: Chapter[] = [
       { pose: 'hike', line: 'Top of the valley. This is where the Hush comes from.' },
       { pose: 'calm', line: 'Deep breath. The air is thin up here and the words are long.' },
       { pose: 'map', line: 'I have never been this far. From here on the map just says “fog”, which is not much help.' },
-      { pose: 'flex', line: 'But look how much valley is clear behind us. Whatever is up here, we have the words for it.' },
+      { pose: 'proud', line: 'But look how much valley is clear behind us. Whatever is up here, we have the words for it.' },
     ],
     trail: [
       'Two more, and I can see the next ridge.',
@@ -216,7 +228,7 @@ const BEYOND_OUTRO: Beat[][] = [
     { pose: 'calm', line: 'It holds because you came back to it. Shall we keep going?' },
   ],
   [
-    { pose: 'dance', line: 'Rooted. All of them.' },
+    { pose: 'cheer', line: 'Rooted. All of them.' },
     { pose: 'hike', line: 'On we go.' },
   ],
 ];

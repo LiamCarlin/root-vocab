@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { Hand, Play, Shuffle, Sparkles, type LucideIcon } from 'lucide-react-native';
+import { Play, Shuffle, Sparkles } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import { Perch } from '@/components/Buddy';
 import { Shine } from '@/components/fx';
@@ -9,6 +9,7 @@ import { GAMES } from '@/components/games';
 import { LIP } from '@/components/rewards';
 import { Block, Ring, Rise, Screen, Txt } from '@/components/ui';
 import { STRANDS, type Strand } from '@/data/profile';
+import { OBJECTS } from '@/data/story';
 import { BANK } from '@/data/words';
 import { GAME_STRAND, HANDS, canPlay, levelProgress, type GameId } from '@/lib/engine';
 import { lexemeFor } from '@/lib/lexicon';
@@ -16,14 +17,14 @@ import { dueCount, learnedWords, levelOf, lexOf, today, useStore } from '@/lib/s
 import { ON_BLOCK, radius, useTheme } from '@/theme';
 import { TAB_SPACE } from './_layout';
 
-type Group = { id: string; label: string; strand?: Strand; icon: LucideIcon; games: GameId[] };
+type Group = { id: string; label: string; strand?: Strand; /** The clay object that stands for the group. */ art: number; games: GameId[] };
 
 /** Every game, grouped by what it trains. "Hands-on" is the word through the hand, the arm and the voice. */
 const GROUPS: Group[] = [
-  { id: 'find', label: STRANDS.find.label, strand: 'find', icon: STRANDS.find.icon, games: ['clue', 'gap'] },
-  { id: 'know', label: STRANDS.know.label, strand: 'know', icon: STRANDS.know.icon, games: ['web', 'pair', 'meaning'] },
-  { id: 'spell', label: STRANDS.spell.label, strand: 'spell', icon: STRANDS.spell.icon, games: ['cover', 'missing', 'proof', 'dictate', 'scramble'] },
-  { id: 'hands', label: 'Hands-on', icon: Hand, games: HANDS },
+  { id: 'find', label: STRANDS.find.label, strand: 'find', art: OBJECTS.magnifier, games: ['clue', 'gap'] },
+  { id: 'know', label: STRANDS.know.label, strand: 'know', art: OBJECTS.book, games: ['web', 'pair', 'meaning'] },
+  { id: 'spell', label: STRANDS.spell.label, strand: 'spell', art: OBJECTS.pencil, games: ['cover', 'missing', 'proof', 'dictate', 'scramble'] },
+  { id: 'hands', label: 'Hands-on', art: OBJECTS.sand, games: HANDS },
 ];
 
 /**
@@ -86,10 +87,10 @@ export default function Practice() {
         Arcade
       </Txt>
 
-      {/* Daily mix. Root sits on top of it, so the wrapper leaves him headroom and is not clipped. */}
+      {/* Daily mix. Root sits on top of it, so the wrapper leaves headroom and is not clipped. */}
       <Rise>
-        {/* Room for Root to sit on the card; none is kept when the companion is switched off. */}
-        <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 58 }}>
+        {/* Room for Root to sit on the card; none is kept when Root is switched off. */}
+        <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 70 }}>
           <Block tone="brand" pad={22} onPress={() => router.push('/play/mix')} a11y={due ? `Daily mix. ${due} ${due === 1 ? 'word' : 'words'} due.` : 'Daily mix'} style={{ minHeight: 168, justifyContent: 'space-between', borderBottomWidth: 6, borderBottomColor: LIP.brand }}>
             <Shine round={radius.xl} />
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -108,7 +109,7 @@ export default function Practice() {
               </View>
             </View>
           </Block>
-          <Perch pose="sit" size={92} side="right" inset={26} />
+          <Perch pose="sit" size={96} side="right" inset={26} />
         </View>
       </Rise>
 
@@ -118,8 +119,8 @@ export default function Practice() {
         return (
           <Rise key={g.id} i={gi + 1} style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 }}>
-              <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: c[tone], alignItems: 'center', justifyContent: 'center' }}>
-                <g.icon size={20} color={ON_BLOCK.ink} strokeWidth={2.5} />
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: c[tone], alignItems: 'center', justifyContent: 'center' }}>
+                <Image source={g.art} style={{ width: 40, height: 40 }} resizeMode="contain" />
               </View>
               <Txt v="title" accessibilityRole="header" style={{ flex: 1 }}>
                 {g.label}

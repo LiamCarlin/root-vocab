@@ -134,7 +134,7 @@ export default function WordPage() {
       footer={footer}
       keyboard={lex.custom}>
       {/* The word, with Root perched on its card. */}
-      <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 44 }}>
+      <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 72 }}>
       <Block tone={tone} style={{ gap: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Growth stage={w ? growth(w) : 0} size={56} />
@@ -156,7 +156,7 @@ export default function WordPage() {
           <IconBtn icon={Snail} label={slow ? 'Slower speech is on' : 'Slower speech'} kind={coloured ? 'glass' : 'ghost'} active={slow} onPress={() => patch({ slowAudio: !slow })} />
         </View>
       </Block>
-        <Perch pose={ROOT[stage]} size={78} side="left" inset={96} />
+        <Perch pose={ROOT[stage]} size={74} side="left" inset={96} />
       </View>
 
       <Rise i={1}>

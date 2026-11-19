@@ -2,12 +2,13 @@ import { Image, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
 import { useTheme } from '@/theme';
-import { STILLS, UNIT, type Pose } from './mascotStills';
+import { STILLS, type Pose } from './mascotStills';
 
 /**
- * Root, the mascot, as a still picture. Root is a 3D character posed in Blender (tools/mascot);
- * each pose is rendered once and shown here as an illustration. Root never moves on its own:
- * what changes is which picture is on screen.
+ * Root, the mascot, as a still picture. The pictures are illustrations of the original
+ * character, cut out of their sheets by tools/mascot/cut.py. Root never moves on its own: what
+ * changes is which picture is on screen, and there is one for most things Root does with the
+ * learner (reading, listening, tapping, tracing, searching, celebrating, getting it wrong).
  */
 export type { Pose } from './mascotStills';
 
@@ -18,22 +19,18 @@ export const POSE_LIST = Object.keys(STILLS) as Pose[];
 export const poseWidth = (pose: Pose, height: number) => height * STILLS[pose].aspect;
 
 /**
- * `size` is the height of a standing Root in points, feet to leaf tips. The layout box is
- * `poseWidth(pose, size)` × `size`: feet sit on its bottom edge, leaf tips touch its top, and
- * anything bigger (a raised arm, a trophy) draws outside it without moving the layout. Three
- * poses anchor differently: `peek` (box bottom = the ledge its hands rest on, so put that on the
- * edge of a card), `sit` (box bottom = the soles of its dangling feet; the seat line is
- * `STILLS.sit.seat`) and `hang` (box top = its fists). `flip` faces Root the other way.
+ * `size` is the height of a standing Root in points, soles to leaf tips. The layout box is
+ * `poseWidth(pose, size)` × `size` and its bottom edge is the ground: Root is the same size in
+ * every pose, a pose that jumps ends above the ground, and anything held overhead (a trophy, a
+ * lightbulb) draws above the box without moving the layout. `flip` faces Root the other way.
  */
 export function Mascot({ pose = 'wave', size = 120, style, a11y = 'Root', flip }: { pose?: Pose; size?: number; style?: StyleProp<ViewStyle>; a11y?: string; flip?: boolean }) {
   const s = STILLS[pose];
   const width = size * s.aspect;
-  const pt = size / (s.stand * s.fh); // points per picture pixel: the same for every pose, so Root never changes size
-  // `hang` is pinned by its fists (the top); everything else by its feet, seat or ledge (the bottom).
-  const top = pose === 'hang' ? -s.top * s.fh * pt : size - s.base * s.fh * pt;
+  const pt = size / (s.stand * s.h); // points per picture pixel: the same for every pose
   return (
     <View style={[{ width, height: size }, style]} accessible accessibilityRole="image" accessibilityLabel={a11y}>
-      <Image source={s.src} fadeDuration={0} style={[{ position: 'absolute', left: (width - s.fw * pt) / 2, top, width: s.fw * pt, height: s.fh * pt }, flip ? { transform: [{ scaleX: -1 }] } : null]} />
+      <Image source={s.src} fadeDuration={0} style={[{ position: 'absolute', left: (width - s.w * pt) / 2, top: size - s.base * s.h * pt, width: s.w * pt, height: s.h * pt }, flip ? { transform: [{ scaleX: -1 }] } : null]} />
     </View>
   );
 }
@@ -42,12 +39,13 @@ export function Mascot({ pose = 'wave', size = 120, style, a11y = 'Root', flip }
 export function MascotBadge({ size = 48, tone = 'brand', pose = 'wave' }: { size?: number; tone?: 'brand' | 'orange' | 'pink' | 'mint' | 'butter' | 'lilac'; pose?: Pose }) {
   const { c } = useTheme();
   const s = STILLS[pose];
-  const perUnit = size / 2.0; // the circle shows about two units of Root: the face and the start of the leaves
-  const imgW = (s.fw / UNIT) * perUnit;
-  const imgH = (s.fh / UNIT) * perUnit;
+  // The circle shows the face and the start of the leaves: Root drawn about twice as tall as the circle.
+  const pt = (size * 2.05) / (s.stand * s.h);
+  const imgW = s.w * pt;
+  const imgH = s.h * pt;
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: c[tone], overflow: 'hidden' }} accessible accessibilityRole="image" accessibilityLabel="Root">
-      <Image source={s.src} fadeDuration={0} style={{ position: 'absolute', width: imgW, height: imgH, left: (size - imgW) / 2, top: size * 0.56 - s.face * imgH }} />
+      <Image source={s.src} fadeDuration={0} style={{ position: 'absolute', width: imgW, height: imgH, left: size / 2 - s.cx * imgW, top: size * 0.56 - s.face * imgH }} />
     </View>
   );
 }

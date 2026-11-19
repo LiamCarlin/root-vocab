@@ -142,6 +142,7 @@ export function Build({ lex, top, next, skip, addHint }: StepProps) {
   return (
     <StepScreen
       top={top}
+      pose="think"
       gap={20}
       footer={
         <>

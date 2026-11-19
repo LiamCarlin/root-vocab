@@ -49,6 +49,7 @@ export function Beats({ lex, top, next, skip }: StepProps) {
   return (
     <StepScreen
       top={top}
+      pose="tap"
       gap={22}
       footer={
         <>

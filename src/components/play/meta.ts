@@ -23,11 +23,11 @@ export function sessionMeta(kind: SessionKind, game?: GameId): SessionMeta {
       return { icon: Flag, name: 'Clear the fog', a11y: 'Chapter challenge', tone: 'orange', pose: 'lantern' };
     case 'game': {
       const g = GAMES[game ?? 'clue'];
-      return { icon: g.icon, name: g.name, a11y: g.a11y, tone: g.tone, pose: 'wink' };
+      return { icon: g.icon, name: g.name, a11y: g.a11y, tone: g.tone, pose: 'thumbs' };
     }
     case 'mix':
     default:
-      return { icon: Shuffle, name: 'Daily mix', a11y: 'A mix of everything', tone: 'brand', pose: 'flex' };
+      return { icon: Shuffle, name: 'Daily mix', a11y: 'A mix of everything', tone: 'brand', pose: 'proud' };
   }
 }
 

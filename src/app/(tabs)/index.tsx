@@ -156,7 +156,7 @@ export default function Journey() {
               </View>
             </View>
           </Block>
-          <Peek from="top" align="start" inset={76} size={96} />
+          <Peek from="top" align="start" inset={76} size={150} />
         </Rise>
 
         {/* Today's three quests. */}

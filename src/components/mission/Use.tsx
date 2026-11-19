@@ -91,6 +91,7 @@ export function Use({ lex, top, next, skip }: StepProps) {
   return (
     <StepScreen
       top={top}
+      pose="speak"
       keyboard
       gap={16}
       footer={

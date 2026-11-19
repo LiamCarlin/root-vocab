@@ -38,7 +38,7 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
     <Sheet visible={visible} onClose={onClose}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingTop: 4 }}>
         {visible && <StreakFlame n={n} lit={lit} size={104} count />}
-        {visible && <Figure pose={n >= 3 ? 'flex' : lit ? 'thumbs' : 'wave'} size={118} />}
+        {visible && <Figure pose={n >= 3 ? 'proud' : lit ? 'thumbs' : 'wave'} size={118} />}
       </View>
 
       <Block pad={14} round={999} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 18 }}>

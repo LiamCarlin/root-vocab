@@ -54,7 +54,7 @@
       [
         "expo-sensors",
         {
-          "motionPermission": "Root uses motion to let you roll a marble and write letters in the air. Nothing is recorded."
+          "motionPermission": "Root uses motion to let you roll a marble by tipping the phone and smooth the sand tray with a shake. Nothing is recorded."
         }
       ],
       "expo-audio",

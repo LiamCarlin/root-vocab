@@ -33,7 +33,7 @@ Checks: `npx tsc --noEmit` and `npx eslint src`.
 ## The design rules
 
 1. **Icons and gestures carry the interface.** Words on screen are learning content, story lines, or labels of two or three words. No instruction sentences, no captions under buttons. Every icon-only control has a screen-reader label.
-2. **Feedback is felt, not read.** Colour, sound and vibration say how it went.
+2. **Feedback is felt, not read.** Root's picture, colour, sound and vibration say how it went.
 3. **Each syllable keeps its colour** everywhere the word appears. Each strand keeps its colour too.
 4. **Nothing blocks.** Every step can be skipped, spelling never gates progress, and every sensor has a touch fallback.
 5. **Built for dyslexia.** No timer or countdown is ever shown (answer time may be measured silently). A wrong spelling points at the letter or beat, never red-pens the word. Replay and slow audio are always there. Text is left-aligned, never italic, never all caps in body text. Typeface, size, letter spacing and background are the learner's choice.
@@ -63,7 +63,7 @@ There are six places (Garden, Orchard, Market, Lantern Woods, Harbor, Summit), t
 
 **A learn stop teaches two words, not one.** Where it can, the pair shares a spelling pattern, so the pattern is met twice in a row in two different words. The stop runs the first word's lesson, a short bridge, the second word's lesson, and then one step that mixes the two and has the learner pull each back out from its meaning. A word is recorded as soon as its own lesson ends, so a stop left half-way picks up at the second word.
 
-The story is told a page at a time, each page a short passage shown whole: a six-page prologue, a four-page opening and a four-page ending for every place, and one more line on the trail after every word set. Each ending also names, in a sentence, the part of the method that made the words stick. Story text is in `src/data/story.ts`. Clearing a place gives back a keepsake (watering can, fruit basket, bunting, lantern, compass, telescope).
+The story is told a page at a time, each page a short passage shown whole: a six-page prologue, a four-page opening and a four-page ending for every place, and one more line on the trail after every word set. Each ending also names, in a sentence, the part of the method that made the words stick. Story text is in `src/data/story.ts`. Clearing a place gives back a keepsake (watering can, fruit basket, bunting, lantern, compass, telescope), each with its own picture.
 
 Reasons to come back: a daily goal (one, two or three stops), a streak with freezes bought with gems, three daily quests, badges with tiers, chests, and reminders that say something specific and never guilt.
 
@@ -118,9 +118,15 @@ The hands-on games are supported practice (the word is in front of the learner),
 
 ## Root, the mascot
 
-Root is a still picture. There is no animated character: Root does not walk in, pop up, react or fidget. It appears as an illustration where a screen has room for one (looking over a card, sitting on its edge, beside a line of the story, on an end screen), and what changes is which picture is shown. *You › Sound and feel › Show Root* hides the pictures on cards and corners.
+Root is a still picture, never an animated character: it does not walk in, pop up or fidget. What makes it part of the experience is that there is a picture of Root for almost everything it does with the learner, and the picture on screen is always the one that fits.
 
-Root is a 3D model built and posed in Blender from code. Each of its 45 poses is rendered once to a still (`assets/mascot/still`, listed in `src/components/mascotStills.ts`, drawn by `src/components/Mascot.tsx` and placed by `src/components/Buddy.tsx`). The scripts are in `tools/mascot`, which also renders the six keepsakes. The story islands and the chest are generated illustrations.
+- **33 poses.** Waving, cheering, thinking, thumbs up, holding a trophy, having an idea, getting it wrong, surprised, asleep, reading, searching with a magnifying glass, writing, listening on headphones, calling out, tracing a letter, tapping, holding a marble, carrying a lantern, a map, a watering can, a backpack, shivering in the fog, looking through a telescope, holding a compass, carrying a basket of fruit, hugging a heart, proud, laughing, calm, sitting, pointing, running and peeking over an edge.
+- **In lessons and exercises** Root stands in the corner doing what the step is about (headphones on Hear, tapping on Beats, a pencil on Spell, a magnifying glass on Spot it). When an answer lands its picture changes for a moment: pleased when it is right, a wince when it is not, then straight back. It hears this from the sounds and buzzes the app already makes (`src/lib/buddy.ts`), so no screen has to tell it.
+- **On cards** Root peeks over the top edge with its hands on it, or sits on it with its legs over the front.
+- **In the story** every page has its own pose.
+- *You › Sound and feel › Show Root* hides Root in corners and on cards.
+
+All the artwork is generated illustration in one soft-clay style: the character sheets, the six story islands and the whole-valley island, the chest and gem, the six keepsakes, and the small objects that mark each kind of stop on the journey (sprout, magnifying glass, pencil, sand tray, flag, book). The source sheets are in `tools/mascot/originals`. `tools/mascot/cut.py` cuts every figure out of its white sheet and writes `assets/mascot/<pose>.webp`, the object pictures in `assets/props`, `assets/scenes/valley.webp` and the manifest `src/components/mascotStills.ts`; `tools/mascot/icons.py` makes the app icon and favicon from the close-up portrait and the splash picture from the waving Root. To add a pose, put its sheet in `originals`, add a line to `POSES` in `cut.py`, run both, and look at `tools/mascot/contact.jpg`. `src/components/Mascot.tsx` draws a pose; `src/components/Buddy.tsx` places it (Peek, Perch, Figure, Companion).
 
 Effects and sounds are in `src/components/fx.tsx`, `src/components/rewards.tsx` and `src/lib/sfx.ts`. `/lab` (linked from *You › Moderator*) is a gallery of every picture and effect.
 

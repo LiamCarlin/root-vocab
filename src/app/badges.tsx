@@ -79,7 +79,7 @@ export default function Badges() {
           <>
             {shown.hidden && st.tier === 0 ? (
               <View style={{ alignItems: 'center', gap: 14, paddingVertical: 10 }}>
-                <Mascot pose="wink" size={150} />
+                <Mascot pose="thumbs" size={150} />
                 <Txt v="title" center>
                   A secret
                 </Txt>

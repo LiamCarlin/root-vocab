@@ -1,3 +1,4 @@
+import { buddy } from './buddy';
 import { useStore } from './store';
 
 // Interface sounds: ten short, quiet mallet tones (see assets/sfx/make.py).
@@ -77,6 +78,10 @@ function fire(name: SfxName) {
 
 export const sfx = {
   play(name: SfxName) {
+    // Root reacts to what the sound means, whether or not sounds are switched on.
+    if (name === 'good' || name === 'combo') buddy.react('correct');
+    else if (name === 'miss') buddy.react('wrong');
+    else if (name === 'win') buddy.react('win');
     try {
       // `sound` is new in v4; an older saved profile without it counts as on.
       if (useStore.getState().display?.sound === false) return;

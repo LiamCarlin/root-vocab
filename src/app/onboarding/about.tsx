@@ -52,7 +52,7 @@ export default function About() {
       </Rise>
 
       {/* Root sits on the first card and reacts as things are picked. */}
-      <Rise i={1} style={{ marginTop: 44 }}>
+      <Rise i={1} style={{ marginTop: 78 }}>
         <View style={{ position: 'relative' }}>
           <Block pad={18} style={{ gap: 14 }}>
             <Field
@@ -76,7 +76,7 @@ export default function About() {
               ))}
             </ChipRow>
           </Block>
-          <Perch pose={pose} size={86} side="right" inset={20} />
+          <Perch pose={pose} size={84} side="right" inset={20} />
         </View>
       </Rise>
 
