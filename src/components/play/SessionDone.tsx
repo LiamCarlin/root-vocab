@@ -6,12 +6,11 @@ import { useShallow } from 'zustand/react/shallow';
 import { Figure } from '@/components/Buddy';
 import { CountUp, Pop } from '@/components/fx';
 import { Growth, type Pose } from '@/components/Mascot';
-import { GoalRing, QuestRow, StreakFlame } from '@/components/rewards';
+import { GoalRing, StreakFlame } from '@/components/rewards';
 import { Block, Btn, Ring, Rise, Screen, Tap, Txt } from '@/components/ui';
 import { PROPS } from '@/data/story';
 import { buzz, say, speakable } from '@/lib/audio';
 import type { SessionKind } from '@/lib/engine';
-import { questState, questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
 import { goalProgress, growth, useStore, type SessionSummary, type StopOutcome } from '@/lib/store';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
@@ -22,20 +21,21 @@ type WordRow = { id: string; text: string; r: 0 | 0.5 | 1 };
 /**
  * The end of a round. Root celebrates, the gems count up, and the learner sees what they did:
  * how many landed, each word (tap to hear it), and anything that moved today: the streak, the
- * daily goal, a quest. Badge and level celebrations play over this screen.
+ * daily goal. Badge and level celebrations play over this screen.
  */
-export function SessionDone({ kind, meta, played, summary, outcome, questsBefore, onContinue }: { kind: SessionKind; meta: SessionMeta; played: Played[]; summary: SessionSummary; outcome: StopOutcome | null; questsBefore: Record<string, number>; onContinue: () => void }) {
+export function SessionDone({ kind, meta, played, summary, outcome, onContinue }: { kind: SessionKind; meta: SessionMeta; played: Played[]; summary: SessionSummary; outcome: StopOutcome | null; onContinue: () => void }) {
   const { c } = useTheme();
   const first = played.filter((p) => !p.retry);
   const total = first.length;
   const landed = first.filter((p) => p.r > 0).length;
   const perfect = total > 0 && first.every((p) => p.r === 1);
   const score = total ? first.reduce((sum, p) => sum + p.r, 0) / total : 0;
+  // The ring shows exactly the number written in it: 6 of 6 is a full ring, whatever help was used.
+  const ring = total ? landed / total : 0;
   const gems = summary.gems + (outcome?.gems ?? 0);
   const streakUp = summary.streakExtended || !!outcome?.streakExtended;
   const goalUp = summary.goalJustMet || !!outcome?.goalJustMet;
   const goal = useStore(useShallow((s) => goalProgress(s)));
-  const moved = useStore(useShallow((s) => questsToday(s).filter((id) => questState(s, id).have > (questsBefore[id] ?? 0))));
 
   // One row per word: its weakest answer this round.
   const rows: WordRow[] = [];
@@ -72,19 +72,28 @@ export function SessionDone({ kind, meta, played, summary, outcome, questsBefore
         <Block pad={14} round={radius.lg} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 112 }} a11y={`${gems} gems earned`}>
           <Image source={PROPS.gem.src} style={{ width: 34, height: (34 * PROPS.gem.h) / PROPS.gem.w }} resizeMode="contain" />
           <CountUp to={gems} prefix="+" delay={700} duration={800} style={number} />
+          <Txt v="caption" color="ink2">
+            gems
+          </Txt>
         </Block>
-        <Block pad={14} round={radius.lg} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 112 }} a11y={`${landed} of ${total} landed`}>
-          <Ring value={score} size={76} stroke={8} color={c[meta.tone]}>
+        <Block pad={14} round={radius.lg} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 112 }} a11y={`${landed} of ${total} right`}>
+          <Ring value={ring} size={76} stroke={8} color={c.mint}>
             <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 19, color: c.ink }}>
               {landed}/{total}
             </Text>
           </Ring>
+          <Txt v="caption" color="ink2">
+            right
+          </Txt>
         </Block>
         {streakUp && (
           <Block pad={10} round={radius.lg} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 112 }}>
             <Pop delay={500} from={0.3}>
               <StreakFlame n={Math.max(summary.streak, outcome?.streak ?? 0)} size={62} count />
             </Pop>
+            <Txt v="caption" color="ink2">
+              day streak
+            </Txt>
           </Block>
         )}
         {goalUp && !streakUp && (
@@ -121,9 +130,14 @@ export function SessionDone({ kind, meta, played, summary, outcome, questsBefore
                 <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: w.r === 1 ? c.mint : w.r === 0.5 ? c.butter : 'transparent', borderWidth: w.r === 0 ? 2 : 0, borderColor: c.line }}>
                   {w.r === 1 ? <Check size={17} color={ON_BLOCK.ink} strokeWidth={3.2} /> : w.r === 0.5 ? <Minus size={17} color={ON_BLOCK.ink} strokeWidth={3.2} /> : null}
                 </View>
-                <Txt v="heading" style={{ flex: 1 }} numberOfLines={1}>
-                  {w.text}
-                </Txt>
+                <View style={{ flex: 1 }}>
+                  <Txt v="heading" numberOfLines={1}>
+                    {w.text}
+                  </Txt>
+                  <Txt v="caption" color="ink2">
+                    {w.r === 1 ? 'Right first time' : w.r === 0.5 ? 'Right with help' : 'Coming back soon'}
+                  </Txt>
+                </View>
                 {stages[i] === 3 ? (
                   <Pop delay={500 + i * 120}>
                     <Growth stage={3} size={34} />
@@ -138,15 +152,6 @@ export function SessionDone({ kind, meta, played, summary, outcome, questsBefore
         </Rise>
       )}
 
-      {moved.length > 0 && (
-        <Rise i={4}>
-          <Block pad={16} round={radius.lg} style={{ gap: 10 }}>
-            {moved.map((id) => (
-              <QuestRow key={id} id={id} />
-            ))}
-          </Block>
-        </Rise>
-      )}
     </Screen>
   );
 }

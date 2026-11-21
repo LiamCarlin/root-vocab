@@ -1,6 +1,6 @@
 // Badges and daily quests: definitions and maths only. The components that draw them live in components/rewards.tsx.
 
-import { BookOpen, CircleDot, Compass, FastForward, Flame, Hammer, Hand, Handshake, Map, PenLine, Puzzle, Repeat, ScanSearch, Search, Sprout, Target, Users, type LucideIcon } from 'lucide-react-native';
+import { BookOpen, CircleDot, Compass, FastForward, Flame, Hammer, Hand, Handshake, Map, PenLine, Puzzle, Repeat, ScanSearch, Search, Sprout, Target, type LucideIcon } from 'lucide-react-native';
 
 import type { BlockTone } from '@/theme/tokens';
 import { HANDS, dayOf, patternsMastered, streakOf } from './engine';
@@ -25,21 +25,20 @@ export type BadgeDef = {
 const count = (s: Data, key: string) => s.counters[key] ?? 0;
 
 export const BADGES: BadgeDef[] = [
-  { id: 'rooted', name: 'Deep roots', icon: Sprout, tone: 'mint', tiers: [5, 25, 50, 100, 200], unit: 'words rooted', value: (s) => Object.values(s.words).filter((w) => w.status === 'known').length },
-  { id: 'streak', name: 'On a roll', icon: Flame, tone: 'orange', tiers: [3, 7, 14, 30, 60, 100], unit: 'days in a row', value: (s) => Math.max(count(s, 'bestStreak'), streakOf(s)) },
+  { id: 'rooted', name: 'Deep roots', icon: Sprout, tone: 'brand', tiers: [5, 25, 50, 100, 200], unit: 'words rooted', value: (s) => Object.values(s.words).filter((w) => w.status === 'known').length },
+  { id: 'streak', name: 'On a roll', icon: Flame, tone: 'brand', tiers: [3, 7, 14, 30, 60, 100], unit: 'days in a row', value: (s) => Math.max(count(s, 'bestStreak'), streakOf(s)) },
   { id: 'learner', name: 'Word collector', icon: BookOpen, tone: 'brand', tiers: [5, 20, 50, 100], unit: 'words learned', value: (s) => count(s, 'lessons') },
-  { id: 'finder', name: 'Quick finder', icon: Search, tone: 'pink', tiers: [10, 50, 150, 400], unit: 'words found', value: (s) => count(s, 'find') },
-  { id: 'speller', name: 'Sure speller', icon: PenLine, tone: 'mint', tiers: [10, 50, 150, 400], unit: 'words spelled', value: (s) => count(s, 'spell') },
-  { id: 'perfect', name: 'Clean sweep', icon: Target, tone: 'butter', tiers: [1, 5, 20], unit: 'perfect rounds', value: (s) => count(s, 'perfect') },
-  { id: 'explorer', name: 'Fog lifter', icon: Compass, tone: 'lilac', tiers: [1, 3, 6], unit: 'places cleared', value: (s) => s.journey.cleared.length },
-  { id: 'pattern', name: 'Pattern spotter', icon: Puzzle, tone: 'lilac', tiers: [1, 3, 6], unit: 'spelling patterns mastered', value: (s) => patternsMastered(s) },
+  { id: 'finder', name: 'Quick finder', icon: Search, tone: 'brand', tiers: [10, 50, 150, 400], unit: 'words found', value: (s) => count(s, 'find') },
+  { id: 'speller', name: 'Sure speller', icon: PenLine, tone: 'brand', tiers: [10, 50, 150, 400], unit: 'words spelled', value: (s) => count(s, 'spell') },
+  { id: 'perfect', name: 'Clean sweep', icon: Target, tone: 'brand', tiers: [1, 5, 20], unit: 'perfect rounds', value: (s) => count(s, 'perfect') },
+  { id: 'explorer', name: 'Fog lifter', icon: Compass, tone: 'brand', tiers: [1, 3, 6], unit: 'places cleared', value: (s) => s.journey.cleared.length },
+  { id: 'pattern', name: 'Pattern spotter', icon: Puzzle, tone: 'brand', tiers: [1, 3, 6], unit: 'spelling patterns mastered', value: (s) => patternsMastered(s) },
   { id: 'sleuth', name: 'Word sleuth', icon: ScanSearch, tone: 'brand', tiers: [1, 10, 30], unit: 'words tracked down', value: (s) => count(s, 'finder') },
-  { id: 'marble', name: 'Steady hands', icon: CircleDot, tone: 'butter', tiers: [3, 15], unit: 'marble runs', value: (s) => count(s, 'marble') },
-  { id: 'builder', name: 'Valley builder', icon: Hammer, tone: 'mint', tiers: [1, 6, 12, 18], unit: 'things rebuilt', value: (s) => s.built.length },
-  { id: 'pledge', name: 'Kept my word', icon: Handshake, tone: 'orange', tiers: [1, 3, 10], unit: 'pledges kept', value: (s) => count(s, 'pledges') },
-  { id: 'ahead', name: 'Ahead already', icon: FastForward, tone: 'butter', tiers: [1, 5, 20], unit: 'words already known', value: (s) => count(s, 'testedOut') },
-  { id: 'friends', name: 'Better together', icon: Users, tone: 'pink', tiers: [1, 3], unit: 'friends added', value: (s) => s.friends.length, hidden: true },
-  { id: 'hands', name: 'Hands-on', icon: Hand, tone: 'pink', tiers: [5, 25, 100], unit: 'words tapped, traced, rolled, written or said', value: (s) => HANDS.reduce((n, g) => n + count(s, g), 0) },
+  { id: 'marble', name: 'Steady hands', icon: CircleDot, tone: 'brand', tiers: [3, 15], unit: 'marble runs', value: (s) => count(s, 'marble') },
+  { id: 'builder', name: 'Valley builder', icon: Hammer, tone: 'brand', tiers: [1, 6, 12, 18], unit: 'things rebuilt', value: (s) => s.built.length },
+  { id: 'pledge', name: 'Kept my word', icon: Handshake, tone: 'brand', tiers: [1, 3, 10], unit: 'pledges kept', value: (s) => count(s, 'pledges') },
+  { id: 'ahead', name: 'Ahead already', icon: FastForward, tone: 'brand', tiers: [1, 5, 20], unit: 'words already known', value: (s) => count(s, 'testedOut') },
+  { id: 'hands', name: 'Hands-on', icon: Hand, tone: 'brand', tiers: [5, 25, 100], unit: 'words tapped, traced, rolled, written or said', value: (s) => HANDS.reduce((n, g) => n + count(s, g), 0) },
 ];
 export const BADGE_BY_ID: Record<string, BadgeDef> = Object.fromEntries(BADGES.map((b) => [b.id, b]));
 
@@ -83,12 +82,12 @@ const GROUPS: QuestDef[][] = [
   ],
   [
     { id: 'find5', label: 'Find 5 words', icon: Search, counter: 'find', target: 5, gems: 15 },
-    { id: 'find3clean', label: '3 clean finds', icon: Search, counter: 'find.clean', target: 3, gems: 20 },
+    { id: 'find3clean', label: 'Find 3 words with no hint', icon: Search, counter: 'find.clean', target: 3, gems: 20 },
     { id: 'know5', label: 'Link 5 meanings', icon: Puzzle, counter: 'know', target: 5, gems: 15 },
   ],
   [
     { id: 'spell5', label: 'Spell 5 words', icon: PenLine, counter: 'spell', target: 5, gems: 15 },
-    { id: 'spell3clean', label: '3 clean spells', icon: PenLine, counter: 'spell.clean', target: 3, gems: 20 },
+    { id: 'spell3clean', label: 'Spell 3 words first try', icon: PenLine, counter: 'spell.clean', target: 3, gems: 20 },
     { id: 'trace2', label: 'Trace 2 words', icon: PenLine, counter: 'trace', target: 2, gems: 15 },
     { id: 'tap2', label: 'Tap out 2 words', icon: Hand, counter: 'tap', target: 2, gems: 15 },
     { id: 'rounds2', label: 'Play 2 rounds', icon: Repeat, counter: 'sessions', target: 2, gems: 15 },

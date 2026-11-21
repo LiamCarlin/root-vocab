@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import { ArrowLeftRight, ArrowRight, BatteryMedium, BookOpen, Brain, CalendarClock, Clock, Ear, GraduationCap, Heart, Lightbulb, Locate, Mic, Sprout, Target, Timer, TrendingUp, Volume2, Zap, type LucideIcon } from 'lucide-react-native';
+import { ArrowLeftRight, BatteryMedium, BookOpen, Brain, CalendarClock, Clock, Ear, GraduationCap, Heart, Lightbulb, Locate, Mic, Sprout, Target, Timer, TrendingUp, Volume2, Zap, type LucideIcon } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
 import { Growth, Mascot } from '@/components/Mascot';
@@ -34,9 +34,7 @@ export default function Insights() {
     const extra = f.game ? GAMES[f.game].name : f.topic ? TOPICS[f.topic].label : '';
     return (
       <View key={f.id} style={[{ backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.line, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }, e1]} accessible accessibilityLabel={`${f.title}${extra ? ` ${extra}` : ''}${f.value ? `, ${f.value}` : ''}. ${f.detail}`}>
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={21} color={c.ink} strokeWidth={2.3} />
-        </View>
+        <Icon size={21} color={c.ink2} strokeWidth={2.2} />
         <View style={{ flex: 1, gap: 2 }}>
           <Txt v="heading" numberOfLines={1}>
             {f.title}
@@ -89,12 +87,12 @@ export default function Insights() {
                 {acc !== null && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Target size={15} color={ON_BLOCK.ink} strokeWidth={2.5} />
-                    <Txt v="bodyS">{Math.round(acc * 100)}%</Txt>
+                    <Txt v="bodyS">{Math.round(acc * 100)}% right lately</Txt>
                   </View>
                 )}
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 22, lineHeight: 26, color: ON_BLOCK.ink }}>{m.levels[k]}</Text>
+                <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 18, lineHeight: 26, color: ON_BLOCK.ink }}>Level {m.levels[k]}</Text>
                 <View style={{ flex: 1 }}>
                   <Bar value={m.progress[k]} />
                 </View>
@@ -153,8 +151,8 @@ export default function Insights() {
       ) : (
         <Block tone="soft" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }} a11y="Root is still learning how you spell. Patterns show up after a few rounds.">
           <Mascot pose="search" size={110} />
-          <Txt v="heading" style={{ flex: 1 }}>
-            Still looking
+          <Txt v="body" style={{ flex: 1 }}>
+            After a few more rounds, Root will show which spelling patterns trip you up.
           </Txt>
         </Block>
       )}
@@ -167,7 +165,6 @@ export default function Insights() {
               const lex = lexOf(s, id);
               return lex ? <Chip key={id} label={lex.text} icon={Sprout} onPress={() => router.push(`/word/${id}` as Href)} /> : null;
             })}
-            <Chip label="Journey" icon={ArrowRight} tone="orange" onPress={() => router.replace('/(tabs)')} />
           </ChipRow>
         </>
       )}

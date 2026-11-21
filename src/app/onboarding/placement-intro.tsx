@@ -8,7 +8,7 @@ import { Btn, Rise, Screen, Tag, TopBar, Txt } from '@/components/ui';
 import { STRANDS, STRAND_ORDER } from '@/data/profile';
 import { sfx } from '@/lib/sfx';
 import { useStore } from '@/lib/store';
-import { ON_BLOCK, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 /** Before the placement: what it covers, how long, and that nothing is timed. */
 export default function PlacementIntro() {
@@ -23,7 +23,7 @@ export default function PlacementIntro() {
   return (
     <Screen
       scroll={false}
-      top={<TopBar steps={{ total: 5, done: 2 }} />}
+      top={<TopBar steps={{ total: 4, done: 2 }} />}
       footer={
         <>
           <Btn
@@ -35,7 +35,7 @@ export default function PlacementIntro() {
               router.push('/onboarding/placement');
             }}
           />
-          <Btn kind="ghost" small label="Skip" iconRight={SkipForward} a11y="Skip the placement and start at level 2" onPress={skip} />
+          <Btn kind="ghost" small label="Skip and start at level 2" iconRight={SkipForward} a11y="Skip the check and start at level 2" onPress={skip} />
         </>
       }>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 26 }}>
@@ -44,6 +44,9 @@ export default function PlacementIntro() {
           <Txt v="display" center accessibilityRole="header">
             Quick check
           </Txt>
+          <Txt v="body" color="ink2" center style={{ marginTop: 8, maxWidth: 300 }}>
+            So your first words are not too easy or too hard.
+          </Txt>
         </Rise>
         <View style={{ flexDirection: 'row', gap: 22 }}>
           {STRAND_ORDER.map((id, i) => {
@@ -51,9 +54,7 @@ export default function PlacementIntro() {
             return (
               <Pop key={id} delay={320 + i * 110}>
                 <View style={{ alignItems: 'center', gap: 8 }} accessible accessibilityLabel={st.label}>
-                  <View style={{ width: 70, height: 70, borderRadius: 35, backgroundColor: c[st.tone], alignItems: 'center', justifyContent: 'center' }}>
-                    <st.icon size={30} color={ON_BLOCK.ink} strokeWidth={2.3} />
-                  </View>
+                  <st.icon size={34} color={c.ink} strokeWidth={2.2} />
                   <Txt v="bodyS">{st.label}</Txt>
                 </View>
               </Pop>

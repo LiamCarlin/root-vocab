@@ -11,7 +11,7 @@ import { buzz } from '@/lib/audio';
 import { pickNewWords } from '@/lib/engine';
 import { sfx } from '@/lib/sfx';
 import { levelOf, lexOf, useStore } from '@/lib/store';
-import { ON_BLOCK, SYLLABLE_TONES, useTheme } from '@/theme';
+import { ON_BLOCK, useTheme } from '@/theme';
 
 /** The starting map: a level for each strand, and the first words on the path. */
 export default function PlacementResult() {
@@ -32,13 +32,19 @@ export default function PlacementResult() {
   }, []);
 
   // A retake from settings goes straight back to the journey.
-  const next = () => (onboarded ? router.replace('/(tabs)') : router.push('/onboarding/check-ins'));
+  const finishOnboarding = useStore((s) => s.finishOnboarding);
+  const next = () => {
+    if (onboarded) return router.replace('/(tabs)');
+    finishOnboarding();
+    if (router.canDismiss()) router.dismissAll();
+    router.replace('/story/prologue');
+  };
 
   return (
-    <Screen top={<TopBar back={null} steps={{ total: 5, done: 3 }} />} footer={<Btn icon={ArrowRight} a11y="Next" onPress={next} />}>
+    <Screen top={<TopBar back={null} steps={{ total: 4, done: 3 }} />} footer={<Btn iconRight={ArrowRight} label={onboarded ? 'Back to the journey' : 'Start learning'} onPress={next} />}>
       <Rise style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <Txt v="display" accessibilityRole="header" style={{ flex: 1, paddingBottom: 12 }}>
-          Your starting map
+          Your starting levels
         </Txt>
         <Figure pose="proud" size={132} delay={200} />
       </Rise>
@@ -50,13 +56,16 @@ export default function PlacementResult() {
           return (
             <Pop key={id} delay={300 + i * 160} style={{ flex: 1 }}>
               <Block tone={st.tone} pad={14} a11y={`${st.label}: level ${level} of 6`} style={{ alignItems: 'center', gap: 10 }}>
-                <Ring value={level / 6} size={84} stroke={8} color={ON_BLOCK.ink} track="rgba(14,14,19,0.14)">
+                <Ring value={level / 6} size={84} stroke={8} color={c.indigo} track="rgba(76,92,235,0.16)">
                   <CountUp to={level} delay={500 + i * 160} duration={700} color={ON_BLOCK.ink} />
                 </Ring>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <st.icon size={16} color={ON_BLOCK.ink} strokeWidth={2.6} />
                   <Txt v="bodyS">{st.label}</Txt>
                 </View>
+                <Txt v="caption" color="ink2">
+                  of 6
+                </Txt>
               </Block>
             </Pop>
           );
@@ -65,10 +74,10 @@ export default function PlacementResult() {
 
       {first.length > 0 && (
         <Rise i={3} style={{ gap: 12 }}>
-          <SectionLabel>First words</SectionLabel>
+          <SectionLabel>Words to start with</SectionLabel>
           <ChipRow>
-            {first.map((lex, i) => (
-              <Chip key={lex.id} label={lex.text} big tone={SYLLABLE_TONES[i % SYLLABLE_TONES.length]} style={{ borderColor: c.line }} />
+            {first.map((lex) => (
+              <Chip key={lex.id} label={lex.text} big />
             ))}
           </ChipRow>
         </Rise>

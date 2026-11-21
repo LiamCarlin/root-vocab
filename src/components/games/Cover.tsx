@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { Peek } from '@/components/Buddy';
 import { Controls } from '@/components/learn';
-import { Btn, Field, IconBtn } from '@/components/ui';
+import { Btn, Field } from '@/components/ui';
 import { say, sayHum, speakable } from '@/lib/audio';
 import { sfx } from '@/lib/sfx';
 import { radius, useTheme, wordSize } from '@/theme';
@@ -96,7 +96,7 @@ export function Cover({ lex, onResult, done }: GameProps) {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Field big value={wrote} onChangeText={write} editable={!locked} autoFocus returnKeyType="done" onSubmitEditing={check} accessibilityLabel="Write the word" style={{ minWidth: 0 }} />
             </View>
-            {!locked && <IconBtn icon={covered ? Eye : EyeOff} label={covered ? 'Look again' : 'Cover it again'} kind="butter" size={60} onPress={peek} />}
+            {!locked && <Btn kind="soft" small icon={covered ? Eye : EyeOff} label={covered ? 'Look' : 'Cover'} a11y={covered ? 'Look at the word again' : 'Cover the word again'} onPress={peek} />}
           </View>
           {off && checked !== null && (
             <View style={{ paddingHorizontal: 6 }}>

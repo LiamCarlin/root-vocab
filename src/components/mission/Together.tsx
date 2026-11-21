@@ -64,12 +64,12 @@ export function Together({ words, pattern, top, next, skip }: { words: Lexeme[];
       footer={
         <>
           <Controls onReplay={() => say(card.word.meaning)} onSkip={skip} />
-          <Btn icon={allDone ? Check : ArrowRight} a11y={allDone ? 'Finish' : 'Next'} onPress={onward} disabled={!right} />
+          <Btn icon={right ? (allDone ? Check : ArrowRight) : undefined} label={right ? undefined : 'Pick the answer first'} a11y={right ? (allDone ? 'Finish' : 'Next') : undefined} onPress={onward} disabled={!right} />
         </>
       }>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-        <Txt v="label" color="ink2" style={{ flex: 1 }}>
-          {`Which word is it?  ${Math.min(at + 1, cards.length)} of ${cards.length}`}
+        <Txt v="heading" style={{ flex: 1 }}>
+          {`Which word is it? (${Math.min(at + 1, cards.length)} of ${cards.length})`}
         </Txt>
         {pattern && <Tag label={PATTERNS[pattern].label} tint="butter" />}
       </View>
@@ -90,7 +90,7 @@ export function Together({ words, pattern, top, next, skip }: { words: Lexeme[];
               accessibilityRole="button"
               accessibilityLabel={opt}
               accessibilityState={{ selected: isRight }}
-              style={{ minHeight: 64, borderRadius: radius.lg, paddingHorizontal: 22, justifyContent: 'center', backgroundColor: isRight ? c.mint : isWrong ? c.errorTint : c.surface, borderWidth: isRight ? 0 : 1.5, borderColor: isWrong ? c.orange : c.line, opacity: right && !isRight ? 0.45 : 1 }}>
+              style={{ minHeight: 64, borderRadius: radius.lg, paddingHorizontal: 22, justifyContent: 'center', backgroundColor: isRight ? c.mint : isWrong ? c.sun : c.surface, borderWidth: isRight ? 0 : 1.5, borderColor: isWrong ? c.butter : c.line, opacity: right && !isRight ? 0.45 : 1 }}>
               <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: font('b'), fontSize: 22, letterSpacing: 0.4, color: isRight ? ON_BLOCK.ink : c.ink }}>
                 {opt}
               </Text>

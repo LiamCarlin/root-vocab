@@ -261,8 +261,14 @@ export function judgeSpoken(heard: string, target: string): 'exact' | 'close' | 
   const t = target.toLowerCase();
   if (!h) return 'miss';
   if (h === t || h.split(/\s+/).includes(t) || h.replace(/\s+/g, '') === t.replace(/\s+/g, '')) return 'exact';
-  const best = Math.min(levenshtein(h, t), ...h.split(/\s+/).map((wd) => levenshtein(wd, t)));
-  if (best <= Math.max(2, Math.floor(t.length * 0.3)) || soundKey(h) === soundKey(t)) return 'close';
+  // Accents and recognisers split a word ("act knowledge" for "acknowledge"), so every run of up to
+  // three neighbouring words is also tried joined up, and judged by sound as well as by letters.
+  const words = h.split(/\s+/).filter(Boolean);
+  const tries = new Set<string>([h, ...words]);
+  for (let i = 0; i < words.length; i++) for (let n = 2; n <= 3 && i + n <= words.length; n++) tries.add(words.slice(i, i + n).join(''));
+  const tt = t.replace(/\s+/g, '');
+  const room = Math.max(2, Math.floor(tt.length * 0.3));
+  for (const x of tries) if (levenshtein(x, tt) <= room || soundKey(x) === soundKey(tt)) return 'close';
   return 'miss';
 }
 

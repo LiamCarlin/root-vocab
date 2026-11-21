@@ -35,7 +35,7 @@ export function HoldToSay({ active, held, onIn, onOut, size = 128, done }: { act
     }
   }, [held, reduceMotion, ring]);
   const wave = useAnimatedStyle(() => ({ transform: [{ scale: 1 + ring.value * 0.5 }], opacity: held ? 0.35 * (1 - ring.value) : 0 }));
-  const bg = done ? c.mint : held ? c.orange : active ? c.ink : c.surface2;
+  const bg = done ? c.mint : held ? c.orange : active ? c.press : c.surface2;
   const fg = done || held ? ON_BLOCK.ink : active ? c.onInk : c.ink3;
   const Icon = done ? Check : active ? Mic : Volume2;
   return (
@@ -158,10 +158,8 @@ export function Echo({ text, parts, says, onDone, whole, quiet }: { text: string
       <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch' }}>
         <HoldToSay active={turn === 'you'} held={held} onIn={pressIn} onOut={pressOut} done={done} size={72} />
         <View style={{ flex: 1, gap: 2 }}>
-          <Txt v="label" color="ink2">
-            Your turn
-          </Txt>
-          <Txt v="heading">{done ? 'Said it' : held ? 'Listening' : miss ? 'Once more' : turn === 'root' ? 'Listen' : 'Hold and say it'}</Txt>
+          {/* Says exactly what to say: the word, not the sentence. When it is done, it says so. */}
+          <Txt v="heading">{done ? `Done: you said “${text}”` : held ? 'Listening…' : miss ? `Try “${text}” once more` : turn === 'root' ? 'Listen' : `Hold the button and say “${text}”`}</Txt>
         </View>
       </View>
     );

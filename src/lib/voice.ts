@@ -32,8 +32,10 @@ export function audioLib(): AudioLib | null {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const m = require('expo-audio') as Partial<AudioLib>;
       lib = typeof m?.createAudioPlayer === 'function' ? (m as AudioLib) : null;
-      // Follow the ringer switch and never interrupt music or speech.
-      lib?.setAudioModeAsync?.({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => {});
+      // Play with the ringer switch on silent too. Hearing the word is the lesson, and with this off
+      // an iPhone on silent played nothing, or fell back to a different-sounding voice for some lines.
+      // Other audio is ducked, not stopped.
+      lib?.setAudioModeAsync?.({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch(() => {});
     } catch {
       lib = null;
     }

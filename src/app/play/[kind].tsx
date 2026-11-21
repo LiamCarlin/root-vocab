@@ -8,17 +8,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Companion } from '@/components/Buddy';
 import { GAMES, type GameResult } from '@/components/games';
 import { Mascot, type Pose } from '@/components/Mascot';
-import { ComboFlame, ComboPop } from '@/components/play/Combo';
 import { FeedbackBar } from '@/components/play/FeedbackBar';
-import { HalfwayCard, StartCard } from '@/components/play/Interlude';
+import { StartCard } from '@/components/play/Interlude';
 import { praise, sessionMeta, type Played } from '@/components/play/meta';
 import { SessionDone } from '@/components/play/SessionDone';
-import { Bar, Btn, IconBtn, Screen, Sheet, TopBar, Txt } from '@/components/ui';
+import { Bar, Btn, Screen, Sheet, TopBar, Txt } from '@/components/ui';
 import { buzz, stopListening, stopSpeaking } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/unlocks';
 import { HANDS, buildSession, type Exercise, type GameId, type SessionKind } from '@/lib/engine';
 import { chapterWords, stopWords } from '@/lib/journey';
-import { questState, questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
 import { clock, noteUi } from '@/lib/signals';
 import { lexOf, useStore, type SessionSummary, type StopOutcome } from '@/lib/store';
@@ -65,10 +63,6 @@ export default function Play() {
     return buildSession(s, kind, { game, words: words.length ? words : kind === 'challenge' || kind === 'hands' ? chapterWords(s) : undefined });
   });
   const [base] = useState(queue.length);
-  const [questsBefore] = useState<Record<string, number>>(() => {
-    const s = useStore.getState();
-    return Object.fromEntries(questsToday(s).map((id) => [id, questState(s, id).have]));
-  });
   const [startedAt] = useState(() => Date.now());
   // A game picked in the arcade says something about what the learner likes doing.
   useEffect(() => {
@@ -86,9 +80,6 @@ export default function Play() {
   const [res, setRes] = useState<GameResult | null>(null);
   const [line, setLine] = useState('');
   const [played, setPlayed] = useState<Played[]>([]);
-  const [combo, setCombo] = useState(0);
-  const [pop, setPop] = useState<{ n: number; id: number } | null>(null);
-  const [halfShown, setHalfShown] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [end, setEnd] = useState<{ summary: SessionSummary; outcome: StopOutcome | null } | null>(null);
   const [barH, setBarH] = useState(0);
@@ -150,11 +141,7 @@ export default function Play() {
       finish(played);
       return;
     }
-    const firstDone = played.filter((p) => !p.retry).length;
-    if (!skipped && !halfShown && base >= 6 && idx + 1 < base && firstDone === Math.ceil(base / 2)) {
-      setHalfShown(true);
-      setPhase('half');
-    }
+    // No "Halfway" card: it stopped the round with nothing to do on it. The progress bar shows halfway.
     setIdx(idx + 1);
   };
 
@@ -173,8 +160,6 @@ export default function Play() {
     if (!retry || scored > 0) st.recordAttempt({ id: ex.wordId, strand: ex.strand, r: scored, game: ex.game, ms: r.ms, cue: r.cue, attempt: r.attempt, pos: played.length });
 
     const sensory = SENSORY.includes(ex.game) && r.r > 0;
-    const run = r.r > 0 ? combo + 1 : 0;
-    setCombo(run);
     if (r.r > 0) {
       sfx.play('good');
       if (r.r === 1 || sensory) buzz.good();
@@ -182,11 +167,6 @@ export default function Play() {
     } else {
       sfx.play('miss');
       buzz.nudge();
-    }
-    if (r.r > 0 && (run === 3 || (run >= 5 && run % 5 === 0))) {
-      setPop({ n: run, id: Date.now() });
-      setTimeout(() => sfx.play('combo'), 380);
-      if (run === 5) st.bump('combo5');
     }
 
     setLine(sensory ? 'Done' : praise(r.r, ex.strand, retry, played.length));
@@ -197,15 +177,18 @@ export default function Play() {
   };
 
   const leaveSheet = (
-    <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave?">
-      <View style={{ alignItems: 'center' }}>
+    <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Stop for now?">
+      <View style={{ alignItems: 'center', gap: 8 }}>
         <Mascot pose="oops" size={130} />
+        <Txt v="body" center>
+          Every answer so far is saved.
+        </Txt>
       </View>
-      <Btn icon={PlayIcon} label="Stay" onPress={() => setLeaving(false)} />
+      <Btn icon={PlayIcon} label="Keep going" onPress={() => setLeaving(false)} />
       <Btn
         kind="soft"
         icon={LogOut}
-        label="Leave"
+        label="Stop for now"
         onPress={() => {
           setLeaving(false);
           walkOut();
@@ -216,11 +199,14 @@ export default function Play() {
 
   if (!queue.length) {
     return (
-      <Screen top={<TopBar back="close" onBack={leave} />} footer={<Btn icon={House} a11y="Back" onPress={leave} />}>
-        <View style={{ alignItems: 'center', gap: 18, marginTop: 60 }}>
+      <Screen top={<TopBar back="close" onBack={leave} />} footer={<Btn icon={House} label="Go to the journey" onPress={() => router.replace('/(tabs)')} />}>
+        <View style={{ alignItems: 'center', gap: 12, marginTop: 60 }}>
           <Mascot pose="sleep" size={190} />
           <Txt v="title" center>
-            Nothing here yet
+            No words to practice yet
+          </Txt>
+          <Txt v="body" color="ink2" center>
+            Learn a word on the journey first. It comes here to practice.
           </Txt>
         </View>
       </Screen>
@@ -228,11 +214,10 @@ export default function Play() {
   }
 
   if (phase === 'done' && end) {
-    return <SessionDone kind={kind} meta={meta} played={played} summary={end.summary} outcome={end.outcome} questsBefore={questsBefore} onContinue={() => (end.outcome?.chapterDone ? router.replace('/story/outro') : leave())} />;
+    return <SessionDone kind={kind} meta={meta} played={played} summary={end.summary} outcome={end.outcome} onContinue={() => (end.outcome?.chapterDone ? router.replace('/story/outro') : leave())} />;
   }
 
   if (phase === 'start') return <StartCard meta={meta} total={base} onDone={() => setPhase('play')} />;
-  if (phase === 'half') return <HalfwayCard done={played.filter((p) => !p.retry).length} total={base} onDone={() => setPhase('play')} />;
 
   const def = ex ? GAMES[ex.game] : null;
   const Comp = def?.Comp;
@@ -253,18 +238,24 @@ export default function Play() {
             onBack={() => setLeaving(true)}
             center={
               <View style={{ flex: 1 }} accessible accessibilityRole="progressbar" accessibilityLabel={`${Math.min(idx + 1, queue.length)} of ${queue.length}`}>
-                <Bar value={progress} height={12} />
+                <Bar value={progress} height={12} color="indigo" />
               </View>
             }
-            right={<ComboFlame n={combo} />}
           />
         }>
         {/* Which game this is: its icon, its colour, its name. */}
         {def && GameIcon && (
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <View style={{ height: 36, borderRadius: radius.pill, backgroundColor: c[def.tone], flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 14 }} accessible accessibilityRole="header" accessibilityLabel={def.a11y}>
-              <GameIcon size={17} color={ON_BLOCK.ink} strokeWidth={2.6} />
-              <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 14, color: ON_BLOCK.ink }}>{def.name}</Text>
+            {/* A plain title, not a pill: it should not look like a button or share a colour with the answers. */}
+            {/* The game's name, then what to do in it, so no card is a guessing game. */}
+            <View style={{ flex: 1, gap: 2 }} accessible accessibilityRole="header" accessibilityLabel={`${def.name}. ${def.a11y}.`}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <GameIcon size={20} color={c.ink} strokeWidth={2.4} />
+                <Txt v="heading">{def.name}</Txt>
+              </View>
+              <Txt v="bodyS" color="ink2">
+                {def.a11y}
+              </Txt>
             </View>
             {ex?.retry && (
               <View style={{ height: 36, borderRadius: radius.pill, backgroundColor: c.butter, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12 }} accessible accessibilityLabel="One more go at this word">
@@ -281,15 +272,16 @@ export default function Play() {
               <Comp lex={lex} onResult={onResult} done={!!res} />
             </Animated.View>
           )}
-          {pop && <ComboPop key={pop.id} n={pop.n} />}
         </View>
 
         {/* The ledge: skip on the left, Root on the right, under the play area. */}
         <View style={{ height: LEDGE + Math.max(insets.bottom, 8), flexDirection: 'row', alignItems: 'flex-start' }}>
-          <IconBtn
+          <Btn
+            kind="soft"
+            small
             icon={SkipForward}
-            label="Skip this one"
-            size={46}
+            label="Skip"
+            a11y="Skip this one"
             disabled={!!res}
             onPress={() => {
               noteUi('skip');

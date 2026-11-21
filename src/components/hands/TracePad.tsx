@@ -3,10 +3,10 @@ import { View, type GestureResponderEvent } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Circle, Line, Path, Polygon } from 'react-native-svg';
 
-import { buzz, say } from '@/lib/audio';
+import { buzz } from '@/lib/audio';
 import { layoutLetters, nearestOn, pathOf, pointAt, type Placed, type Track } from '@/lib/glyphs';
 import { useTheme } from '@/theme';
-import { PAD_RADIUS, WordStrip, letterName } from './kit';
+import { PAD_RADIUS, WordStrip } from './kit';
 
 // ── Trace ─────────────────────────────────────────────────────────────────
 // Finger tracing is the oldest move in multisensory teaching: the hand forms the letter while
@@ -27,12 +27,11 @@ export type TraceEvent = 'on' | 'off' | 'idle';
 const STRIP = 50;
 
 export function TracePad({ text, parts, onPart, onDone, onState, assist, height = 280 }: { text: string; parts: string[]; onPart: (i: number) => void; onDone: () => void; onState?: (e: TraceEvent) => void; assist?: boolean; height?: number }) {
-  const { c, e1, syl, reduceMotion } = useTheme();
+  const { c, e1, reduceMotion } = useTheme();
   const [w, setW] = useState(0);
   const [beat, setBeat] = useState(0);
   const [k, setK] = useState(0);
   const [s, setS] = useState(0);
-  const [touching, setTouching] = useState(false);
   const [off, setOff] = useState(false);
 
   const kRef = useRef(0);
@@ -51,7 +50,6 @@ export function TracePad({ text, parts, onPart, onDone, onState, assist, height 
 
   const strokeW = lay ? Math.max(9, 15 * lay.scale) : 12;
   const tol = lay ? Math.max(22, 34 * lay.scale) : 24;
-  const tone = syl(Math.min(beat, parts.length - 1));
 
   const report = (e: TraceEvent) => {
     const isOff = e === 'off';
@@ -94,7 +92,6 @@ export function TracePad({ text, parts, onPart, onDone, onState, assist, height 
     const letterDone = next >= steps.length || steps[next].li !== cur.li;
     if (letterDone && lay) {
       buzz.tap();
-      say(letterName(lay.letters[cur.li].ch));
     }
     kRef.current = next;
     sRef.current = 0;
@@ -153,7 +150,6 @@ export function TracePad({ text, parts, onPart, onDone, onState, assist, height 
   };
 
   const release = () => {
-    setTouching(false);
     report('idle');
     // Lifting the finger just short of the end still finishes the stroke.
     const cur = steps[kRef.current];
@@ -188,12 +184,13 @@ export function TracePad({ text, parts, onPart, onDone, onState, assist, height 
             <Line x1={18} x2={w - 18} y1={lay.xh} y2={lay.xh} stroke={c.line} strokeWidth={1.5} strokeDasharray="3 7" />
             <Line x1={18} x2={w - 18} y1={lay.base} y2={lay.base} stroke={c.line} strokeWidth={1.5} />
 
-            {/* The model: every stroke of every letter, in the beat's colour; letters still to come wait in grey. */}
+            {/* The model: one plain grey track per stroke. The letter being written is a clear, solid
+                track; letters still to come are lighter but still easy to see. No colour, no ghosting. */}
             {lay.letters.map((l, li) =>
               l.tracks.map((t, ti) => {
                 const active = !finished && cur && li === cur.li;
-                const col = finished || letterDone(li) || active ? tone : c.surface2;
-                return t.dot ? <Circle key={`g${li}-${ti}`} cx={t.pts[0].x} cy={t.pts[0].y} r={strokeW * 0.6} fill={col} opacity={active ? 1 : 0.6} /> : <Path key={`g${li}-${ti}`} d={pathOf(t)} stroke={col} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={active ? 1 : 0.6} />;
+                const op = active ? 0.24 : 0.12;
+                return t.dot ? <Circle key={`g${li}-${ti}`} cx={t.pts[0].x} cy={t.pts[0].y} r={strokeW * 0.6} fill={c.ink} opacity={op} /> : <Path key={`g${li}-${ti}`} d={pathOf(t)} stroke={c.ink} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={op} />;
               }),
             )}
 
@@ -212,8 +209,7 @@ export function TracePad({ text, parts, onPart, onDone, onState, assist, height 
             {/* The pen: where to be, and which way to go. */}
             {nib && cur && !assist && (
               <>
-                {!touching && <Circle cx={nib.p.x} cy={nib.p.y} r={nibR + 9} fill={off ? c.orange : c.ink} opacity={0.14} />}
-                <Circle cx={nib.p.x} cy={nib.p.y} r={nibR} fill={off ? c.orange : c.ink} />
+                                <Circle cx={nib.p.x} cy={nib.p.y} r={nibR} fill={off ? c.orange : c.ink} />
                 <Circle cx={nib.p.x} cy={nib.p.y} r={nibR * 0.34} fill={c.surface} />
                 {!cur.track.dot && s < cur.track.len - nibR * 3 && <Arrow at={pointAt(cur.track, s + nibR * 2.6)} size={nibR * 0.8} color={c.ink} />}
               </>
@@ -228,7 +224,6 @@ export function TracePad({ text, parts, onPart, onDone, onState, assist, height 
         onMoveShouldSetResponder={() => true}
         onResponderTerminationRequest={() => false}
         onResponderGrant={(e) => {
-          setTouching(true);
           touch(e, true);
         }}
         onResponderMove={(e) => touch(e, false)}
@@ -246,5 +241,5 @@ function Arrow({ at, size, color }: { at: { p: { x: number; y: number }; dir: { 
   const tip = `${p.x + dir.x * size},${p.y + dir.y * size}`;
   const a = `${p.x - dir.x * size * 0.6 + nx * size * 0.8},${p.y - dir.y * size * 0.6 + ny * size * 0.8}`;
   const b = `${p.x - dir.x * size * 0.6 - nx * size * 0.8},${p.y - dir.y * size * 0.6 - ny * size * 0.8}`;
-  return <Polygon points={`${tip} ${a} ${b}`} fill={color} opacity={0.55} />;
+  return <Polygon points={`${tip} ${a} ${b}`} fill={color} />;
 }

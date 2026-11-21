@@ -15,7 +15,7 @@ const FILTERS: { id: Exclude<Filter, 'removed'>; name: string; stage?: 0 | 2 | 3
   { id: 'all', name: 'All', icon: LayoutGrid },
   { id: 'learning', name: 'Growing', stage: 2 },
   { id: 'known', name: 'Rooted', stage: 3 },
-  { id: 'queued', name: 'Waiting', stage: 0 },
+  { id: 'queued', name: 'To learn', stage: 0 },
 ];
 const ORDER: Record<UserWord['status'], number> = { learning: 0, queued: 1, known: 2, removed: 3 };
 
@@ -42,15 +42,6 @@ export default function Garden() {
         .sort((a, b) => Number(isDue(b, t)) - Number(isDue(a, t)) || ORDER[a.status] - ORDER[b.status] || firstDue(a).localeCompare(firstDue(b)) || b.addedAt - a.addedAt),
     [all, filter, needle, t],
   );
-  // The bed at the top: the newest words, each at its own stage.
-  const bed = useMemo(
-    () =>
-      all
-        .filter((w) => w.status !== 'removed')
-        .sort((a, b) => b.addedAt - a.addedAt)
-        .slice(0, 10),
-    [all],
-  );
   const overall = live ? all.filter((w) => w.status !== 'removed').reduce((sum, w) => sum + (w.status === 'known' ? 1 : strength(w)), 0) / live : 0;
 
   const header = (
@@ -61,22 +52,16 @@ export default function Garden() {
           <View style={{ paddingLeft: 8, paddingTop: 14 }}>
             <Mascot pose="water" size={144} />
           </View>
-          <View style={{ flex: 1, padding: 18, paddingLeft: 6, gap: 12, alignSelf: 'center' }} accessible accessibilityLabel={`${count('known')} rooted, ${count('learning')} growing, ${count('queued')} waiting`}>
+          <View style={{ flex: 1, padding: 18, paddingLeft: 6, gap: 12, alignSelf: 'center' }} accessible accessibilityLabel={`${count('known')} of ${live} words rooted`}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
               <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 46, lineHeight: 50, color: ON_BLOCK.ink }}>{count('known')}</Text>
               <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 18, color: ON_BLOCK.ink2 }}>/ {live}</Text>
             </View>
+            <Text style={{ fontFamily: 'Lexend_500Medium', fontSize: 14, color: ON_BLOCK.ink2, marginTop: -8 }}>words rooted</Text>
             {/* How rooted the whole garden is. */}
             <View style={{ height: 10, borderRadius: 5, backgroundColor: 'rgba(14,14,19,0.14)', overflow: 'hidden' }}>
               <View style={{ height: 10, borderRadius: 5, width: `${Math.round(overall * 100)}%`, backgroundColor: ON_BLOCK.ink }} />
             </View>
-            {bed.length > 0 && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-                {bed.map((w) => (
-                  <Growth key={w.id} stage={growth(w)} size={26} />
-                ))}
-              </View>
-            )}
           </View>
         </View>
       </Block>
@@ -172,12 +157,14 @@ function Gap() {
   return <View style={{ height: 8 }} />;
 }
 
-/** One word: its stage, its picture hook, and how firmly Know, Find and Spell are held. */
+const STATUS_TEXT: Record<UserWord['status'], string> = { learning: 'Growing', known: 'Rooted', queued: 'To learn', removed: 'Removed' };
+
+/** One word: its stage, its picture hook, and where it stands, in words. */
 function WordRow({ w, due }: { w: UserWord; due: boolean }) {
   const { c, e1 } = useTheme();
   const off = w.status === 'removed';
   const boxes = STRAND_ORDER.map((k) => (w.status === 'known' ? Math.max(3, w.mem[k]?.box ?? 0) : w.status === 'learning' ? (w.mem[k]?.box ?? 0) : 0));
-  const a11y = `${w.text}. ${w.status === 'known' ? 'Rooted' : w.status === 'learning' ? 'Growing' : w.status === 'queued' ? 'Waiting' : 'Removed'}${due ? ', due today' : ''}. ${STRAND_ORDER.map((k, i) => `${STRANDS[k].label} ${boxes[i]} of 4`).join(', ')}`;
+  const a11y = `${w.text}. ${w.status === 'known' ? 'Rooted' : w.status === 'learning' ? 'Growing' : w.status === 'queued' ? 'To learn' : 'Removed'}${due ? ', due today' : ''}. ${STRAND_ORDER.map((k, i) => `${STRANDS[k].label} ${boxes[i]} of 4`).join(', ')}`;
   return (
     <Tap onPress={() => router.push(`/word/${w.id}`)} scaleTo={0.98} accessibilityRole="button" accessibilityLabel={a11y} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.line, paddingVertical: 12, paddingHorizontal: 14, minHeight: 74, opacity: off ? 0.6 : 1 }, e1]}>
       <Growth stage={growth(w)} size={46} />
@@ -188,16 +175,12 @@ function WordRow({ w, due }: { w: UserWord; due: boolean }) {
           </Txt>
           {!!w.hook && <Text style={{ fontSize: 18 }}>{w.hook}</Text>}
         </View>
-        {/* Know · Find · Spell, each in its own colour. */}
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          {STRAND_ORDER.map((k, i) => (
-            <View key={k} style={{ flex: 1, maxWidth: 64, height: 7, borderRadius: 4, backgroundColor: c.surface2, overflow: 'hidden' }}>
-              <View style={{ width: `${(Math.min(4, boxes[i]) / 4) * 100}%`, height: 7, borderRadius: 4, backgroundColor: c[STRANDS[k].tone] }} />
-            </View>
-          ))}
-        </View>
+        {/* Where the word stands, in words: three unlabelled bars said nothing. */}
+        <Txt v="caption" color={due ? 'ink' : 'ink2'}>
+          {STATUS_TEXT[w.status]}
+          {due ? ', review today' : ''}
+        </Txt>
       </View>
-      {due && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c.orange }} />}
     </Tap>
   );
 }

@@ -1,18 +1,14 @@
-import { router, type Href } from 'expo-router';
-import { BookOpen, Check, Gift, Snowflake, Store, Wrench } from 'lucide-react-native';
-import { useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Check, Gem, Snowflake } from 'lucide-react-native';
+import { Text, View } from 'react-native';
 
 import { Figure } from '@/components/Buddy';
-import { CountUp, Pop } from '@/components/fx';
-import { Chest, StreakFlame } from '@/components/rewards';
+import { Pop } from '@/components/fx';
+import { StreakFlame } from '@/components/rewards';
 import { Block, Btn, Sheet, Txt } from '@/components/ui';
-import { PROPS } from '@/data/story';
 import { buzz } from '@/lib/audio';
-import { useHoldUnlocks } from '@/lib/unlocks';
 import { weekOf } from '@/lib/dates';
 import { sfx } from '@/lib/sfx';
-import { GEMS, MAX_FREEZES, journalPages, repairable, streak, today, useStore } from '@/lib/store';
+import { GEMS, MAX_FREEZES, repairable, streak, today, useStore } from '@/lib/store';
 import { ON_BLOCK, useTheme } from '@/theme';
 
 // Two letters each: a lone T or S could be either day.
@@ -66,23 +62,32 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
         })}
       </Block>
 
+      {/* What the streak is and what gems do for it, said once in plain words. */}
+      <Txt v="body" center>
+        {n === 1 ? '1 day in a row of practice.' : `${n} days in a row of practice.`} Miss a day and it starts again, unless a freeze covers it.
+      </Txt>
+
       {/* A streak that broke in the last couple of days can be mended. */}
       {fix && (
-        <Block tone="orange" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <Block tone="butter" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <View style={{ flex: 1, gap: 2 }}>
             <Txt v="heading">Mend streak</Txt>
             <Txt v="bodyS" color="ink2">
-              {fix.lost} days, saved
+              {s.gems < fix.cost ? `Bring back your ${fix.lost} day streak. You need ${fix.cost} gems and have ${s.gems}.` : `Bring back your ${fix.lost} day streak.`}
             </Txt>
           </View>
-          <Btn kind="white" small disabled={s.gems < fix.cost} a11y={`Mend your ${fix.lost} day streak for ${fix.cost} gems`} onPress={mend} label={String(fix.cost)} icon={Wrench} style={{ minWidth: 112 }} />
+          <Btn kind="white" small disabled={s.gems < fix.cost} a11y={`Mend your ${fix.lost} day streak for ${fix.cost} gems`} onPress={mend} label={`Mend · ${fix.cost}`} icon={Gem} style={{ minWidth: 112 }} />
         </Block>
       )}
 
       {/* Freezes: each one covers a missed day so the streak survives it. */}
-      <Block tone="brand" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+      <Block pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
         <View style={{ flex: 1, gap: 10 }}>
           <Txt v="heading">Streak freeze</Txt>
+          {/* Says why the button is off, when it is. */}
+          <Txt v="bodyS" color="ink2">
+            {s.freezes >= MAX_FREEZES ? `Saves your streak on a day you miss. You hold ${MAX_FREEZES}, the most.` : s.gems < GEMS.freeze ? `Saves your streak on a day you miss. You need ${GEMS.freeze} gems and have ${s.gems}.` : 'Saves your streak on a day you miss.'}
+          </Txt>
           <View style={{ flexDirection: 'row', gap: 8 }} accessible accessibilityLabel={`${s.freezes} of ${MAX_FREEZES} held`}>
             {Array.from({ length: MAX_FREEZES }, (_, i) => {
               const held = i < s.freezes;
@@ -106,79 +111,11 @@ export function StreakSheet({ visible, onClose }: { visible: boolean; onClose: (
           disabled={!canBuy}
           a11y={s.freezes >= MAX_FREEZES ? 'You hold the most freezes you can' : `Buy a streak freeze for ${GEMS.freeze} gems`}
           onPress={buy}
-          label={String(GEMS.freeze)}
-          icon={Snowflake}
+          label={`Buy · ${GEMS.freeze}`}
+          icon={Gem}
           style={{ minWidth: 112 }}
         />
       </Block>
-      <Btn
-        kind="soft"
-        icon={Store}
-        label="Shop"
-        a11y="Open the shop: pledges, and rebuilding the valley"
-        onPress={() => {
-          onClose();
-          router.push('/shop' as Href);
-        }}
-      />
-    </Sheet>
-  );
-}
-
-/** A chest on the path. One tap: it rattles open, the gems fly, the count lands. */
-export function ChestSheet({ index, onClose }: { index: number | null; onClose: () => void }) {
-  const openChest = useStore((s) => s.openChest);
-  const [won, setWon] = useState<number | null>(null);
-  const [page, setPage] = useState(false);
-  // Anything the chest unlocks (a streak, the daily goal) waits until the sheet is closed.
-  useHoldUnlocks(index !== null);
-
-  const open = () => {
-    if (index === null || won !== null) return;
-    const before = journalPages(useStore.getState());
-    setWon(openChest(index));
-    // Every chest holds a page of the journal, until all of them are found.
-    setPage(journalPages(useStore.getState()) > before);
-  };
-  const close = () => {
-    setWon(null);
-    setPage(false);
-    onClose();
-  };
-
-  return (
-    <Sheet visible={index !== null} onClose={close}>
-      <View style={{ alignItems: 'center', paddingTop: 70, paddingBottom: 6, gap: 10 }}>
-        {index !== null && <Chest open={won !== null} size={170} onPress={won === null ? open : undefined} a11y="Open the chest" />}
-        <View style={{ height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          {won !== null && won > 0 && (
-            <Pop delay={380} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Image source={PROPS.gem.src} style={{ width: 34, height: (34 * PROPS.gem.h) / PROPS.gem.w }} resizeMode="contain" />
-              <CountUp to={won} prefix="+" delay={420} v="display" />
-            </Pop>
-          )}
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12 }}>
-        {index !== null && <Figure key={won === null ? 'wait' : 'won'} pose={won === null ? 'gasp' : 'cheer'} size={104} />}
-        <View style={{ flex: 1, gap: 10 }}>
-          {won !== null && page && (
-            <Pop delay={700}>
-              <Btn
-                kind="orange"
-                icon={BookOpen}
-                label="New page"
-                a11y="A page of the journal was in the chest. Read it."
-                onPress={() => {
-                  close();
-                  router.push('/journal' as Href);
-                }}
-              />
-            </Pop>
-          )}
-          {won === null ? <Btn icon={Gift} label="Open" onPress={open} /> : <Btn kind="soft" icon={Check} label="Done" onPress={close} />}
-        </View>
-      </View>
     </Sheet>
   );
 }

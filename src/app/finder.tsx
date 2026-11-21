@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ScrollView, View } from 'react-native';
 
 import { Figure } from '@/components/Buddy';
-import { Burst } from '@/components/fx';
+
 import { SylWord } from '@/components/learn';
 import { Growth, Mascot } from '@/components/Mascot';
 import { Block, Btn, Chip, ChipRow, Field, Group, IconBtn, Rise, Row, Screen, Sheet, Tag, Tap, TopBar, Txt, useToast } from '@/components/ui';
@@ -22,7 +22,7 @@ const MODES: Record<FindMode, { label: string; a11y: string; icon: LucideIcon; h
   sounds: { label: 'Sounds like', a11y: 'Sounds like: type the word the way it sounds', icon: Ear, hint: 'how it sounds', tries: ['fizishun', 'nesesery'] },
 };
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
-const STATUS: Record<UserWord['status'], string> = { queued: 'Waiting', learning: 'Growing', known: 'Rooted', removed: 'Removed' };
+const STATUS: Record<UserWord['status'], string> = { queued: 'To learn', learning: 'Growing', known: 'Rooted', removed: 'Removed' };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** Bank splits are hand-made. For other words the rough split is only shown when it agrees with the dictionary's beat count: no split is better than a wrong one. */
 const partsOf = (f: Found) => {
@@ -189,7 +189,13 @@ export default function Finder() {
     <Screen
       keyboard
       gap={14}
-      top={<TopBar back="close" right={<IconBtn icon={online ? Globe : Smartphone} label={online ? 'Searching online. Change' : online === false ? 'Searching this device only. Change' : 'Choose where to search'} size={48} onPress={() => setConsent(true)} />} />}>
+      top={
+        <TopBar
+          back="close"
+          center={<Txt v="heading">Find a word</Txt>}
+          right={<Btn kind="white" small icon={online ? Globe : Smartphone} label={online ? 'Online' : 'This device'} a11y={online ? 'Searching online. Change where to search' : 'Searching this device only. Change where to search'} onPress={() => setConsent(true)} />}
+        />
+      }>
       {/* Two ways in, and Root on the case. */}
       <Block tone="pink" pad={16} style={{ minHeight: 148 }}>
         <View style={{ flexDirection: 'row', gap: roomy ? 8 : 10, paddingRight: roomy ? 58 : 84 }}>
@@ -271,17 +277,29 @@ export default function Finder() {
 
       {!busy && res && !won && (
         <>
+          {/* Where the results came from, and the way out when this device has nothing good. */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Tag label={res.fellBack ? 'Offline' : res.source === 'online' ? 'Online' : 'This device'} icon={res.fellBack ? WifiOff : res.source === 'online' ? Globe : Smartphone} />
-            {beatChoices.length > 1 &&
-              beatChoices.map((b) => (
-                <Tap key={b} onPress={() => setBeats(beats === b ? null : b)} accessibilityRole="button" accessibilityState={{ selected: beats === b }} accessibilityLabel={`${b} ${b === 1 ? 'beat' : 'beats'}`} style={{ height: 38, paddingHorizontal: 12, borderRadius: 19, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: beats === b ? c.ink : c.surface, borderWidth: 1, borderColor: beats === b ? c.ink : c.line }}>
-                  {Array.from({ length: Math.min(b, 6) }, (_, i) => (
-                    <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: beats === b ? c.onInk : c.ink }} />
-                  ))}
+            <Tag label={res.fellBack ? 'Offline: from this device' : res.source === 'online' ? 'From online' : 'From this device'} icon={res.fellBack ? WifiOff : res.source === 'online' ? Globe : Smartphone} />
+            {res.source !== 'online' && !res.fellBack && <Btn kind="soft" small icon={Globe} label="Search online instead" onPress={() => setConsent(true)} />}
+          </View>
+          {/* Narrowing filters, each named: dots alone read as decoration. */}
+          {beatChoices.length > 1 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Txt v="bodyS" color="ink2">
+                Beats
+              </Txt>
+              {beatChoices.map((b) => (
+                <Tap key={b} onPress={() => setBeats(beats === b ? null : b)} accessibilityRole="button" accessibilityState={{ selected: beats === b }} accessibilityLabel={`${b} ${b === 1 ? 'beat' : 'beats'}`} style={{ height: 38, paddingHorizontal: 14, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: beats === b ? c.ink : c.surface, borderWidth: 1, borderColor: beats === b ? c.ink : c.line }}>
+                  <Txt v="bodyS" style={{ color: beats === b ? c.onInk : c.ink }}>
+                    {b}
+                  </Txt>
                 </Tap>
               ))}
-          </View>
+            </View>
+          )}
+          <Txt v="bodyS" color="ink2">
+            Starts with
+          </Txt>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6, paddingVertical: 2 }} accessibilityLabel="First letter">
             {LETTERS.map((l) => {
@@ -327,6 +345,7 @@ export default function Finder() {
               <Mascot pose="think" size={112} />
               <View style={{ flex: 1, gap: 12, alignItems: 'flex-start' }}>
                 <Txt v="title">No match</Txt>
+                <Txt v="bodyS">{letter || beats !== null ? 'Nothing fits these filters.' : mode === 'describe' ? 'Try saying what it does or where you find it, or type how it sounds.' : 'Try spelling it a different way, or describe what it means.'}</Txt>
                 {letter || beats !== null ? (
                   <Btn
                     small
@@ -367,9 +386,7 @@ function Line({ icon: Icon, text, a11y }: { icon: LucideIcon; text: string; a11y
   const { c } = useTheme();
   return (
     <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }} accessible accessibilityLabel={a11y ?? text}>
-      <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={17} color={c.ink} strokeWidth={2.4} />
-      </View>
+      <Icon size={17} color={c.ink2} strokeWidth={2.2} />
       <Txt v="bodyS" style={{ flex: 1 }}>
         {text}
       </Txt>
@@ -402,10 +419,10 @@ function Card({ f, open, status, stage, onToggle, onHear, onYes, onNo }: { f: Fo
           <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
             {!!f.pos && <Tag label={f.pos} />}
             <Tag label={`${f.beats} ${f.beats === 1 ? 'beat' : 'beats'}`} icon={Drum} />
-            {status && <Tag label={STATUS[status]} tint={status === 'known' ? 'mint' : status === 'learning' ? 'brand' : 'butter'} />}
+            {status && <Tag label={STATUS[status]} tint={status === 'known' ? 'mint' : 'surface'} />}
           </View>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-            <IconBtn icon={X} label={`Not it: hide ${f.text}`} kind="soft" size={58} onPress={onNo} />
+            <Btn icon={X} label="Not it" kind="soft" a11y={`Not it: hide ${f.text}`} onPress={onNo} flex={1} />
             <Btn icon={Check} label="That’s it" a11y={`That is the word: ${f.text}`} onPress={onYes} flex={1} />
           </View>
         </View>
@@ -417,15 +434,14 @@ function Card({ f, open, status, stage, onToggle, onHear, onYes, onNo }: { f: Fo
 /** The word is off the tip of the tongue. New words are planted; ones already growing go straight to practice. */
 function Won({ found: f, fresh, status, stage, onAgain }: { found: Found; fresh: boolean; status: UserWord['status']; stage: 0 | 1 | 2 | 3; onAgain: () => void }) {
   const learned = status === 'learning' || status === 'known';
-  const tone = fresh ? 'mint' : 'brand';
+  const tone = fresh ? 'mint' : 'surface';
   return (
     <Rise>
       <Block tone={tone} pad={20} style={{ gap: 14, alignItems: 'center' }} a11y={`Found: ${f.text}`}>
         <View style={{ height: 172, alignItems: 'center', justifyContent: 'flex-end' }}>
-          <Burst size={220} count={14} />
           <Figure pose={fresh ? 'trophy' : 'cheer'} size={164} />
         </View>
-        <SylWord text={f.text} parts={partsOf(f)} size={wordSize(f.text, 38, 280)} color={ON_BLOCK.ink} on={tone} />
+        <SylWord text={f.text} parts={partsOf(f)} size={wordSize(f.text, 38, 280)} color={ON_BLOCK.ink} />
         {!!f.meaning && (
           <Txt v="body">
             {cap(f.meaning)}

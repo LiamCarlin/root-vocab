@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { AccessibilityInfo, Image, Modal, Pressable, Text, View } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useShallow } from 'zustand/react/shallow';
 
 import { STRANDS } from '@/data/profile';
@@ -16,7 +16,7 @@ import { sfx } from '@/lib/sfx';
 import { useStore, type Unlock } from '@/lib/store';
 import { ON_BLOCK, useTheme, type BlockTone } from '@/theme';
 import { Figure } from './Buddy';
-import { Burst, Confetti, CountUp, Float, FogVeil, Pop, Rays, Shine } from './fx';
+import { CountUp, Float, FogVeil, Pop } from './fx';
 import type { Pose } from './Mascot';
 import { Bar, Btn, Ring, Txt, useOnBlock } from './ui';
 
@@ -25,7 +25,7 @@ import { Bar, Btn, Ring, Txt, useOnBlock } from './ui';
 // something unlocks.
 
 /** The darker edge that gives every colour block its chunky lip. */
-export const LIP: Record<BlockTone, string> = { brand: '#7B97E8', orange: '#D6781F', pink: '#D488DC', mint: '#8FD3A2', butter: '#E6C766', lilac: '#B9A3EA' };
+export const LIP: Record<BlockTone, string> = { brand: '#7B97E8', orange: '#D6781F', pink: '#7B97E8', mint: '#8FD3A2', butter: '#E6C766', lilac: '#7B97E8', stone: '#B9C6F2' };
 
 // ── Badge ─────────────────────────────────────────────────────────────────
 /**
@@ -87,7 +87,7 @@ export function Scene({ scene, size = 220, fog = 0, float = true, fogColor }: { 
   const w = (size * s.w) / s.h;
   return (
     <View style={{ width: w, height: size }} accessible accessibilityRole="image" accessibilityLabel={`${scene}${fog > 0.6 ? ', in fog' : ''}`}>
-      <Float amp={float ? 5 : 0} period={3200}>
+      <Float amp={0} period={3200}>
         <Image source={s.src} style={{ width: w, height: size }} resizeMode="contain" />
       </Float>
       <FogVeil amount={fog} color={fogColor} />
@@ -236,12 +236,8 @@ export function StreakFlame({ n, lit = true, size = 64, count }: { n: number; li
   const pop = useSharedValue(1);
   const first = useRef(true);
   useEffect(() => {
-    if (!lit || reduceMotion) {
-      f.set(0);
-      return;
-    }
-    f.set(withRepeat(withTiming(1, { duration: 620, easing: Easing.inOut(Easing.sin) }), -1, true));
-    return () => cancelAnimation(f);
+    // Still: a constant flicker read as bouncing and pulled the eye. It only pops when the count goes up.
+    f.set(0);
   }, [lit, reduceMotion, f]);
   useEffect(() => {
     if (first.current) {
@@ -300,14 +296,12 @@ export function QuestRow({ id }: { id: string }) {
   const def = QUESTS.find((q) => q.id === id);
   const { have, target, done, claimed } = useStore(useShallow((s) => questState(s, id)));
   const claimQuest = useStore((s) => s.claimQuest);
-  const [burst, setBurst] = useState(0);
   if (!def) return null;
   const Icon = def.icon;
   const claim = () => {
     claimQuest(id);
     sfx.play('gem');
     buzz.good();
-    setBurst((b) => b + 1);
   };
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 }}>
@@ -324,13 +318,12 @@ export function QuestRow({ id }: { id: string }) {
         {claimed ? (
           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.mint, alignItems: 'center', justifyContent: 'center' }} accessible accessibilityLabel="Claimed">
             <Check size={20} color={ON_BLOCK.ink} strokeWidth={3.2} />
-            {burst > 0 && <Burst key={burst} size={110} count={9} />}
           </View>
         ) : done ? (
           <Pop key="claim" from={0.4}>
             <Pressable onPress={claim} accessibilityRole="button" accessibilityLabel={`Claim ${def.gems} gems`} style={{ height: 40, borderRadius: 20, backgroundColor: c.orange, borderBottomWidth: 3, borderBottomColor: LIP.orange, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12 }}>
               <Image source={PROPS.gem.src} style={{ width: 18, height: (18 * PROPS.gem.h) / PROPS.gem.w }} resizeMode="contain" />
-              <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 15, color: ON_BLOCK.ink }}>+{def.gems}</Text>
+              <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 15, color: ON_BLOCK.ink }}>Collect +{def.gems}</Text>
             </Pressable>
           </Pop>
         ) : (
@@ -432,17 +425,15 @@ function Celebration({ unlock, onDone }: { unlock: Unlock; onDone: () => void })
 
   return (
     <View style={{ flex: 1, backgroundColor: bg, alignItems: 'center' }} accessibilityViewIsModal>
-      {/* Tapping anywhere that is not a control continues. It sits behind the content, so no pressable is nested. */}
-      <Pressable onPress={go} accessible={false} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
+      {/* Only the Continue button moves on. A tap or swipe anywhere else used to close it, so a
+          learner trying to swipe between what looked like page dots was thrown out of it. */}
       <SafeAreaView pointerEvents="box-none" style={{ flex: 1, width: '100%', maxWidth: 480 }}>
         <View pointerEvents="none" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18, paddingHorizontal: 24 }}>
           <View style={{ width: 300, height: 260, alignItems: 'center', justifyContent: 'center' }}>
-            <Rays size={380} />
             {unlock.kind === 'badge' && (
               <Pop delay={160} from={0.2}>
                 <View style={{ borderRadius: 90, overflow: 'hidden' }}>
                   <Badge id={unlock.id} tier={unlock.tier} size={168} />
-                  <Shine period={2600} delay={900} />
                 </View>
               </Pop>
             )}
@@ -457,12 +448,11 @@ function Celebration({ unlock, onDone }: { unlock: Unlock; onDone: () => void })
               </Pop>
             )}
             {unlock.kind === 'level' && <LevelDisc unlock={unlock} />}
-            <Burst size={300} count={14} delay={260} colors={['#FFFFFF', ON_BLOCK.ink, c.butter, c.surface]} />
           </View>
           <Pop delay={380} from={0.8} style={{ alignItems: 'center', gap: 4 }}>
-            <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 13, letterSpacing: 1.1, textTransform: 'uppercase', color: ON_BLOCK.ink2 }}>{look.sub}</Text>
             <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 32, lineHeight: 38, color: ON_BLOCK.ink, textAlign: 'center' }}>{look.title}</Text>
-            {unlock.kind === 'badge' && <TierDots id={unlock.id} tier={unlock.tier} />}
+            <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 17, lineHeight: 24, color: ON_BLOCK.ink2, textAlign: 'center' }}>{look.sub}</Text>
+            {unlock.kind === 'badge' && <TierLabel id={unlock.id} tier={unlock.tier} />}
           </Pop>
           <Figure pose={look.pose} size={150} delay={520} />
         </View>
@@ -470,19 +460,18 @@ function Celebration({ unlock, onDone }: { unlock: Unlock; onDone: () => void })
           <Btn icon={ArrowRight} label="Continue" onPress={go} />
         </View>
       </SafeAreaView>
-      <Confetti count={32} height={520} />
     </View>
   );
 }
 
-function TierDots({ id, tier }: { id: string; tier: number }) {
+/** The badge's level, in words. It used to be a row of dots, which looked like page dots to swipe through. */
+function TierLabel({ id, tier }: { id: string; tier: number }) {
   const n = BADGES.find((b) => b.id === id)?.tiers.length ?? 1;
+  if (n <= 1) return null;
   return (
-    <View style={{ flexDirection: 'row', gap: 7, marginTop: 8 }} accessible accessibilityLabel={`Level ${tier} of ${n}`}>
-      {Array.from({ length: n }, (_, i) => (
-        <View key={i} style={{ width: i < tier ? 22 : 10, height: 10, borderRadius: 5, backgroundColor: i < tier ? ON_BLOCK.ink : 'rgba(14,14,19,0.2)' }} />
-      ))}
-    </View>
+    <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 15, color: ON_BLOCK.ink2, marginTop: 6 }}>
+      {`Level ${tier} of ${n}`}
+    </Text>
   );
 }
 
@@ -499,20 +488,5 @@ function LevelDisc({ unlock }: { unlock: Extract<Unlock, { kind: 'level' }> }) {
         </View>
       </View>
     </Pop>
-  );
-}
-
-/** A soft shadow to sit something on. Not used by Scene (islands float), offered for screens that ground Root or a chest. */
-export function GroundShadow({ width = 120 }: { width?: number }) {
-  return (
-    <Svg width={width} height={width * 0.22} viewBox="0 0 100 22">
-      <Defs>
-        <RadialGradient id="rootGroundShadow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0" stopColor="#0E0E13" stopOpacity={0.22} />
-          <Stop offset="1" stopColor="#0E0E13" stopOpacity={0} />
-        </RadialGradient>
-      </Defs>
-      <Ellipse cx={50} cy={11} rx={50} ry={11} fill="url(#rootGroundShadow)" />
-    </Svg>
   );
 }

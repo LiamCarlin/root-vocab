@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Keyboard, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useBuddyEvent } from '@/lib/buddy';
@@ -148,7 +148,17 @@ export function Companion({ pose, size = 84, style }: { pose: Pose; size?: numbe
     setMood(e === 'wrong' ? 'oops' : e === 'win' ? 'cheer' : PLEASED[turn++ % PLEASED.length]);
     timer.current = setTimeout(() => setMood(null), e === 'wrong' ? 1300 : 1700);
   });
-  if (!on) return null;
+  // Root steps aside while the phone's keyboard is up, so it never sits on top of the typing.
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setTyping(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  if (!on || typing) return null;
   const p = mood ?? pose;
   // The box keeps one width whatever the pose, so nothing beside Root shifts when the picture changes.
   return (

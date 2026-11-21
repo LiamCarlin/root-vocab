@@ -55,7 +55,7 @@ export function Growth({ stage, size = 38 }: { stage: 0 | 1 | 2 | 3; size?: numb
   const { c } = useTheme();
   const g = '#45B649';
   const bg = stage === 0 ? c.surface2 : stage === 3 ? c.peach : c.mintTint;
-  const label = ['Waiting', 'Sprouting', 'Growing', 'Rooted'][stage];
+  const label = ['To learn', 'Sprouting', 'Growing', 'Rooted'][stage];
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }} accessible accessibilityRole="image" accessibilityLabel={label}>
       <Svg width={size * 0.7} height={size * 0.7} viewBox="0 0 24 24">

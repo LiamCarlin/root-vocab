@@ -5,7 +5,7 @@ import { Platform, Vibration } from 'react-native';
 
 import { buddy } from './buddy';
 import { useStore } from './store';
-import { clipFor, playClip, primeClip, stopClips } from './voice';
+import { audioLib, clipFor, playClip, primeClip, stopClips } from './voice';
 
 // ── Speaking ──────────────────────────────────────────────────────────────
 // Bank words and their beats are recordings (voice.ts). Everything else, and every word on a
@@ -19,10 +19,46 @@ export function stopSpeaking() {
   } catch {}
 }
 
+// The phone's own voice, for everything that has no recording (sentences, the learner's own words).
+// Left to itself the phone picks its default voice, which on many iPhones is the old robotic one and
+// differs from phone to phone. Root picks the best English voice the phone has, once, and keeps it:
+// an enhanced (downloaded) US voice if there is one, preferring the warm female voices closest to the
+// recorded one.
+const PREFERRED = ['ava', 'samantha', 'allison', 'zoe', 'nicky', 'susan', 'evan', 'tom'];
+let voiceId: string | undefined;
+let voicePicked = false;
+function pickVoice() {
+  if (voicePicked) return;
+  voicePicked = true;
+  // The audio session is set up by the recordings' module; make sure it exists before the first line is spoken.
+  audioLib();
+  Speech.getAvailableVoicesAsync()
+    .then((all) => {
+      const en = all.filter((v) => /^en[-_]US/i.test(v.language));
+      const pool = en.length ? en : all.filter((v) => /^en/i.test(v.language));
+      const score = (v: Speech.Voice) => {
+        const id = `${v.identifier} ${v.name}`.toLowerCase();
+        let n = 0;
+        if (v.quality === Speech.VoiceQuality.Enhanced) n += 100;
+        if (id.includes('premium')) n += 50;
+        if (id.includes('enhanced')) n += 30;
+        const pref = PREFERRED.findIndex((p) => id.includes(p));
+        if (pref >= 0) n += 20 - pref;
+        // Novelty and whisper voices are never the one.
+        if (/eloquence|compact|whisper|bad news|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|wobble|zarvox|albert|fred|junior|ralph|kathy|bahh/.test(id)) n -= 200;
+        return n;
+      };
+      const best = [...pool].sort((a, b) => score(b) - score(a))[0];
+      if (best && score(best) > -100) voiceId = best.identifier;
+    })
+    .catch(() => {});
+}
+pickVoice();
+
 function speak(text: string, slow: boolean, onDone?: () => void) {
   try {
     Speech.stop();
-    Speech.speak(text, { language: 'en-US', rate: slow ? RATE.slow : RATE.normal, pitch: 1, onDone, onStopped: onDone, onError: onDone });
+    Speech.speak(text, { language: 'en-US', voice: voiceId, rate: slow ? RATE.slow : RATE.normal, pitch: 1, onDone, onStopped: onDone, onError: onDone });
   } catch {
     onDone?.();
   }
@@ -68,14 +104,34 @@ function beat(word: string, says: string[], i: number, fallback: string, opts: {
 
 let seq = 0;
 /**
- * Says the whole word, then each beat on its own, calling `onPart` as each one
- * starts so the matching tile can light up. Returns a cancel function.
+ * Says the whole word, then the word again said carefully, calling `onPart` as each beat starts so
+ * the matching tile lights up in time with it. The beats are heard inside the real word, the way a
+ * person says it, not as separate sounds that each turn into a different word ("act", "knowledge").
+ * A tapped tile still says its beat on its own (`sayBeat`). A word with no recording falls back to
+ * the phone saying each beat. Returns a cancel function.
  */
 export function sayByParts(text: string, says: string[], onPart: (i: number) => void, opts: { slow?: boolean; wholeFirst?: boolean } = {}): () => void {
   const mine = ++seq;
   const alive = () => mine === seq;
   const slow = opts.slow ?? useStore.getState().slowAudio;
   let stopHum: (() => void) | null = null;
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  const clip = clipFor(text, says.length);
+  const careful = (): boolean => {
+    if (!clip || !alive()) return false;
+    stopHum?.();
+    stopHum = humWord(says, true, text);
+    const ok = playClip(clip.slow, clip.ms.slow, () => {
+      timers.forEach(clearTimeout);
+      if (alive()) onPart(-1);
+    });
+    if (!ok) {
+      stopHum?.();
+      return false;
+    }
+    clip.ms.at.forEach((t, i) => timers.push(setTimeout(() => alive() && onPart(i), t)));
+    return true;
+  };
   const step = (i: number) => {
     if (!alive()) return;
     if (i >= says.length) {
@@ -85,12 +141,16 @@ export function sayByParts(text: string, says: string[], onPart: (i: number) => 
     onPart(i);
     stopHum = beat(text, says, i, says[i], { slow: opts.slow, onDone: () => setTimeout(() => step(i + 1), 220) });
   };
-  if (opts.wholeFirst === false) step(0);
+  const parts = () => {
+    if (!careful()) step(0);
+  };
+  if (opts.wholeFirst === false) parts();
   else {
     stopHum = humWord(says, slow, text);
-    say(speakable(text), { slow: opts.slow, onDone: () => setTimeout(() => step(0), 320) });
+    say(speakable(text), { slow: opts.slow, onDone: () => timers.push(setTimeout(parts, 320)) });
   }
   return () => {
+    timers.forEach(clearTimeout);
     if (alive()) {
       seq++;
       stopHum?.();

@@ -27,9 +27,9 @@ function TabBar({ state, navigateToTab }: { state: { index: number; routes: { na
     const key = state.routes.find((r) => r.name === t.name)?.key;
     const dot = t.name === 'practice' && due > 0;
     return (
-      <Tap key={t.name} onPress={() => key && navigateToTab(key)} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={dot ? `${t.label}, ${due} due` : t.label} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.ink : 'transparent' }}>
+      <Tap key={t.name} onPress={() => key && navigateToTab(key)} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={dot ? `${t.label}, ${due} due` : t.label} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.press : 'transparent' }}>
         <t.icon size={23} color={on ? c.onInk : c.ink3} strokeWidth={on ? 2.5 : 2.2} />
-        {dot && <View style={{ position: 'absolute', right: 9, top: 9, width: 11, height: 11, borderRadius: 6, backgroundColor: c.orange, borderWidth: 2, borderColor: on ? c.ink : c.surface }} />}
+        {dot && <View style={{ position: 'absolute', right: 9, top: 9, width: 11, height: 11, borderRadius: 6, backgroundColor: c.butter, borderWidth: 2, borderColor: on ? c.surface : c.ink }} />}
       </Tap>
     );
   };
@@ -46,7 +46,7 @@ function TabBar({ state, navigateToTab }: { state: { index: number; routes: { na
           }}
           accessibilityRole="button"
           accessibilityLabel="Find a word"
-          style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: c.orange, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4, borderBottomWidth: 4, borderBottomColor: '#D6781F' }}>
+          style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4, borderWidth: 2, borderColor: c.ink, borderBottomWidth: 5 }}>
           <Search size={28} color={ON_BLOCK.ink} strokeWidth={2.8} />
         </Pressable>
         {item(TABS[2])}

@@ -5,11 +5,10 @@ import { Text, View, useWindowDimensions } from 'react-native';
 import { Echo } from '@/components/hands/Echo';
 import { Controls, PartTiles, SylWord } from '@/components/learn';
 import { Block, Btn, Field, IconBtn, Tag, Tap } from '@/components/ui';
-import { TOPICS } from '@/data/profile';
 import { say, sayBeat, sayByParts } from '@/lib/audio';
 import { exampleFor, plain, splitAround } from '@/lib/lexicon';
 import { useStore } from '@/lib/store';
-import { ON_BLOCK, useTheme, wordSize } from '@/theme';
+import { ON_BLOCK, radius, useTheme, wordSize } from '@/theme';
 import { StepScreen } from './Frame';
 import type { StepProps } from './types';
 
@@ -24,6 +23,8 @@ export function Hear({ lex, top, next, skip }: StepProps) {
   const interests = useStore((s) => s.profile.interests);
   const { width } = useWindowDimensions();
   const [active, setActive] = useState(-1);
+  // The step is done when the learner has said the word back (or the phone could not listen and they held the button).
+  const [said, setSaid] = useState(false);
   const [meaning, setMeaning] = useState(lex.meaning);
   const cancel = useRef<(() => void) | null>(null);
   const stopHum = useRef<(() => void) | null>(null);
@@ -34,7 +35,6 @@ export function Hear({ lex, top, next, skip }: StepProps) {
 
   const example = useMemo(() => exampleFor(lex, interests), [lex, interests]);
   const [before, word, after] = splitAround(example?.text ?? '');
-  const topic = example?.topic ? TOPICS[example.topic] : null;
 
   const quiet = () => {
     cancel.current?.();
@@ -71,7 +71,9 @@ export function Hear({ lex, top, next, skip }: StepProps) {
     say(plain(example.text));
   };
 
-  const size = wordSize(lex.text, 46, Math.min(width, 480) - 56);
+  // The word shares its row with the 64px speaker button (plus a 12px gap), so it sizes to what is left and stays on one line.
+  // The dots between beats take room too, so each counts as a letter.
+  const size = wordSize(lex.text.padEnd(lex.text.length + lex.parts.length - 1, ' '), 46, Math.min(width, 480) - 56 - 76);
   const sentence = [text('body'), { color: c.ink }];
 
   return (
@@ -82,21 +84,16 @@ export function Hear({ lex, top, next, skip }: StepProps) {
       gap={18}
       footer={
         <>
-          <Controls onReplay={play} onSkip={skip} />
-          <Btn
-            icon={ArrowRight}
-            a11y="Next"
-            onPress={() => {
-              next();
-            }}
-          />
+          {/* The big speaker beside the word replays it, so the row has no second one. */}
+          <Controls onSkip={skip} />
+          <Btn icon={said ? ArrowRight : undefined} label={said ? undefined : 'Say the word first'} a11y={said ? 'Next' : undefined} onPress={next} disabled={!said} />
         </>
       }>
       <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1 }}>
           <SylWord text={lex.text} parts={lex.parts} size={size} active={active} />
         </View>
-        <IconBtn icon={Volume2} label={`Hear ${lex.text}, then each beat`} kind="orange" size={64} onPress={play} />
+        <IconBtn icon={Volume2} label={`Hear ${lex.text}, then each beat`} kind="ink" size={64} onPress={play} />
       </View>
 
       <PartTiles parts={lex.parts} says={lex.custom ? undefined : lex.says} active={active} onPress={hearPart} />
@@ -123,12 +120,11 @@ export function Hear({ lex, top, next, skip }: StepProps) {
       </Block>
 
       {!!example && (
-        <Tap onPress={hearExample} scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`Hear it in a sentence: ${plain(example.text)}`} style={{ backgroundColor: c.surface2, borderRadius: 28, padding: 18, gap: 10, alignItems: 'flex-start' }}>
+        <Tap onPress={hearExample} scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`Hear it in a sentence: ${plain(example.text)}`} style={{ backgroundColor: c.surface, borderRadius: radius.xl, padding: 18, gap: 10, alignItems: 'flex-start', borderWidth: 1.5, borderColor: '#CFD1DA' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c.ink, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c.press, alignItems: 'center', justifyContent: 'center' }}>
               <Volume2 size={16} color={c.onInk} strokeWidth={2.6} />
             </View>
-            {topic && <Tag icon={topic.icon} label={topic.label} tint={topic.tone} />}
           </View>
           <Text style={sentence}>
             {before}
@@ -140,7 +136,10 @@ export function Hear({ lex, top, next, skip }: StepProps) {
 
       {/* Your turn: the word is not learned until the mouth has made it. Root has said it; now the learner says it back. */}
       <Block pad={16} style={{ alignItems: 'center', gap: 2 }}>
-        <Echo key={lex.id} text={lex.text} parts={lex.parts} says={lex.says} whole quiet onDone={() => bump('echo')} />
+        <Echo key={lex.id} text={lex.text} parts={lex.parts} says={lex.says} whole quiet onDone={() => {
+            bump('echo');
+            setSaid(true);
+          }} />
       </Block>
     </StepScreen>
   );

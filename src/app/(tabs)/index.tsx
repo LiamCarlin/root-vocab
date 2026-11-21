@@ -1,30 +1,24 @@
-import { router, useFocusEffect, type Href } from 'expo-router';
-import { BookOpen, Flame, Hammer, Play, Target, Users, Zap } from 'lucide-react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { Flame, Play, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
+import { ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 
-import { Peek } from '@/components/Buddy';
-import { MascotBadge } from '@/components/Mascot';
 import { KIND_LABEL, Path, stopY, type StopFace } from '@/components/journey/Path';
-import { ChestSheet, StreakSheet } from '@/components/journey/Sheets';
-import { GemPill, GoalRing, QuestRow, Scene } from '@/components/rewards';
-import { Bar, Block, Btn, Rise, Screen, Stat, Tap, Txt } from '@/components/ui';
-import { KEEPSAKES, chapterOf } from '@/data/story';
-import { JOURNAL, RESTORE } from '@/data/valley';
-import { refreshCheckIns } from '@/lib/checkins';
-import { dueItems } from '@/lib/engine';
+import { StreakSheet } from '@/components/journey/Sheets';
+import { GemPill, GoalRing, Scene } from '@/components/rewards';
+import { Bar, Block, Btn, Rise, Screen, Stat, Txt } from '@/components/ui';
+import { chapterOf } from '@/data/story';
 import { stopTodo, stopWords } from '@/lib/journey';
-import { questsToday } from '@/lib/rewards';
 import { sfx } from '@/lib/sfx';
-import { currentStop, dueCount, goalProgress, journalPages, lexOf, streak, today, useStore } from '@/lib/store';
+import { currentStop, dueCount, goalProgress, lexOf, streak, today, useStore } from '@/lib/store';
 import { GUTTER, ON_BLOCK, useTheme } from '@/theme';
 import { TAB_SPACE } from './_layout';
 
 /**
- * The journey: one place in the valley per chapter, ten stops to clear its fog.
- * This is home. Everything that gives a reason to come back is on it: the place
- * getting clearer, today's goal, the streak, the quests, and the next stop with
- * Root already standing on it.
+ * The journey: one place in the valley per chapter, a path of stops to clear its fog.
+ * This is home, and it asks one thing: Start the next stop. Around it only what
+ * explains where you stand: the place getting clearer, today's goal, the streak,
+ * and the words due for review.
  */
 export default function Journey() {
   const { c } = useTheme();
@@ -32,7 +26,6 @@ export default function Journey() {
   const scroll = useRef<ScrollViewInstance>(null);
   const [focused, setFocused] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
-  const [chest, setChest] = useState<number | null>(null);
   const pathTop = useRef(0);
 
   const { journey } = s;
@@ -44,22 +37,18 @@ export default function Journey() {
   const fire = streak(s);
   const lit = s.practiceDays.includes(today(s));
   const due = dueCount(s);
-  // When a lot is due, the main button warms up first: new words wait until the old ones are watered.
-  // The path below still opens the next stop directly, so nothing is ever blocked.
-  const heavy = dueItems(s) > 12 && stops[cur]?.kind === 'learn';
-  const quests = questsToday(s);
-  const pages = journalPages(s);
+  // A learner who has not finished a lesson yet sees one thing to do: the place and its Start button.
+  const firstTime = !Object.values(s.words).some((w) => w.learnedOn) && doneCount === 0;
 
-  // Root only moves on while this screen is in view and no chest is being opened,
-  // so the walk to the next stop is something you see.
+  // Root only moves on while this screen is in view, so the walk to the next stop is something you see.
   const [shown, setShown] = useState(cur);
-  if (focused && chest === null && shown !== cur) setShown(cur);
+  if (focused && shown !== cur) setShown(cur);
 
   useFocusEffect(
     useCallback(() => {
       const st = useStore.getState();
       st.tick();
-      refreshCheckIns().catch(() => {}); // keep reminder text true to today's streak and place
+      st.splitPath();
       if (!st.journey.stops.length) st.finishOnboarding(); // builds the first chapter if it is somehow missing
       const j = useStore.getState().journey;
       // The story comes first: the prologue once, each place's opening, and its ending when every stop is done.
@@ -110,7 +99,8 @@ export default function Journey() {
     if (ids.length && todo.length) router.push(`/mission/${todo[0]}?stop=${i}`);
     // Every word of the set is learned but the stop was never closed (the app was shut on the last screen): close it now.
     else if (ids.length) s.completeStop(i);
-    else if (st.kind === 'chest') setChest(i);
+    // Chests are gone from new chapters; one left on an older path just opens and moves on.
+    else if (st.kind === 'chest') s.openChest(i);
     else if (st.kind === 'find' || st.kind === 'spell' || st.kind === 'hands' || st.kind === 'challenge') router.push(`/play/${st.kind}?stop=${i}`);
     // A learn stop with no word left to give (the whole bank is learned) becomes a mixed round.
     else router.push(`/play/mix?stop=${i}`);
@@ -119,26 +109,19 @@ export default function Journey() {
   return (
     <Screen scroll={false} pad={false} gap={0}>
       <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: 4, paddingBottom: 24 + TAB_SPACE, gap: 14 }} showsVerticalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Tap onPress={() => router.push('/(tabs)/you')} accessibilityRole="button" accessibilityLabel="You">
-            <MascotBadge size={48} tone="brand" />
-          </Tap>
-          <View style={{ flex: 1 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10, minHeight: 48 }}>
           <Stat icon={Flame} value={fire} tint={lit ? 'orange' : 'ink3'} onPress={() => setStreakOpen(true)} a11y={`${fire} day streak${lit ? '' : ', not yet today'}. Open streak.`} />
-          <GemPill value={s.gems} onPress={() => router.push('/shop' as Href)} />
+          <GemPill value={s.gems} onPress={() => setStreakOpen(true)} />
         </View>
 
         {/* The place. The fog thins as the chapter's stops are cleared. */}
-        <Rise style={{ marginTop: 44 }}>
+        <Rise style={{ marginTop: 8 }}>
           <Block tone={ch.tone} pad={0} style={{ minHeight: 268 }} a11y={`Chapter ${ch.n}, ${ch.name}. ${doneCount} of ${stops.length} stops cleared.`}>
             <View style={{ position: 'absolute', right: -14, top: 10 }}>
               <Scene scene={ch.scene} size={184} fog={stops.length ? (1 - doneCount / stops.length) * 0.82 : 0.82} fogColor={c[ch.tone]} />
             </View>
             <View style={{ padding: 22, gap: 6, flex: 1 }}>
-              <Txt v="label" color="ink2">
-                Chapter {ch.n}
-              </Txt>
-              <Txt v="display" style={{ maxWidth: '54%' }}>
+              <Txt v="display" style={{ maxWidth: '54%' }} accessibilityRole="header">
                 {ch.name}
               </Txt>
               <View style={{ flex: 1, minHeight: 34 }} />
@@ -149,68 +132,30 @@ export default function Journey() {
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 }}>
-                {next && heavy ? (
-                  <Btn icon={Zap} label="Warm up" a11y={`Warm up first. ${due} ${due === 1 ? 'word is' : 'words are'} due.`} onPress={() => router.push('/play/mix')} flex={1} />
-                ) : next ? (
-                  <Btn icon={Play} label="Start" a11y={`Start the next stop: ${nextLabel}`} onPress={() => open(cur)} flex={1} />
+                {next ? (
+                  <Btn icon={Play} label={(faces[cur]?.got ?? 0) > 0 ? 'Carry on' : 'Start'} a11y={`Start the next stop: ${nextLabel}`} onPress={() => open(cur)} flex={1} />
                 ) : (
                   <View style={{ flex: 1 }} />
                 )}
-                <GoalRing done={goal.done} goal={goal.goal} size={58} />
+                {/* Today's goal: stops done of the stops picked in setup. Labelled, or "0/2" is a riddle. */}
+                <View style={{ alignItems: 'center', gap: 2 }}>
+                  <GoalRing done={goal.done} goal={goal.goal} size={52} />
+                  <Text style={{ fontFamily: 'Lexend_500Medium', fontSize: 12, color: ON_BLOCK.ink2 }}>today</Text>
+                </View>
               </View>
             </View>
-          </Block>
-          <Peek from="top" align="start" inset={76} size={150} />
-        </Rise>
-
-        {/* Who you are doing this with, what your gems have rebuilt, and the pages found so far. */}
-        <Rise i={1}>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {[
-              { icon: Users, label: 'Friends', value: s.friends.length ? String(s.friends.length) : '+', to: '/friends', tone: 'pink' as const, dot: false, a11y: s.friends.length ? `Friends. ${s.friends.length} added.` : 'Friends. Add someone to do this with.' },
-              { icon: Hammer, label: 'Valley', value: `${s.built.length}/${RESTORE.length}`, to: '/shop', tone: 'mint' as const, dot: false, a11y: `Shop. ${s.built.length} of ${RESTORE.length} things rebuilt in the valley.` },
-              { icon: BookOpen, label: 'Journal', value: `${pages}/${JOURNAL.length}`, to: '/journal', tone: 'butter' as const, dot: pages > s.journalSeen, a11y: `Journal. ${pages} of ${JOURNAL.length} pages found${pages > s.journalSeen ? ', one new' : ''}.` },
-            ].map((x) => (
-              <Block key={x.label} tone={x.tone} pad={12} onPress={() => router.push(x.to as Href)} a11y={x.a11y} style={{ flex: 1, gap: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <x.icon size={20} color={ON_BLOCK.ink} strokeWidth={2.4} />
-                  {x.dot && <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: c.orange, borderWidth: 2, borderColor: ON_BLOCK.ink }} />}
-                </View>
-                <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 19, lineHeight: 24, color: ON_BLOCK.ink }}>{x.value}</Text>
-                <Txt v="caption" color="ink2" numberOfLines={1}>
-                  {x.label}
-                </Txt>
-              </Block>
-            ))}
-          </View>
-        </Rise>
-
-        {/* Today's three quests. */}
-        <Rise i={1}>
-          <Block pad={18} style={{ gap: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Target size={18} color={c.ink2} strokeWidth={2.4} />
-              <Txt v="label" color="ink2">
-                Today
-              </Txt>
-            </View>
-            {quests.map((id) => (
-              <QuestRow key={id} id={id} />
-            ))}
           </Block>
         </Rise>
 
         {/* Words that are due: a short mixed round to warm up. */}
-        {due > 0 && (
+        {due > 0 && !firstTime && (
           <Rise i={2}>
-            <Block tone="pink" pad={18} onPress={() => router.push('/play/mix')} a11y={`Warm-up. ${due} ${due === 1 ? 'word is' : 'words are'} due.`} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={24} color="#FFFFFF" fill="#FFFFFF" />
-              </View>
+            <Block pad={18} onPress={() => router.push('/play/mix')} a11y={`Warm-up. ${due} ${due === 1 ? 'word is' : 'words are'} due.`} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <Zap size={26} color={c.ink} strokeWidth={2.4} />
               <Txt v="heading" style={{ flex: 1 }}>
                 Warm-up
               </Txt>
-              <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 40, lineHeight: 46, color: ON_BLOCK.ink }}>{due}</Text>
+              <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 40, lineHeight: 46, color: c.ink }}>{due}</Text>
             </Block>
           </Rise>
         )}
@@ -222,33 +167,9 @@ export default function Journey() {
           <Path key={journey.chapter} stops={stops} faces={faces} at={shown} tone={ch.tone} onOpen={open} />
         </View>
 
-        {/* What each cleared place gave back. */}
-        {journey.cleared.length > 0 && (
-          <Block pad={16} style={{ gap: 12 }}>
-            <Txt v="label" color="ink2">
-              Keepsakes
-            </Txt>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
-              {journey.cleared.map((n) => {
-                const done = chapterOf(n);
-                return (
-                  <View key={n} style={{ alignItems: 'center', gap: 6, width: 84 }} accessible accessibilityLabel={`${done.keepsake}, from ${done.name}`}>
-                    <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: c[done.tone], alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                      <Image source={KEEPSAKES[done.scene]} style={{ width: 54, height: 54 }} resizeMode="contain" />
-                    </View>
-                    <Txt v="caption" color="ink2" center numberOfLines={2}>
-                      {done.keepsake}
-                    </Txt>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </Block>
-        )}
       </ScrollView>
 
       <StreakSheet visible={streakOpen} onClose={() => setStreakOpen(false)} />
-      <ChestSheet index={chest} onClose={() => setChest(null)} />
     </Screen>
   );
 }

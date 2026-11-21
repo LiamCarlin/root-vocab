@@ -1,13 +1,13 @@
-import { Hand, Lightbulb, Mic, SkipForward, Snail, Square, Volume2 } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Hand, Lightbulb, Mic, SkipForward, Square, Volume2 } from 'lucide-react-native';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View, type GestureResponderEvent } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import type { Mark } from '@/lib/lexicon';
 import { useStore } from '@/lib/store';
-import { ON_BLOCK, SYLLABLE_TONES, radius, trackSteps, useTheme, type BlockTone } from '@/theme';
-import { IconBtn, Tap, Txt } from './ui';
+import { ON_BLOCK, radius, trackSteps, useTheme, type BlockTone } from '@/theme';
+import { Btn, Tap, Txt } from './ui';
 
 // The pieces every lesson step and game shares: the word in its syllable colours, the beat
 // tiles, the audio controls, the mic, the letter-by-letter spelling marks and a plain writing
@@ -22,7 +22,7 @@ export function PartTiles({ parts, says, active = -1, onPress, states }: { parts
         const st = states?.[i] ?? 'idle';
         const on = i === active;
         const empty = st === 'empty';
-        const bg = empty ? 'transparent' : st === 'off' ? c.errorTint : syl(i);
+        const bg = empty ? 'transparent' : st === 'off' ? c.sun : syl(i);
         return (
           <View key={i} style={{ flex: Math.max(p.length, 2.4), gap: 6 }}>
             <Tap
@@ -30,7 +30,7 @@ export function PartTiles({ parts, says, active = -1, onPress, states }: { parts
               disabled={!onPress}
               accessibilityRole="button"
               accessibilityLabel={empty ? `Empty slot ${i + 1}` : `Part ${i + 1}: ${p}`}
-              style={{ height: 68, borderRadius: radius.md, backgroundColor: bg, borderWidth: empty ? 2.5 : on ? 3 : 0, borderColor: empty ? (on ? c.ink : c.line) : c.ink, borderStyle: empty ? 'dashed' : 'solid', alignItems: 'center', justifyContent: 'center', transform: [{ translateY: on && !empty ? -4 : 0 }] }}>
+              style={{ height: 68, borderRadius: radius.md, backgroundColor: bg, borderWidth: empty ? 2.5 : on ? 3 : onPress ? 1.5 : 0, borderColor: empty ? (on ? c.ink : c.line) : on ? c.ink : 'rgba(14,14,19,0.28)', borderStyle: empty ? 'dashed' : 'solid', alignItems: 'center', justifyContent: 'center', transform: [{ translateY: on && !empty ? -4 : 0 }] }}>
               <Text numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3} style={{ fontFamily: font('b'), fontSize: (parts.length > 4 ? 17 : 22) * Math.min(scale, 1.1), color: st === 'off' ? c.ink : ON_BLOCK.ink, paddingHorizontal: 2 }}>
                 {empty ? '' : p}
               </Text>
@@ -47,16 +47,18 @@ export function PartTiles({ parts, says, active = -1, onPress, states }: { parts
   );
 }
 
-/** The whole word in big type with a coloured bar under each syllable. */
-export function SylWord({ text, parts, size = 44, active = -1, color, on }: { text: string; parts: string[]; size?: number; active?: number; color?: string; /** The block colour this sits on, so no bar disappears into it. */ on?: BlockTone }) {
+/**
+ * The whole word in big type. Syllables are split by a small dot ("anx·ious"), the way a
+ * dictionary does it: no colour, so nothing reads as a meaning it does not have.
+ */
+export function SylWord({ text, parts, size = 44, active = -1, color }: { text: string; parts: string[]; size?: number; active?: number; color?: string; /** Kept for callers; the word no longer takes colour from the block under it. */ on?: BlockTone }) {
   const { c, font } = useTheme();
   // The learner's letter-spacing setting reaches the big word too.
   const extra = trackSteps[useStore((s) => s.display.spacing)];
   const track = 0.6 + extra;
   // Wider spacing makes the word longer; a slightly smaller size keeps a word that fitted on one line on one line.
   const fs = extra ? Math.floor(size * 0.955) : size;
-  const tones = SYLLABLE_TONES.filter((t) => t !== on);
-  const syl = (i: number) => c[tones[i % tones.length]];
+  const ink = color ?? c.ink;
   const chunks = useMemo(() => {
     const out: { p: string; space: boolean }[] = [];
     let pos = 0;
@@ -72,11 +74,11 @@ export function SylWord({ text, parts, size = 44, active = -1, color, on }: { te
     return out;
   }, [text, parts]);
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }} accessible accessibilityRole="header" accessibilityLabel={text}>
+    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }} accessible accessibilityRole="header" accessibilityLabel={text}>
       {chunks.map((ch, i) => (
-        <View key={i} style={{ marginLeft: ch.space ? size * 0.3 : 0, alignItems: 'stretch' }}>
-          <Text style={{ fontFamily: font('b'), fontSize: fs, lineHeight: size * 1.18, letterSpacing: track, color: color ?? c.ink, opacity: active >= 0 && active !== i ? 0.35 : 1 }}>{ch.p}</Text>
-          <View style={{ height: 7, borderRadius: 4, backgroundColor: syl(i), marginHorizontal: 1.5 }} />
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: ch.space ? size * 0.3 : 0 }}>
+          {i > 0 && !ch.space && <View style={{ width: Math.max(4, size * 0.11), height: Math.max(4, size * 0.11), borderRadius: size, backgroundColor: ink, opacity: 0.35, marginHorizontal: Math.max(2, size * 0.06) }} />}
+          <Text style={{ fontFamily: font('b'), fontSize: fs, lineHeight: size * 1.18, letterSpacing: track, color: ink, opacity: active >= 0 && active !== i ? 0.35 : 1 }}>{ch.p}</Text>
         </View>
       ))}
     </View>
@@ -84,15 +86,22 @@ export function SylWord({ text, parts, size = 44, active = -1, color, on }: { te
 }
 
 // ── Controls: icons only, same place on every step ────────────────────────
-export function Controls({ onReplay, onSkip, onHint }: { onReplay: () => void; onSkip?: () => void; onHint?: () => void }) {
-  const slow = useStore((s) => s.slowAudio);
-  const patch = useStore((s) => s.patch);
+/**
+ * The lesson hands its "previous step" down to every step's controls, so going back sits in the
+ * same place on every screen. Outside a lesson there is none and the button is not shown.
+ */
+export const StepBack = createContext<(() => void) | null>(null);
+
+/** Back, replay, hint and skip, each with its word. Slower speech is a setting (Settings › Sound and feel), not a button here. */
+export function Controls({ onReplay, onSkip, onHint }: { onReplay?: () => void; onSkip?: () => void; onHint?: () => void }) {
+  const back = useContext(StepBack);
   return (
-    <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
-      <IconBtn icon={Volume2} label="Hear it again" onPress={onReplay} />
-      <IconBtn icon={Snail} label={slow ? 'Slower speech is on' : 'Slower speech'} active={slow} onPress={() => patch({ slowAudio: !slow })} />
-      {onHint && <IconBtn icon={Lightbulb} label="Hint" kind="butter" onPress={onHint} />}
-      {onSkip && <IconBtn icon={SkipForward} label="Skip this step" onPress={onSkip} />}
+    // Words on every control: a lone ⏭ was read as "next", not "skip this step".
+    <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
+      {back && <Btn kind="soft" small icon={ArrowLeft} label="Back" a11y="Previous step" onPress={back} />}
+      {onReplay && <Btn kind="soft" small icon={Volume2} label="Replay" a11y="Hear it again" onPress={onReplay} />}
+      {onHint && <Btn kind="soft" small icon={Lightbulb} label="Hint" onPress={onHint} />}
+      {onSkip && <Btn kind="soft" small icon={SkipForward} label="Skip" a11y="Skip this step" onPress={onSkip} />}
     </View>
   );
 }
@@ -112,7 +121,7 @@ export function MicButton({ listening, onPress, size = 92, disabled }: { listeni
   return (
     <View style={{ width: size * 1.6, height: size * 1.6, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={[{ position: 'absolute', width: size, height: size, borderRadius: size / 2, backgroundColor: c.orange }, ring]} />
-      <Tap onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={listening ? 'Stop listening' : 'Say it'} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: listening ? c.orange : c.ink, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : 1 }}>
+      <Tap onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={listening ? 'Stop listening' : 'Say it'} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: listening ? c.orange : c.press, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : 1 }}>
         {listening ? <Square size={size * 0.28} color={ON_BLOCK.ink} fill={ON_BLOCK.ink} /> : <Mic size={size * 0.4} color={c.onInk} strokeWidth={2.2} />}
       </Tap>
     </View>
@@ -131,7 +140,7 @@ export function SpellingMarks({ marks, label }: { marks: Mark[]; label: string }
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ flexDirection: 'row', gap, alignSelf: 'stretch' }} accessible accessibilityLabel={`${label}: ${marks.map((m) => m.ch).join('')}`}>
       {marks.map((m, i) => (
-        <View key={i} style={{ width: m.ch === ' ' ? tile * 0.4 : tile, height: Math.max(34, 48 * scale * k), borderRadius: 12 * Math.max(0.6, k), alignItems: 'center', justifyContent: 'center', backgroundColor: m.ok ? c.surface2 : m.kind === 'missing' ? c.butter : c.orange }}>
+        <View key={i} style={{ width: m.ch === ' ' ? tile * 0.4 : tile, height: Math.max(34, 48 * scale * k), borderRadius: 12 * Math.max(0.6, k), alignItems: 'center', justifyContent: 'center', backgroundColor: m.ok ? c.surface2 : c.butter, borderWidth: m.ok ? 0 : 2, borderColor: ON_BLOCK.ink, borderStyle: m.kind === 'missing' ? 'dashed' : 'solid' }}>
           <Text maxFontSizeMultiplier={1.3} style={{ fontFamily: font('b'), fontSize: Math.max(13, 24 * scale * k), color: m.ok ? c.ink : ON_BLOCK.ink }}>{m.ch}</Text>
         </View>
       ))}

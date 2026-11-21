@@ -1,4 +1,4 @@
-import { ChevronsRight, Hand, MousePointerClick, Pointer, RotateCcw, Smartphone, Undo2 } from 'lucide-react-native';
+import { ChevronsRight, Hand, MousePointerClick, RotateCcw, Smartphone, Undo2 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 
@@ -9,7 +9,7 @@ import { SandTray } from '@/components/hands/SandTray';
 import { TapSweep } from '@/components/hands/TapSweep';
 import { TracePad, type TraceEvent } from '@/components/hands/TracePad';
 import { Controls, SylWord } from '@/components/learn';
-import { IconBtn } from '@/components/ui';
+import { Btn } from '@/components/ui';
 import { sayBeat, sayHum } from '@/lib/audio';
 import { useStore } from '@/lib/store';
 import { wordSize } from '@/theme';
@@ -30,7 +30,6 @@ function Sensory({ kind, lex, onResult, done }: GameProps & { kind: Kind }) {
   const report = useReport(onResult);
   const bump = useStore((s) => s.bump);
   const [run, setRun] = useState(0);
-  const [assist, setAssist] = useState(false);
   const [finished, setFinished] = useState(false);
   const [off, setOff] = useState(false);
   const [input, setInput] = useState<'tilt' | 'touch'>('touch');
@@ -57,11 +56,12 @@ function Sensory({ kind, lex, onResult, done }: GameProps & { kind: Kind }) {
 
   /** `wholeAfter` is how long to wait before the whole word is said: long enough for the last beat or letter to finish. */
   const finish = useCallback(
-    (wholeAfter: number | null) => {
+    (wholeAfter: number | null, r: 0.5 | 1 = 0.5) => {
       setFinished(true);
       bump(kind);
-      // Supported practice, not recall: the word was in front of the learner, so it counts as a half.
-      report({ r: 0.5 });
+      // Supported practice counts as a half: the word was in front of the learner. The sand tray is
+      // recall checked by Root, so a word written right first time counts in full.
+      report({ r });
       if (wholeAfter === null) return;
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
@@ -76,13 +76,13 @@ function Sensory({ kind, lex, onResult, done }: GameProps & { kind: Kind }) {
 
   const locked = done || finished;
   const padH = Math.max(230, Math.min(MAX_H[kind === 'marble' ? 'marble' : kind === 'sand' ? 'sand' : 'trace'], height - 470));
-  const padKey = `${kind}-${run}-${assist ? 'a' : 'f'}`;
+  const padKey = `${kind}-${run}`;
   const restart = () => setRun((r) => r + 1);
 
   if (kind === 'sand') {
     return (
       <View style={{ flex: 1 }} pointerEvents={done ? 'none' : 'auto'}>
-        <SandTray text={text} parts={parts} height={Math.max(220, Math.min(300, height - 520))} onDone={() => finish(200)} />
+        <SandTray text={text} parts={parts} height={Math.max(220, Math.min(300, height - 520))} onPart={onPart} onDone={(tries) => finish(900, tries <= 1 ? 1 : 0.5)} />
       </View>
     );
   }
@@ -107,7 +107,9 @@ function Sensory({ kind, lex, onResult, done }: GameProps & { kind: Kind }) {
         </View>
         <Coach icon={sweeping ? ChevronsRight : MousePointerClick} text={finished ? 'Tapped and blended.' : sweeping ? 'Now sweep across to blend them.' : 'One tap for each beat, left to right.'} tone={finished ? 'good' : 'plain'} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <IconBtn
+          <Btn
+            kind="soft"
+            small
             icon={RotateCcw}
             label="Start again"
             disabled={locked}
@@ -127,16 +129,15 @@ function Sensory({ kind, lex, onResult, done }: GameProps & { kind: Kind }) {
     <View style={{ flex: 1, gap: 12 }}>
       {/* Once it is done the pad stays as it finished, and stops taking touches. */}
       <View pointerEvents={locked ? 'none' : 'auto'}>
-        {kind === 'trace' && <TracePad key={padKey} text={text} parts={parts} onPart={onPart} onDone={onDone} onState={onTrace} assist={assist} height={padH} />}
+        {kind === 'trace' && <TracePad key={padKey} text={text} parts={parts} onPart={onPart} onDone={onDone} onState={onTrace} height={padH} />}
         {kind === 'marble' && <MarbleRun key={padKey} text={text} parts={parts} onPart={onPart} onDone={onDone} onInput={setInput} height={padH} />}
       </View>
 
-      {kind === 'trace' && <Coach icon={off ? Undo2 : assist ? Pointer : Hand} text={finished ? 'Traced.' : off ? 'Back to the dot.' : assist ? 'Touch each letter to write it.' : 'Start at the dot. Follow the arrow.'} tone={finished ? 'good' : off ? 'warn' : 'plain'} />}
+      {kind === 'trace' && <Coach icon={off ? Undo2 : Hand} text={finished ? 'Traced.' : off ? 'Back to the dot.' : 'Start at the dot. Follow the arrow.'} tone={finished ? 'good' : off ? 'warn' : 'plain'} />}
       {kind === 'marble' && <Coach icon={input === 'tilt' ? Smartphone : Hand} text={finished ? 'Rolled.' : input === 'tilt' ? 'Tip the phone the way the letter goes.' : 'Drag on the board to tip it.'} tone={finished ? 'good' : 'plain'} />}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        {kind === 'trace' && <IconBtn icon={Pointer} label="Touch a letter to write it, instead of tracing" active={assist} disabled={locked} onPress={() => setAssist((t) => !t)} />}
-        <IconBtn icon={RotateCcw} label="Start again" disabled={locked} onPress={restart} />
+        <Btn kind="soft" small icon={RotateCcw} label="Start again" disabled={locked} onPress={restart} />
         <View style={{ flex: 1 }} />
         <Controls onReplay={() => sayHum(text, says)} />
       </View>

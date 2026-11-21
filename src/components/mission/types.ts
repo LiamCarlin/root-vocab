@@ -3,9 +3,13 @@ import type { ReactNode } from 'react';
 import type { Lexeme } from '@/lib/lexicon';
 import type { LessonStats } from '@/lib/store';
 
-// One word, seven ways in: hear it, link it, drum it, build it, move through it, spell it, use it.
+// One word, five ways in: hear it (and its beats), link it, move through it, spell it, use it.
+// It used to be seven. Beats (tap and sweep) and Build (put the pieces in order) both went over the
+// syllables again right after Hear had done it, which made a lesson long and repetitive; the beats
+// still come in through the hand in Hear (tap a tile) and in Move. The two ids stay in the type so
+// lessons recorded before the change still read.
 export type StepId = 'hear' | 'link' | 'beats' | 'build' | 'move' | 'spell' | 'use';
-export const STEP_ORDER: StepId[] = ['hear', 'link', 'beats', 'build', 'move', 'spell', 'use'];
+export const STEP_ORDER: StepId[] = ['hear', 'link', 'move', 'spell', 'use'];
 
 /** The steps this word can run. A learner's own word has no web or pictures, so it skips Link. */
 export const stepsFor = (lex: Pick<Lexeme, 'links' | 'pics'>): StepId[] => STEP_ORDER.filter((s) => s !== 'link' || lex.links.length > 0 || lex.pics.length > 0);

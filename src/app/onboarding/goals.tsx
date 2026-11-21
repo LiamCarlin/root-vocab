@@ -1,29 +1,20 @@
 import { router } from 'expo-router';
-import { ArrowRight, Check, Flame, Leaf, Zap, type LucideIcon } from 'lucide-react-native';
+import { ArrowRight, Check } from 'lucide-react-native';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Peek } from '@/components/Buddy';
-import { Burst } from '@/components/fx';
-import { Block, Btn, Rise, Screen, SectionLabel, Tap, TopBar, Txt } from '@/components/ui';
+import { PacePicker } from '@/components/PacePicker';
+import { Block, Btn, Rise, Screen, SectionLabel, TopBar, Txt } from '@/components/ui';
 import { STRANDS, STRAND_ORDER, type Strand } from '@/data/profile';
 import { sfx } from '@/lib/sfx';
 import { useStore } from '@/lib/store';
-import { ON_BLOCK, radius, useTheme } from '@/theme';
-
-const PACE: { goal: 1 | 2 | 3; label: string; icon: LucideIcon }[] = [
-  { goal: 1, label: 'Easy', icon: Leaf },
-  { goal: 2, label: 'Steady', icon: Flame },
-  { goal: 3, label: 'Keen', icon: Zap },
-];
+import { useTheme } from '@/theme';
 
 /** Goals. Which of the three strands matter most, and how much to do in a day. */
 export default function Goals() {
-  const { c, font } = useTheme();
+  const { c } = useTheme();
   const goals = useStore((s) => s.profile.goals);
-  const goal = useStore((s) => s.goal);
   const setProfile = useStore((s) => s.setProfile);
-  const patch = useStore((s) => s.patch);
   const [fresh, setFresh] = useState<{ id: Strand; n: number } | null>(null);
 
   const toggle = (id: Strand) => {
@@ -36,9 +27,9 @@ export default function Goals() {
   };
 
   return (
-    <Screen gap={14} top={<TopBar steps={{ total: 5, done: 1 }} />} footer={<Btn
+    <Screen gap={14} top={<TopBar steps={{ total: 4, done: 1 }} />} footer={<Btn
           icon={ArrowRight}
-          a11y="Next"
+          label="Next"
           onPress={() => {
             // Nothing picked means all three matter.
             if (!goals.length) setProfile({ goals: [...STRAND_ORDER] });
@@ -56,50 +47,23 @@ export default function Goals() {
         const on = goals.includes(id);
         return (
           <Rise key={id} i={i + 1}>
-            <Block tone={on ? st.tone : 'surface'} pad={18} onPress={() => toggle(id)} a11y={`${st.goal}${on ? ', selected' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 96 }}>
-              {on && fresh?.id === id && <Burst key={fresh.n} size={160} />}
-              <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: on ? ON_BLOCK.ink : c[st.tone], alignItems: 'center', justifyContent: 'center' }}>
-                <st.icon size={26} color={on ? '#FFFFFF' : ON_BLOCK.ink} strokeWidth={2.4} />
-              </View>
+            <Block outline={on ? 'ink' : undefined} pad={18} onPress={() => toggle(id)} a11y={`${st.goal}${on ? ', selected' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 96 }}>
+              <st.icon size={28} color={c.ink} strokeWidth={2.3} />
               <View style={{ flex: 1 }}>
                 <Txt v="heading">{st.goal}</Txt>
               </View>
-              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: on ? ON_BLOCK.ink : 'transparent', borderWidth: on ? 0 : 2, borderColor: c.line, alignItems: 'center', justifyContent: 'center' }}>{on && <Check size={18} color="#FFFFFF" strokeWidth={3.2} />}</View>
+              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: on ? c.ink : 'transparent', borderWidth: on ? 0 : 2, borderColor: c.line, alignItems: 'center', justifyContent: 'center' }}>{on && <Check size={18} color={c.onInk} strokeWidth={3.2} />}</View>
             </Block>
           </Rise>
         );
       })}
 
       {/* How much in a day. Root looks over the top of the card. */}
-      <Rise i={4} style={{ marginTop: 58 }}>
+      <Rise i={4} style={{ marginTop: 10 }}>
         <View style={{ position: 'relative' }}>
-          <Peek from="top" size={150} align="end" inset={26} />
           <Block pad={18} style={{ gap: 12 }}>
-            <SectionLabel style={{ marginTop: 0 }}>Each day</SectionLabel>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {PACE.map((p) => {
-                const on = goal === p.goal;
-                const fg = on ? ON_BLOCK.ink : c.ink;
-                return (
-                  <Tap
-                    key={p.goal}
-                    onPress={() => {
-                      if (!on) sfx.play('tap');
-                      patch({ goal: p.goal });
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${p.label}: ${p.goal} ${p.goal === 1 ? 'stop' : 'stops'} a day`}
-                    accessibilityState={{ selected: on }}
-                    style={{ flex: 1, minHeight: 118, borderRadius: radius.lg, backgroundColor: on ? c.orange : c.surface2, alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 12 }}>
-                    <p.icon size={22} color={fg} strokeWidth={2.4} />
-                    <Text style={{ fontFamily: font('b'), fontSize: 30, lineHeight: 36, color: fg }}>{p.goal}</Text>
-                    <Txt v="bodyS" style={{ color: fg }}>
-                      {p.label}
-                    </Txt>
-                  </Tap>
-                );
-              })}
-            </View>
+            <SectionLabel style={{ marginTop: 0 }}>Stops on the journey each day</SectionLabel>
+            <PacePicker />
           </Block>
         </View>
       </Rise>

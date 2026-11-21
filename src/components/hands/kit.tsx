@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
 import { Tap, Txt } from '@/components/ui';
-import { ON_BLOCK, SYLLABLE_TONES, radius, useTheme } from '@/theme';
+import { radius, sylFill, useTheme } from '@/theme';
 
 // Shared by the hands-on pads (trace, marble run, sand tray, tap and sweep, echo).
 //
@@ -45,7 +45,7 @@ export function WordStrip({ parts, text, cur, done, dark }: { parts: string[]; t
         return (
           <View key={i} style={{ marginLeft: gaps[i] ? 8 : 0 }}>
             <Text style={{ fontFamily: font(finished || now ? 'b' : 's'), fontSize: size, lineHeight: size * 1.3, letterSpacing: 0.6, color: finished || now ? ink : wait }}>{p}</Text>
-            <View style={{ height: 4, borderRadius: 2, marginHorizontal: 1, backgroundColor: finished ? c[SYLLABLE_TONES[i % SYLLABLE_TONES.length]] : now ? ink : 'transparent' }} />
+            <View style={{ height: 4, borderRadius: 2, marginHorizontal: 1, backgroundColor: finished ? sylFill(i) : now ? ink : 'transparent' }} />
           </View>
         );
       })}
@@ -56,22 +56,18 @@ export function WordStrip({ parts, text, cur, done, dark }: { parts: string[]; t
 /** One line under a pad: what to do right now. An icon and a handful of words. */
 export function Coach({ icon: Icon, text, tone = 'plain' }: { icon: LucideIcon; text: string; tone?: 'plain' | 'good' | 'warn' }) {
   const { c } = useTheme();
-  const bg = tone === 'good' ? c.mint : tone === 'warn' ? c.orange : c.surface2;
-  const ink = tone === 'plain' ? c.ink : ON_BLOCK.ink;
+  // A line to read, so its icon sits bare: a filled circle would make it look like a button.
+  // Green only when the move is done; yellow ("look here") when the finger has left the letter.
+  const ink = tone === 'good' ? c.success : tone === 'warn' ? c.warn : c.ink2;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 36 }} accessibilityLiveRegion="polite">
-      <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={17} color={ink} strokeWidth={2.4} />
-      </View>
+      <Icon size={20} color={ink} strokeWidth={2.4} />
       <Txt v="bodyS" color="ink2" style={{ flex: 1 }} numberOfLines={2}>
         {text}
       </Txt>
     </View>
   );
 }
-
-/** Letters are named as letters ("B"), anything else is said as written. */
-export const letterName = (ch: string) => (/[a-z]/i.test(ch) ? ch.toUpperCase() : ch);
 
 /** A segmented control: one row, a few choices, each an icon with a word under it. The chosen one is filled in ink. */
 export function Segmented<T extends string>({ options, value, onChange, a11y }: { options: { id: T; icon: LucideIcon; label: string; a11y: string }[]; value: T; onChange: (id: T) => void; a11y: string }) {

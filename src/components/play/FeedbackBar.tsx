@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Lightbulb, Snail, Sprout, Volume2 } from 'lucide-react-native';
+import { ArrowRight, Check, Lightbulb, Sprout, Volume2 } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -50,7 +50,6 @@ export function FeedbackBar({ res, lex, line, last, onContinue, onHeight, positi
             <View style={{ flex: 1, alignItems: 'flex-start' }}>
               <SylWord text={lex.text} parts={lex.parts} size={wordSize(lex.text, 34, 250)} color={ON_BLOCK.ink} on="butter" />
             </View>
-            <IconBtn icon={Snail} label={`Hear ${lex.text} slowly`} kind="glass" size={50} onPress={() => say(speakable(lex.text), { slow: true })} />
             <IconBtn icon={Volume2} label={`Hear ${lex.text}`} kind="ink" size={50} onPress={() => say(speakable(lex.text))} />
           </View>
         )}

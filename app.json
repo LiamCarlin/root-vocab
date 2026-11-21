@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.rootvocab.prototype",
@@ -50,7 +50,6 @@
           "speechRecognitionPermission": "Root turns what you say into a word so you can practice out loud. Nothing is saved."
         }
       ],
-      "expo-notifications",
       [
         "expo-sensors",
         {

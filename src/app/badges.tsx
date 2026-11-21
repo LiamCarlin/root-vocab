@@ -2,7 +2,6 @@ import { CircleQuestionMark } from 'lucide-react-native';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Rays } from '@/components/fx';
 import { Mascot } from '@/components/Mascot';
 import { Badge, unitFor } from '@/components/rewards';
 import { Bar, Block, Screen, Sheet, Tap, TopBar, Txt } from '@/components/ui';
@@ -31,7 +30,7 @@ export default function Badges() {
 
   return (
     <Screen top={<TopBar center={<Txt v="heading">Badges</Txt>} />} gap={14}>
-      <Block tone="butter" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 150 }} a11y={`${held} of ${total} badge levels earned`}>
+      <Block tone="brand" pad={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 150 }} a11y={`${held} of ${total} badge levels earned`}>
         <Mascot pose="trophy" size={128} />
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 54, lineHeight: 60, color: ON_BLOCK.ink }}>{held}</Text>
@@ -63,7 +62,7 @@ export default function Badges() {
               </Txt>
               {!secret && (
                 <View style={{ alignSelf: 'stretch', gap: 4, paddingHorizontal: 4 }}>
-                  <Bar value={progress(def, tier, value, next)} color={next === null ? 'success' : 'ink'} height={6} />
+                  <Bar value={progress(def, tier, value, next)} color={next === null ? 'success' : 'indigo'} height={6} />
                   <Txt v="caption" color="ink2" center>
                     {next === null ? `${value}` : `${value} / ${next}`}
                   </Txt>
@@ -87,7 +86,6 @@ export default function Badges() {
             ) : (
               <>
                 <View style={{ height: 220, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: radius.xl, backgroundColor: st.tier ? c[shown.tone] : c.surface2 }}>
-                  {st.tier > 0 && <Rays size={360} />}
                   <Badge id={shown.id} tier={st.tier} size={132} />
                 </View>
                 <Txt v="title" center>
@@ -102,7 +100,7 @@ export default function Badges() {
                   ))}
                 </View>
                 <View style={{ gap: 8, paddingHorizontal: 6 }}>
-                  <Bar value={progress(shown, st.tier, st.value, st.next)} color={st.next === null ? 'success' : 'ink'} />
+                  <Bar value={progress(shown, st.tier, st.value, st.next)} color={st.next === null ? 'success' : 'indigo'} />
                   <Txt v="body" center>
                     {st.next === null ? unitFor(st.value, shown.unit) : `${st.value} / ${st.next} ${shown.unit}`}
                   </Txt>

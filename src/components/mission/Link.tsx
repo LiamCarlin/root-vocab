@@ -6,18 +6,17 @@ import Svg, { Line } from 'react-native-svg';
 
 import { Pop } from '@/components/fx';
 import { Controls, SylWord } from '@/components/learn';
-import { Btn, IconBtn, Tap, Txt } from '@/components/ui';
+import { Btn, Tap, Txt } from '@/components/ui';
 import { buzz, say, speakable, stopSpeaking } from '@/lib/audio';
 import { noteUi } from '@/lib/signals';
 import { sfx } from '@/lib/sfx';
-import { ON_BLOCK, useTheme, wordSize, type BlockTone } from '@/theme';
+import { useTheme, wordSize } from '@/theme';
 import { StepScreen } from './Frame';
 import type { StepProps } from './types';
 
 const WEB_H = 310;
 const BUBBLE_W = 150;
 const BUBBLE_H = 54;
-const TONES: BlockTone[] = ['pink', 'mint', 'butter', 'lilac'];
 // Where each linked idea sits around the word, as a fraction of the web's half-width and half-height.
 const SPOTS = [
   { x: -1, y: -0.78 },
@@ -125,7 +124,7 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
       footer={
         <>
           <Controls onReplay={replay} onSkip={skip} />
-          <Btn icon={ArrowRight} a11y="Next" onPress={forward} disabled={!canGo} />
+          <Btn icon={canGo ? ArrowRight : undefined} label={canGo ? undefined : phase === 'web' ? 'Listen to the linked words' : 'Pick a picture first'} a11y={canGo ? 'Next' : undefined} onPress={forward} disabled={!canGo} />
         </>
       }>
       {phase === 'web' ? (
@@ -137,7 +136,7 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
                   {links.map((_, i) => {
                     if (i >= shown) return null;
                     const p = spot(i);
-                    return <Line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={lit === i ? c.ink : c[TONES[i]]} strokeWidth={lit === i ? 5 : 4} strokeLinecap="round" />;
+                    return <Line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={lit === i ? c.ink : c.line} strokeWidth={lit === i ? 5 : 4} strokeLinecap="round" />;
                   })}
                 </Svg>
 
@@ -147,8 +146,8 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
                   return (
                     <View key={`${run}-${i}`} style={{ position: 'absolute', left: p.x - BUBBLE_W / 2, top: p.y - BUBBLE_H / 2, width: BUBBLE_W, height: BUBBLE_H, alignItems: 'center', justifyContent: 'center' }}>
                       <Pop from={0.2}>
-                        <Tap onPress={() => hearLink(i)} accessibilityRole="button" accessibilityLabel={`Goes with ${lex.text}: ${l}`} style={{ minHeight: BUBBLE_H - 6, maxWidth: BUBBLE_W, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 26, backgroundColor: c[TONES[i]], borderWidth: lit === i ? 3 : 0, borderColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center', borderBottomWidth: lit === i ? 3 : 4, borderBottomColor: lit === i ? ON_BLOCK.ink : 'rgba(14,14,19,0.16)' }}>
-                          <Text numberOfLines={2} style={[text('bodyS'), { color: ON_BLOCK.ink, textAlign: 'center', fontFamily: font('s') }]}>
+                        <Tap onPress={() => hearLink(i)} accessibilityRole="button" accessibilityLabel={`Goes with ${lex.text}: ${l}`} style={{ minHeight: BUBBLE_H - 6, maxWidth: BUBBLE_W, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 26, backgroundColor: c.surface, borderWidth: lit === i ? 3 : 1.5, borderColor: lit === i ? c.ink : c.line, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text numberOfLines={2} style={[text('bodyS'), { color: c.ink, textAlign: 'center', fontFamily: font('s') }]}>
                             {l}
                           </Text>
                         </Tap>
@@ -158,8 +157,8 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
                 })}
 
                 <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, top: cy - 42, height: 84, alignItems: 'center', justifyContent: 'center' }}>
-                  <Tap onPress={() => say(speakable(lex.text))} accessibilityRole="button" accessibilityLabel={`${lex.text}. Hear it.`} style={{ height: 84, minWidth: 130, maxWidth: w - 36, paddingHorizontal: 22, borderRadius: 42, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 5, borderBottomColor: 'rgba(14,14,19,0.18)' }}>
-                    <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font('b'), fontSize: wordSize(lex.text, 28, Math.max(120, w - 90)) * Math.min(scale, 1.1), color: ON_BLOCK.ink }}>
+                  <Tap onPress={() => say(speakable(lex.text))} accessibilityRole="button" accessibilityLabel={`${lex.text}. Hear it.`} style={{ height: 84, minWidth: 130, maxWidth: w - 36, paddingHorizontal: 22, borderRadius: 42, backgroundColor: c.ink, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font('b'), fontSize: wordSize(lex.text, 28, Math.max(120, w - 90)) * Math.min(scale, 1.1), color: c.onInk }}>
                       {lex.text}
                     </Text>
                   </Tap>
@@ -174,20 +173,24 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
         <>
           <View style={{ marginTop: 6, gap: 14 }}>
             <SylWord text={lex.text} parts={lex.parts} size={wordSize(lex.text, 38, 320)} />
-            <Txt v="heading" color="ink2">
-              Pick your picture
-            </Txt>
+            {/* Says what the picture is for, so picking one is not a guess at a right answer. */}
+            <Txt v="heading">{hook ? 'Your picture for this word' : 'Pick a picture to help you remember it'}</Txt>
+            {!hook && (
+              <Txt v="bodyS" color="ink2">
+                There is no right one. It will show up later as a clue.
+              </Txt>
+            )}
           </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, height: 170, alignItems: 'center' }}>
             {lex.pics.slice(0, 3).map((e, i) => (
-              <PicTile key={e + i} emoji={e} tone={TONES[i]} state={!hook ? 'idle' : hook === e ? 'picked' : 'gone'} onPress={() => pick(e)} word={lex.text} />
+              <PicTile key={e + i} emoji={e} state={!hook ? 'idle' : hook === e ? 'picked' : 'gone'} onPress={() => pick(e)} word={lex.text} />
             ))}
           </View>
 
           {!!hook && (
             <View style={{ alignItems: 'center' }}>
-              <IconBtn icon={RotateCcw} label="Pick a different picture" size={48} onPress={() => pickHook(null)} />
+              <Btn kind="soft" small icon={RotateCcw} label="Pick a different picture" onPress={() => pickHook(null)} />
             </View>
           )}
         </>
@@ -197,7 +200,7 @@ export function Link({ lex, top, next, skip, hook, pickHook }: StepProps) {
 }
 
 /** One picture. Picked, it grows and sparks; passed over, it drops away. */
-function PicTile({ emoji, tone, state, onPress, word }: { emoji: string; tone: BlockTone; state: 'idle' | 'picked' | 'gone'; onPress: () => void; word: string }) {
+function PicTile({ emoji, state, onPress, word }: { emoji: string; state: 'idle' | 'picked' | 'gone'; onPress: () => void; word: string }) {
   const { c, reduceMotion } = useTheme();
   const s = useSharedValue(1);
   const y = useSharedValue(0);
@@ -220,7 +223,7 @@ function PicTile({ emoji, tone, state, onPress, word }: { emoji: string; tone: B
   const anim = useAnimatedStyle(() => ({ opacity: o.value, transform: [{ translateY: y.value }, { scale: s.value }] }));
   return (
     <Animated.View style={anim} pointerEvents={state === 'gone' ? 'none' : 'auto'}>
-      <Tap onPress={onPress} disabled={state !== 'idle'} accessibilityRole="button" accessibilityState={{ selected: state === 'picked' }} accessibilityLabel={`${emoji} as your picture for ${word}`} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: c[tone], alignItems: 'center', justifyContent: 'center', borderBottomWidth: 6, borderBottomColor: 'rgba(14,14,19,0.16)' }}>
+      <Tap onPress={onPress} disabled={state !== 'idle'} accessibilityRole="button" accessibilityState={{ selected: state === 'picked' }} accessibilityLabel={`${emoji} as your picture for ${word}`} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: c.surface, borderWidth: state === 'picked' ? 3 : 1.5, borderColor: state === 'picked' ? c.ink : c.line, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: 48, lineHeight: 60 }} allowFontScaling={false}>
           {emoji}
         </Text>

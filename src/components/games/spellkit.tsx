@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { Tag, Txt } from '@/components/ui';
 import { PATTERNS } from '@/data/schema';
 import { alignSpelling, levenshtein, type Lexeme, type Mark } from '@/lib/lexicon';
-import { ON_BLOCK, SYLLABLE_TONES, useTheme } from '@/theme';
+import { ON_BLOCK, useTheme } from '@/theme';
 import type { GameResult } from './types';
 
 // Shared by the spelling games. Nothing in here marks a whole word wrong: a
@@ -82,11 +82,11 @@ export function WordBeats({ lex, size = 44, mark = true }: { lex: Pick<Lexeme, '
       {chunksOf(lex.text, lex.parts).map((ch, i) => {
         const hot = i === tricky && lex.parts.length > 1;
         return (
-          <View key={i} style={{ marginLeft: ch.space ? size * 0.3 : 0, alignItems: 'stretch' }}>
-            <View style={{ borderRadius: 10, backgroundColor: hot ? c.sun : 'transparent', paddingHorizontal: 1 }}>
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: ch.space ? size * 0.3 : 0 }}>
+            {i > 0 && !ch.space && <View style={{ width: Math.max(4, size * 0.11), height: Math.max(4, size * 0.11), borderRadius: size, backgroundColor: c.ink, opacity: 0.35, marginHorizontal: Math.max(2, size * 0.06) }} />}
+            <View style={{ borderRadius: 10, backgroundColor: hot ? c.sun : 'transparent', borderBottomWidth: hot ? 4 : 0, borderBottomColor: c.ink, paddingHorizontal: hot ? 4 : 1 }}>
               <Text style={{ fontFamily: font('b'), fontSize: size, lineHeight: size * 1.18, letterSpacing: 0.6, color: c.ink }}>{ch.p}</Text>
             </View>
-            <View style={{ height: hot ? 10 : 7, borderRadius: 5, marginTop: hot ? 2 : 3.5, backgroundColor: c[SYLLABLE_TONES[i % SYLLABLE_TONES.length]], marginHorizontal: 1.5, borderWidth: hot ? 2 : 0, borderColor: c.ink }} />
           </View>
         );
       })}

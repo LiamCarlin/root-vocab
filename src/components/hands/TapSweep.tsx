@@ -109,7 +109,7 @@ export function TapSweep({ parts, says, onBeat, onDone }: { parts: string[]; say
                 accessibilityRole="button"
                 accessibilityLabel={down ? `Beat ${i + 1}: ${p}` : `Beat ${i + 1}`}
                 accessibilityState={{ selected: down }}
-                style={{ height: 124, borderRadius: radius.lg, backgroundColor: down ? syl(i) : c.surface, borderWidth: down ? 0 : now ? 2.5 : 1.5, borderColor: now ? c.ink : c.line, alignItems: 'center', justifyContent: 'center', borderBottomWidth: down ? 6 : now ? 2.5 : 1.5, borderBottomColor: down ? 'rgba(14,14,19,0.16)' : now ? c.ink : c.line, opacity: sweeping && !on ? 0.4 : 1 }}>
+                style={{ height: 124, borderRadius: radius.lg, backgroundColor: down ? syl(i) : c.surface, borderWidth: down ? 0 : now ? 2.5 : 1.5, borderColor: now ? c.ink : c.line, alignItems: 'center', justifyContent: 'center', opacity: sweeping && !on ? 0.4 : 1 }}>
                 {down ? (
                   <Text numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3} style={{ fontFamily: font('b'), fontSize, color: ON_BLOCK.ink, paddingHorizontal: 4 }}>
                     {p}
@@ -146,13 +146,13 @@ export function TapSweep({ parts, says, onBeat, onDone }: { parts: string[]; say
         onResponderMove={(e) => slide(e, false)}
         onResponderRelease={letGo}
         onResponderTerminate={letGo}>
-        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: (KNOB + 8) / 2, backgroundColor: done ? c.mint : c.line }, fill]} />
+        {sweeping && <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: (KNOB + 8) / 2, backgroundColor: done ? c.mint : c.line }, fill]} />}
         {!done && (
           <View pointerEvents="none" style={{ position: 'absolute', right: 20 }}>
             <ChevronsRight size={24} color={c.ink3} strokeWidth={2.4} />
           </View>
         )}
-        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 4, width: KNOB, height: KNOB, borderRadius: KNOB / 2, backgroundColor: sweeping ? c.ink : c.ink3, alignItems: 'center', justifyContent: 'center', boxShadow: '0px 2px 6px rgba(0,0,0,0.22)' }, knob]}>
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 4, width: KNOB, height: KNOB, borderRadius: KNOB / 2, backgroundColor: sweeping ? c.ink : c.ink3, alignItems: 'center', justifyContent: 'center' }, knob]}>
           <ChevronsRight size={26} color={c.onInk} strokeWidth={2.6} />
         </Animated.View>
       </View>

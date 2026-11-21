@@ -60,29 +60,26 @@ export const PROPS = {
   gem: { src: require('../../assets/props/gem.png'), w: 405, h: 364 },
 } as const;
 
+// Two pages, not six: the setup is said once, plainly, and then the learner is on the journey.
 export const PROLOGUE: Beat[] = [
-  { pose: 'map', line: 'This is the valley. Words grow here the way other places grow apples: slowly, and all year round.' },
-  { pose: 'shiver', line: 'Then a fog rolled in. People here call it the Hush.' },
-  { pose: 'gasp', line: 'It does not take words away. It does something more annoying. It holds them just out of reach, right when you need them.' },
-  { pose: 'think', line: 'You know the feeling. The word is there. You can feel the shape of it. And then nothing.' },
-  { pose: 'lantern', line: 'I have walked the whole valley, and I have noticed one thing. Where a word is properly rooted, the fog cannot settle.' },
-  { pose: 'hike', line: 'So that is the plan. We root words, one place at a time, starting at my own gate.' },
+  { pose: 'map', line: 'This is the valley, where words grow. A fog called the Hush has rolled in. It holds words just out of reach, right when you need them.' },
+  { pose: 'hike', line: 'Where a word is properly rooted, the fog cannot settle. So we root words, one place at a time.' },
 ];
 
 const STORY: Chapter[] = [
   {
-    n: 1, scene: 'garden', name: 'The Garden', tone: 'mint', keepsake: 'Watering can',
+    n: 1, scene: 'garden', name: 'The Garden', tone: 'brand', keepsake: 'Watering can',
     intro: [
       { pose: 'water', line: 'We start at home. This is my garden. It is small and it is a mess, but I know where everything is.' },
       { pose: 'search', line: 'Or I did. The fog has been at the labels. Half the beds are just “that green one” now.' },
       { pose: 'trace', line: 'Here is how we get them back. We do not just read a word. We hear it, say it, tap it out, write it with a finger. Every way in we can find.' },
-      { pose: 'hike', line: 'A word with that many roots does not slip. Two at a time. Let us go.' },
+      { pose: 'hike', line: 'We get the labels back by taking each word in every way we can: hear it, say it, write it. One at a time. Let us go.' },
     ],
     trail: [
-      'First two in the ground. See that? The fog has backed off the gate.',
+      'First one in the ground. See that? The fog has backed off the gate.',
       'The bean rows have their labels back. I had forgotten how many kinds of bean there are.',
       'Halfway. I can see the shed from here, which is new.',
-      'The path to the well is clear. I found my good trowel on it, so that is two wins.',
+      'The path to the well is clear. I found my good trowel on it, so that is a win twice over.',
       'Last bed planted. All that is left is to walk the whole garden once and see that it holds.',
     ],
     outro: [
@@ -93,7 +90,7 @@ const STORY: Chapter[] = [
     ],
   },
   {
-    n: 2, scene: 'orchard', name: 'The Orchard', tone: 'orange', keepsake: 'Fruit basket',
+    n: 2, scene: 'orchard', name: 'The Orchard', tone: 'brand', keepsake: 'Fruit basket',
     intro: [
       { pose: 'search', line: 'The orchard. There is a ladder somewhere in here. I had the word for it a second ago.' },
       { pose: 'think', line: 'That is the Hush for you. It goes for the ordinary words first, the ones you would never think to hold on to.' },
@@ -101,7 +98,7 @@ const STORY: Chapter[] = [
       { pose: 'hike', line: 'So we get their words back, and they get their harvest in. Fair trade.' },
     ],
     trail: [
-      'Two more rooted. Somebody up a tree just shouted “ladder”. They sounded relieved.',
+      'One more rooted. Somebody up a tree just shouted “ladder”. They sounded relieved.',
       'The near rows are clear. They are picking again, and arguing about whose turn it is to carry.',
       'Halfway down the orchard. The fog is sitting in the low corner as if it were sulking.',
       'They have started singing. Badly, but with all the words.',
@@ -115,7 +112,7 @@ const STORY: Chapter[] = [
     ],
   },
   {
-    n: 3, scene: 'market', name: 'The Market', tone: 'pink', keepsake: 'Bunting',
+    n: 3, scene: 'market', name: 'The Market', tone: 'brand', keepsake: 'Bunting',
     intro: [
       { pose: 'think', line: 'A market with no chatter. The stalls are open, the goods are out, and nobody can name what they are selling.' },
       { pose: 'oops', line: 'People are pointing at things and saying “that”. It is the saddest haggling I have ever heard.' },
@@ -124,7 +121,7 @@ const STORY: Chapter[] = [
     ],
     trail: [
       'The baker has “sourdough” back and will not stop saying it.',
-      'Two stalls are haggling properly now. Nobody is enjoying it more than they are.',
+      'One stall is haggling properly now. Nobody is enjoying it more than they are.',
       'Halfway round the square. Somebody has hung the first string of flags back up.',
       'The fishmonger just called something “exquisite”. I think he is showing off.',
       'Last corner of the market. One lap to make sure it sticks.',
@@ -137,15 +134,15 @@ const STORY: Chapter[] = [
     ],
   },
   {
-    n: 4, scene: 'woods', name: 'Lantern Woods', tone: 'lilac', keepsake: 'Lantern',
+    n: 4, scene: 'woods', name: 'Lantern Woods', tone: 'brand', keepsake: 'Lantern',
     intro: [
       { pose: 'lantern', line: 'Lantern Woods. The Hush is thickest in here. Stay close.' },
       { pose: 'shiver', line: 'There is a lamp on every tree, and every one has gone out. Each lamp was lit by a word. No word, no light.' },
       { pose: 'think', line: 'I will not pretend this part is quick. These are harder words, and the fog knows it.' },
-      { pose: 'hike', line: 'But we know how this goes now. One pair, then the next. The dark is only the part we have not done yet.' },
+      { pose: 'hike', line: 'But we know how this goes now. One word, then the next. The dark is only the part we have not done yet.' },
     ],
     trail: [
-      'Two lamps lit. It is remarkable how much difference two lamps make.',
+      'One lamp lit. It is remarkable how much difference one lamp makes.',
       'I can see the path now, which means I can see how much of it there is. Mixed feelings.',
       'Halfway. Look back. That whole lit stretch is yours.',
       'An owl just gave us a look. I think that was approval.',
@@ -167,7 +164,7 @@ const STORY: Chapter[] = [
       { pose: 'hike', line: 'Let us go and remind her.' },
     ],
     trail: [
-      'Two more. The harbor bell rang by itself just now. I am choosing to take that as a good sign.',
+      'One more. The harbor bell rang by itself just now. I am choosing to take that as a good sign.',
       'The quay has its signs back. “Mooring.” “Customs.” “No fishing”, which is being ignored.',
       'Halfway up the lighthouse stairs. There are a lot of stairs.',
       'The keeper says the lamp is nearly ready. She also says “nearly” is her favourite word to have back.',
@@ -181,7 +178,7 @@ const STORY: Chapter[] = [
     ],
   },
   {
-    n: 6, scene: 'summit', name: 'The Summit', tone: 'butter', keepsake: 'Telescope',
+    n: 6, scene: 'summit', name: 'The Summit', tone: 'brand', keepsake: 'Telescope',
     intro: [
       { pose: 'hike', line: 'Top of the valley. This is where the Hush comes from.' },
       { pose: 'calm', line: 'Deep breath. The air is thin up here and the words are long.' },
@@ -189,11 +186,11 @@ const STORY: Chapter[] = [
       { pose: 'proud', line: 'But look how much valley is clear behind us. Whatever is up here, we have the words for it.' },
     ],
     trail: [
-      'Two more, and I can see the next ridge.',
+      'One more, and I can see the next ridge.',
       'There is a bench up here. Someone carved “nearly there” into it, a long time ago.',
       'Halfway. Do not look down. Actually, do. Look at all of that.',
       'The fog is thinning, and there is nothing behind it. Just more hill.',
-      'That is the last pair. One walk across the top.',
+      'That is the last word. One walk across the top.',
     ],
     outro: [
       { pose: 'gasp', line: 'It was never a monster. There is nothing up here at all. Just weather.' },
@@ -207,7 +204,7 @@ const STORY: Chapter[] = [
 const BEYOND_INTRO: Beat[][] = [
   [
     { pose: 'map', line: 'New ground. This part of the valley is not on my map, so we will draw it as we go.' },
-    { pose: 'hike', line: 'Same plan as ever: two words at a time, every way in we can find.' },
+    { pose: 'hike', line: 'Same plan as ever: one word at a time, every way in we can find.' },
   ],
   [
     { pose: 'search', line: 'There is more valley than I remembered. Good.' },
@@ -232,10 +229,18 @@ const BEYOND_OUTRO: Beat[][] = [
     { pose: 'hike', line: 'On we go.' },
   ],
 ];
-const BEYOND_TRAIL = ['Two more in the ground.', 'The fog has backed off another field.', 'Halfway across. Look how much is clear behind us.', 'Nearly there. I can see the far hedge.', 'That is the last pair for this place. One walk through to check.'];
+const BEYOND_TRAIL = ['One more in the ground.', 'The fog has backed off another field.', 'Halfway across. Look how much is clear behind us.', 'Nearly there. I can see the far hedge.', 'That is the last word for this place. One walk through to check.'];
 
 /** Chapters 1 to 6 tell the story; after that the valley keeps going, cycling through its places. */
+/** A chapter's opening and ending are kept to two pages: the first and the last. The middle pages read long. */
+const brief = (beats: Beat[]): Beat[] => (beats.length > 2 ? [beats[0], beats[beats.length - 1]] : beats);
+
 export function chapterOf(n: number): Chapter {
+  const ch = chapterFull(n);
+  return { ...ch, intro: brief(ch.intro), outro: brief(ch.outro) };
+}
+
+function chapterFull(n: number): Chapter {
   if (n <= STORY.length) return STORY[Math.max(1, n) - 1];
   const base = STORY[(n - 1) % STORY.length];
   const lap = Math.floor((n - 1) / STORY.length) + 1;

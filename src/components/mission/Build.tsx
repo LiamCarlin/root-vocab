@@ -146,7 +146,7 @@ export function Build({ lex, top, next, skip, addHint }: StepProps) {
       footer={
         <>
           <Controls onReplay={replay} onHint={done ? undefined : openHint} onSkip={skip} />
-          <Btn icon={ArrowRight} a11y="Next" onPress={next} disabled={!done} />
+          <Btn icon={done ? ArrowRight : undefined} label={done ? undefined : 'Build the word first'} a11y={done ? 'Next' : undefined} onPress={next} disabled={!done} />
         </>
       }>
       <View style={{ marginTop: 10 }}>

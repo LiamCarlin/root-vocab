@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Controls, MicButton } from '@/components/learn';
-import { Block, Btn, Chip, ChipRow, Field, IconBtn, Txt } from '@/components/ui';
+import { Block, Btn, Chip, ChipRow, Field, Txt } from '@/components/ui';
 import { buzz, listenOnce, micAvailable, say, speakable, stopListening } from '@/lib/audio';
 import { gapped, judgeSpoken, meaningOf, plain, shuffled, splitAround } from '@/lib/lexicon';
 import { note, noteUi } from '@/lib/signals';
@@ -12,7 +12,11 @@ import { ON_BLOCK, useTheme } from '@/theme';
 import { StepScreen, Why } from './Frame';
 import type { StepProps } from './types';
 
-/** Use: the word dropped into an everyday sentence first, then a sentence of the learner's own, said or typed. */
+/**
+ * Use: the word dropped into an everyday sentence. Picking it fills the gap, and the green sentence
+ * is the whole confirmation. Only a word with no such sentence (a learner's own word) asks for a
+ * sentence of the learner's own instead, and says plainly that is what it wants.
+ */
 export function Use({ lex, top, next, skip }: StepProps) {
   const { c, text } = useTheme();
 
@@ -101,7 +105,7 @@ export function Use({ lex, top, next, skip }: StepProps) {
       footer={
         <>
           <Controls onReplay={() => say(gapDone && hasGap ? plain(lex.life) : speakable(lex.text))} onSkip={skip} />
-          <Btn icon={ArrowRight} a11y="Finish" onPress={next} disabled={hasGap && !gapDone} />
+          <Btn icon={hasGap && !gapDone ? undefined : ArrowRight} label={hasGap && !gapDone ? 'Pick the word that fits first' : undefined} a11y={hasGap && !gapDone ? undefined : 'Finish'} onPress={next} disabled={hasGap && !gapDone} />
         </>
       }>
       {hasGap && (
@@ -128,22 +132,21 @@ export function Use({ lex, top, next, skip }: StepProps) {
             ))}
           </ChipRow>
 
-          {!gapDone && !!wrong && <Why label={wrong} text={wrongMeaning ?? 'A different word.'} />}
+          {/* A wrong pick always says so; when the word is in the bank, it also says what it really means. */}
+          {!gapDone && !!wrong && <Why label={wrong} text={wrongMeaning ? `${wrongMeaning}. It does not fit here; try another.` : 'It does not fit here; try another.'} />}
         </>
       )}
 
-      {(gapDone || !hasGap) && (
+      {!hasGap && (
         <Block pad={20} style={{ gap: 14 }}>
-          <Txt v="heading" color="ink2">
-            Your sentence
-          </Txt>
+          <Txt v="heading">{`Make up a sentence with “${lex.text}”`}</Txt>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {mic && <MicButton listening={listening} onPress={onMic} size={56} />}
             <View style={{ flex: 1 }}>
               <Field
                 value={typed}
                 onChangeText={setTyped}
-                placeholder={lex.text}
+                placeholder="Say it or type it"
                 autoCapitalize="sentences"
                 autoCorrect
                 returnKeyType="done"
@@ -166,8 +169,8 @@ export function Use({ lex, top, next, skip }: StepProps) {
               </Txt>
               {spoken === 'miss' && (
                 <>
-                  <IconBtn icon={RotateCcw} label="Say it again" size={44} onPress={onMic} />
-                  <IconBtn icon={Check} label="That counts" kind="mint" size={44} onPress={() => setSpoken('ok')} />
+                  <Btn kind="soft" small icon={RotateCcw} label="Again" a11y="Say it again" onPress={onMic} />
+                  <Btn kind="soft" small icon={Check} label="It counts" a11y="That is what I said. It counts." onPress={() => setSpoken('ok')} />
                 </>
               )}
             </View>

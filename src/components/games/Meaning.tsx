@@ -9,7 +9,7 @@ import { Block, IconBtn } from '@/components/ui';
 import { BANK } from '@/data/words';
 import { buzz, say, speakable } from '@/lib/audio';
 import { shuffled, type Lexeme } from '@/lib/lexicon';
-import { ON_BLOCK, wordSize } from '@/theme';
+import { wordSize } from '@/theme';
 import type { GameProps } from './types';
 
 /** The word's own meaning and two from other words of about the same level, mixed. */
@@ -56,9 +56,9 @@ export function Meaning({ lex, onResult, done }: GameProps) {
 
   return (
     <View style={{ flex: 1, gap: 14 }}>
-      <Block tone="brand" pad={20} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 120 }}>
+      <Block pad={20} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 120 }}>
         <View style={{ flex: 1, alignItems: 'flex-start' }}>
-          <SylWord text={lex.text} parts={lex.parts} size={wordSize(lex.text, 40, 200)} color={ON_BLOCK.ink} on="brand" />
+          <SylWord text={lex.text} parts={lex.parts} size={wordSize(lex.text, 40, 200)}  />
         </View>
         <IconBtn icon={Volume2} label={`Hear ${lex.text}`} kind="ink" size={56} onPress={() => say(speakable(lex.text))} />
       </Block>

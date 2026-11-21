@@ -2,15 +2,15 @@ import { Check } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
 import { SylWord } from '@/components/learn';
-import { Block, Group, Row, Screen, Tap, TopBar, Txt } from '@/components/ui';
+import { Block, Group, Row, Screen, SectionLabel, Tap, TopBar, Txt } from '@/components/ui';
 import { useStore, type Display } from '@/lib/store';
 import { ON_BLOCK, fontLabels, fonts, palettes, radius, useTheme, type FontId } from '@/theme';
 
+// Light backgrounds only for now (see useTheme). "Match phone" and Dark come back once the dark
+// palette follows the colour rules too.
 const THEMES: { id: Display['theme']; name: string }[] = [
-  { id: 'system', name: 'Match phone' },
   { id: 'light', name: 'Light' },
   { id: 'paper', name: 'Paper' },
-  { id: 'dark', name: 'Dark' },
 ];
 
 /** How words look: typeface, size, letter spacing and background. Sound and motion live in Sound and feel. */
@@ -33,6 +33,7 @@ export default function Reading() {
         <Txt v="body">to move things apart</Txt>
       </Block>
 
+      <SectionLabel>Font</SectionLabel>
       <Group>
         {(Object.keys(fontLabels) as FontId[]).map((id, i, arr) => (
           <Row
@@ -50,28 +51,31 @@ export default function Reading() {
         ))}
       </Group>
 
-      {/* Size */}
+      <SectionLabel>Text size</SectionLabel>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {([16, 21, 27] as const).map((px, i) => pick(display.size === i, () => setDisplay({ size: i as 0 | 1 | 2 }), ['Standard text', 'Large text', 'Larger text'][i], <Text style={{ fontFamily: font('b'), fontSize: px, color: display.size === i ? c.onInk : c.ink }}>A</Text>))}
       </View>
 
-      {/* Letter spacing */}
+      <SectionLabel>Letter spacing</SectionLabel>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {[0, 1].map((sp) => pick(display.spacing === sp, () => setDisplay({ spacing: sp as 0 | 1 }), sp ? 'Wider letter spacing' : 'Standard letter spacing', <Text style={{ fontFamily: font('s'), fontSize: 19, letterSpacing: sp ? 5 : 0.5, color: display.spacing === sp ? c.onInk : c.ink }}>abc</Text>))}
       </View>
 
-      {/* Background */}
+      <SectionLabel>Background</SectionLabel>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {THEMES.map((t) => {
-          const on = display.theme === t.id;
+          const on = (display.theme === 'paper' ? 'paper' : 'light') === t.id;
           const a = t.id === 'system' ? palettes.light.canvas : palettes[t.id].canvas;
           const b = t.id === 'system' ? palettes.dark.canvas : palettes[t.id].canvas;
           return (
             <Tap key={t.id} onPress={() => setDisplay({ theme: t.id })} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={`${t.name} background`} style={{ flex: 1, alignItems: 'center' }}>
-              <View style={{ width: 62, height: 62, borderRadius: 31, borderWidth: on ? 4 : 1.5, borderColor: on ? c.orange : c.line, overflow: 'hidden', flexDirection: 'row' }}>
+              <View style={{ width: 62, height: 62, borderRadius: 31, borderWidth: on ? 4 : 1.5, borderColor: on ? c.ink : c.line, overflow: 'hidden', flexDirection: 'row' }}>
                 <View style={{ flex: 1, backgroundColor: a }} />
                 <View style={{ flex: 1, backgroundColor: b }} />
               </View>
+              <Txt v="bodyS" style={{ marginTop: 6 }}>
+                {t.name}
+              </Txt>
             </Tap>
           );
         })}

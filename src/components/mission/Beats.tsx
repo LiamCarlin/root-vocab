@@ -54,7 +54,7 @@ export function Beats({ lex, top, next, skip }: StepProps) {
       footer={
         <>
           <Controls onReplay={replay} onSkip={skip} />
-          <Btn icon={ArrowRight} a11y="Next" onPress={next} disabled={!done} />
+          <Btn icon={done ? ArrowRight : undefined} label={done ? undefined : 'Tap every beat first'} a11y={done ? 'Next' : undefined} onPress={next} disabled={!done} />
         </>
       }>
       <View style={{ marginTop: 6 }}>
@@ -63,7 +63,7 @@ export function Beats({ lex, top, next, skip }: StepProps) {
       <View pointerEvents={done ? 'none' : 'auto'}>
         <TapSweep parts={lex.parts} says={lex.says} onBeat={(i) => setBeats(i + 1)} onDone={finish} />
       </View>
-      <Coach icon={sweeping ? ChevronsRight : MousePointerClick} text={done ? 'Tapped and blended.' : sweeping ? 'Now sweep across to blend them.' : 'One tap for each beat, left to right.'} tone={done ? 'good' : 'plain'} />
+      {!done && <Coach icon={sweeping ? ChevronsRight : MousePointerClick} text={sweeping ? 'Slide the dark button to the end.' : 'One tap for each beat, left to right.'} />}
     </StepScreen>
   );
 }

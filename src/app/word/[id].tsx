@@ -1,13 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeftRight, Check, Equal, Home, PenLine, Play, RotateCcw, Search, Snail, Trash2, Undo2, Volume2 } from 'lucide-react-native';
+import { ArrowLeftRight, Check, Equal, Home, PenLine, Play, RotateCcw, Search, Trash2, Undo2, Volume2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Perch } from '@/components/Buddy';
-import { Pop } from '@/components/fx';
 import { PartTiles, SylWord } from '@/components/learn';
-import { Growth, Mascot, type Pose } from '@/components/Mascot';
-import { Block, Btn, Chip, ChipRow, Field, Group, IconBtn, Ring, Rise, Row, Screen, SectionLabel, Tag, Tap, TopBar, Txt, useToast, type Tone } from '@/components/ui';
+import { Growth, Mascot } from '@/components/Mascot';
+import { Block, Btn, Chip, ChipRow, Field, Group, IconBtn, Ring, Rise, Row, Screen, SectionLabel, Tag, TopBar, Txt, useToast, type Tone } from '@/components/ui';
 import { STRAND_ORDER, STRANDS, TOPICS } from '@/data/profile';
 import { PATTERNS } from '@/data/words';
 import { buzz, sayBeat, sayByParts, stopSpeaking } from '@/lib/audio';
@@ -20,10 +18,10 @@ import { growth, stopForWord, today, useStore, type UserWord } from '@/lib/store
 import { ON_BLOCK, useTheme, wordSize, type BlockTone } from '@/theme';
 
 type Stage = UserWord['status'] | 'new';
-const HERO: Record<Stage, Tone> = { new: 'butter', queued: 'butter', learning: 'brand', known: 'mint', removed: 'soft' };
-const STATE: Record<Stage, string> = { new: 'Not started', queued: 'Waiting', learning: 'Growing', known: 'Rooted', removed: 'Removed' };
+// Only a rooted word is green (done). Every other state is a plain card; the label says which.
+const HERO: Record<Stage, Tone> = { new: 'surface', queued: 'surface', learning: 'surface', known: 'mint', removed: 'soft' };
+const STATE: Record<Stage, string> = { new: 'Not started', queued: 'To learn', learning: 'Growing', known: 'Rooted', removed: 'Removed' };
 /** Root keeps the word company: how it sits says how the word is doing. */
-const ROOT: Record<Stage, Pose> = { new: 'sit', queued: 'sit', learning: 'read', known: 'proud', removed: 'sleep' };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Everything Root knows about one word. Works for a bank word that has not been started yet, too. */
@@ -35,10 +33,8 @@ export default function WordPage() {
   const w = useStore((s) => (id ? s.words[id] : undefined));
   const t = useStore((s) => today(s));
   const interests = useStore((s) => s.profile.interests);
-  const slow = useStore((s) => s.slowAudio);
   const companion = useStore((s) => s.display.companion);
   const onPath = useStore((s) => stopForWord(s, id));
-  const patch = useStore((s) => s.patch);
   const updateWord = useStore((s) => s.updateWord);
 
   const lex = useMemo(() => (id ? lexemeFor(id, w) : null), [id, w]);
@@ -69,7 +65,7 @@ export default function WordPage() {
 
   if (!lex) {
     return (
-      <Screen top={<TopBar />} scroll={false} footer={<Btn icon={Home} label="Garden" a11y="Back to the garden" onPress={() => router.replace('/(tabs)/words')} />}>
+      <Screen top={<TopBar />} scroll={false} footer={<Btn icon={Home} label="My words" a11y="Back to my words" onPress={() => router.replace('/(tabs)/words')} />}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <Mascot pose="think" size={200} />
           <Txt v="title" center>
@@ -90,12 +86,6 @@ export default function WordPage() {
   const canFind = !!lex.clue && canPlay(lex, 'clue');
   const canSpell = canPlay(lex, 'cover');
 
-  const nextHook = () => {
-    if (!w || lex.pics.length < 2) return;
-    const i = lex.pics.indexOf(hook ?? '');
-    useStore.getState().setHook(w.id, lex.pics[(i + 1) % lex.pics.length]);
-    buzz.tap();
-  };
   const knowIt = () => {
     useStore.getState().markKnown(lex.id);
     buzz.good();
@@ -110,11 +100,17 @@ export default function WordPage() {
 
   const footer =
     stage === 'removed' ? (
-      <Btn icon={Undo2} label="Restore" a11y="Put it back in my garden" onPress={() => useStore.getState().restoreWord(lex.id)} />
+      <Btn icon={Undo2} label="Restore" a11y="Put it back in my words" onPress={() => useStore.getState().restoreWord(lex.id)} />
     ) : learned ? (
-      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-        <Btn icon={Search} label="Find" a11y={`Practice finding ${lex.text}`} disabled={!canFind} onPress={() => router.push(`/play/find?words=${lex.id}`)} flex={1} />
-        <Btn icon={PenLine} label="Spell" kind="soft" a11y={`Practice spelling ${lex.text}`} disabled={!canSpell} onPress={() => router.push(`/play/spell?words=${lex.id}`)} flex={1} />
+      // "Find" alone read like the search button: the row says these are practice rounds for this word.
+      <View style={{ gap: 8 }}>
+        <Txt v="bodyS" color="ink2" center>
+          Practice this word
+        </Txt>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+          <Btn icon={Search} label="Find it" a11y={`Practice finding ${lex.text} from its meaning`} disabled={!canFind} onPress={() => router.push(`/play/find?words=${lex.id}`)} flex={1} />
+          <Btn icon={PenLine} label="Spell it" kind="soft" a11y={`Practice spelling ${lex.text}`} disabled={!canSpell} onPress={() => router.push(`/play/spell?words=${lex.id}`)} flex={1} />
+        </View>
       </View>
     ) : (
       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
@@ -124,19 +120,7 @@ export default function WordPage() {
 
   return (
     <Screen
-      top={
-        <TopBar
-          right={
-            // "I know it" and "remove" sit up here, so the two practice buttons below keep their full labels at any text size.
-            stage === 'removed' ? undefined : (
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {stage === 'known' ? <IconBtn icon={RotateCcw} label="I am not sure any more. Teach me again." size={48} onPress={() => useStore.getState().undoKnown(lex.id)} /> : <IconBtn icon={Check} label="I already know this word" size={48} onPress={knowIt} />}
-                {inList && <IconBtn icon={Trash2} label="Remove from my garden" size={48} onPress={remove} />}
-              </View>
-            )
-          }
-        />
-      }
+      top={<TopBar />}
       footer={footer}
       keyboard={lex.custom}>
       {/* The word, with Root perched on its card. */}
@@ -145,11 +129,9 @@ export default function WordPage() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Growth stage={w ? growth(w) : 0} size={56} />
           {hook ? (
-            <Tap onPress={nextHook} disabled={!w || lex.pics.length < 2} accessibilityRole="button" accessibilityLabel={`Picture for this word: ${hook}. Tap to change.`} style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-              <Pop key={hook} from={0.4}>
-                <Text style={{ fontSize: 40 }}>{hook}</Text>
-              </Pop>
-            </Tap>
+            <View accessible accessibilityLabel={`Your picture for this word: ${hook}`} style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 40 }}>{hook}</Text>
+            </View>
           ) : (
             <Tag label={STATE[stage]} tint="surface" color="ink" />
           )}
@@ -159,10 +141,8 @@ export default function WordPage() {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <IconBtn icon={Volume2} label="Hear it" kind={coloured ? 'ink' : 'ghost'} onPress={hear} />
-          <IconBtn icon={Snail} label={slow ? 'Slower speech is on' : 'Slower speech'} kind={coloured ? 'glass' : 'ghost'} active={slow} onPress={() => patch({ slowAudio: !slow })} />
         </View>
       </Block>
-        <Perch pose={ROOT[stage]} size={74} side="left" inset={96} />
       </View>
 
       <Rise i={1}>
@@ -214,7 +194,7 @@ export default function WordPage() {
           {lex.links.length > 0 && (
             <ChipRow>
               {lex.links.map((l, i) => (
-                <Chip key={l} label={l} tone={(['brand', 'pink', 'mint', 'butter'] as const)[i % 4]} />
+                <Chip key={l} label={l} />
               ))}
             </ChipRow>
           )}
@@ -255,7 +235,7 @@ export default function WordPage() {
 
       {lex.lookalikes.length > 0 && (
         <Rise i={6} style={{ gap: 16 }}>
-          <SectionLabel>Not this</SectionLabel>
+          <SectionLabel>Easy to mix up with</SectionLabel>
           <Group>
             {lex.lookalikes.map((l, i) => {
               const m = meaningOf(l);
@@ -274,11 +254,11 @@ export default function WordPage() {
               const m = w.mem[k];
               const box = stage === 'known' ? Math.max(3, m?.box ?? 0) : (m?.box ?? 0);
               const Icon = STRANDS[k].icon;
-              const due = m?.due ? (m.due <= t ? 'Today' : cap(relDay(m.due, t))) : box >= 4 ? 'Done' : 'Soon';
+              const due = m?.due ? (m.due <= t ? 'Review today' : `Review ${relDay(m.due, t)}`) : box >= 4 ? 'Done' : 'Review soon';
               // One strand per row: ring, name, when it comes back. Rows hold up at the largest text size; three columns did not.
               return (
                 <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }} accessible accessibilityLabel={`${STRANDS[k].label}: ${box} of 4. Next: ${due}`}>
-                  <Ring value={Math.min(4, box) / 4} size={56} stroke={6} color={c[STRANDS[k].tone]}>
+                  <Ring value={Math.min(4, box) / 4} size={56} stroke={6} color={c.ink}>
                     <Icon size={21} color={c.ink} strokeWidth={2.3} />
                   </Ring>
                   <Txt v="heading" style={{ flex: 1 }} numberOfLines={1}>
@@ -290,6 +270,18 @@ export default function WordPage() {
             })}
           </Block>
         </Rise>
+      )}
+
+      {/* The two things to do to the word itself, said in words at the end of the page. */}
+      {stage !== 'removed' && (
+        <Group>
+          {stage === 'known' ? (
+            <Row title="Teach me this word again" icon={RotateCcw} onPress={() => useStore.getState().undoKnown(lex.id)} last={!inList} />
+          ) : (
+            <Row title="I already know this word" icon={Check} onPress={knowIt} last={!inList} />
+          )}
+          {inList && <Row title="Remove from my words" icon={Trash2} onPress={remove} last />}
+        </Group>
       )}
     </Screen>
   );

@@ -1,4 +1,4 @@
-import { Check, Lock, Play } from 'lucide-react-native';
+import { Check, Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -7,7 +7,7 @@ import Svg, { Path as Line } from 'react-native-svg';
 import { Mascot, poseWidth } from '@/components/Mascot';
 import { Pulse, Wiggle } from '@/components/fx';
 import { LIP } from '@/components/rewards';
-import { Rise, Tap, Txt } from '@/components/ui';
+import { Rise, Tap, Txt, useToast } from '@/components/ui';
 import { OBJECTS, PROPS } from '@/data/story';
 import { buzz } from '@/lib/audio';
 import type { Stop, StopKind } from '@/lib/store';
@@ -22,10 +22,10 @@ const NOW = 88;
 const ROOT = 74;
 const FEET = 0.965;
 
-/** The object in the node of each kind of practice stop. (A set of new words shows its letters; a chest is a chest.) */
+/** The object in the node of each kind of practice stop. (A new word shows its first letter, or its picture; a chest is a chest.) */
 const STOP_OBJECT: Record<StopKind, number> = { learn: OBJECTS.sprout, find: OBJECTS.magnifier, spell: OBJECTS.pencil, hands: OBJECTS.sand, challenge: OBJECTS.flag, chest: PROPS.chest.src };
 
-export const KIND_LABEL: Record<StopKind, string> = { learn: 'New words', find: 'Find', spell: 'Spell', chest: 'Chest', hands: 'Hands-on', challenge: 'Challenge' };
+export const KIND_LABEL: Record<StopKind, string> = { learn: 'New word', find: 'Find', spell: 'Spell', chest: 'Chest', hands: 'Hands-on', challenge: 'Challenge' };
 
 /** Where the middle of stop `i` sits, measured from the top of the path. */
 export const stopY = (i: number) => TOP + i * STEP;
@@ -41,7 +41,6 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
   const [nudged, setNudged] = useState<Record<number, number>>({});
 
   const stand = at < 0 ? stops.length - 1 : at;
-  const nowTone: BlockTone = tone === 'orange' ? 'brand' : 'orange';
   const labelRight = (i: number) => stopX(i, width) <= width / 2 + 1;
 
   // Root stands on the shoulder of its node, on the side away from the label.
@@ -69,8 +68,11 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
   };
   const height = pathHeight(stops.length);
 
+  const toast = useToast();
   const press = (i: number) => {
     if (stops[i].done || i === at) return onOpen(i);
+    // A locked stop says why it will not open, not only a wiggle (and a buzz a browser cannot make).
+    toast({ text: 'Locked. Finish the stops before it first.', icon: Lock });
     buzz.nudge();
     setNudged((n) => ({ ...n, [i]: (n[i] ?? 0) + 1 }));
   };
@@ -92,10 +94,11 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
         const right = labelRight(i);
         const label = st.kind === 'learn' ? (face.text ?? KIND_LABEL.learn) : KIND_LABEL[st.kind];
         const ink = done || now ? ON_BLOCK.ink : c.ink3;
-        const bg = done ? c[tone] : now ? c[nowTone] : c.surface;
-        const lip = done ? LIP[tone] : now ? LIP[nowTone] : c.line;
+        // Done is green and the next stop is orange (you are here), on every chapter.
+        const bg = done ? c.mint : now ? c.orange : c.surface;
+        const lip = done ? LIP.mint : now ? LIP.orange : c.line;
         const part = st.kind === 'learn' && !done && (face.got ?? 0) > 0 ? `, ${face.got} of ${face.of} learned` : '';
-        const a11y = `${st.kind === 'learn' ? `New words: ${label}` : label}${part}${done ? ', done' : now ? ', next' : ', locked'}`;
+        const a11y = `${st.kind === 'learn' ? (face.text ? `Word: ${label}` : 'New word') : label}${part}${done ? (st.kind === 'learn' ? ', learned' : ', done') : now ? ', next' : ', locked'}`;
         const room = right ? width - (x + size / 2 + 12) : x - size / 2 - 12;
 
         return (
@@ -123,12 +126,6 @@ export function Path({ stops, faces, at, tone, onOpen }: { stops: Stop[]; faces:
                     )}
                   </View>
                 </Pulse>
-                {now && (
-                  <View style={{ marginTop: 8, height: 34, borderRadius: 17, paddingHorizontal: 13, backgroundColor: c.ink, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Play size={13} color={c.onInk} fill={c.onInk} />
-                    <Text style={{ fontFamily: 'Lexend_600SemiBold', fontSize: 14, color: c.onInk }}>{(face.got ?? 0) > 0 ? 'Carry on' : 'Start'}</Text>
-                  </View>
-                )}
               </Tap>
             </Wiggle>
             <View pointerEvents="none" style={[{ position: 'absolute', top: 0, height: size, justifyContent: 'center', width: Math.max(60, room) }, right ? { left: x + size / 2 + 12 } : { left: x - size / 2 - 12 - Math.max(60, room), alignItems: 'flex-end' }]}>

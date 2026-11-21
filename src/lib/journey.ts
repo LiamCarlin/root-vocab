@@ -1,4 +1,4 @@
-// The journey: one chapter is ten stops and ten new words, chosen as the learner reaches them. Pure functions over state.
+// The journey: one chapter is nine stops and five new words, one per lesson, chosen as the learner reaches them. Pure functions over state.
 
 import { BANK_BY_ID } from '@/data/words';
 import { pickNewWords, stopTodo, stopWords } from './engine';
@@ -8,12 +8,12 @@ import type { Data, Stop, StopKind } from './store';
 export { stopTodo, stopWords } from './engine';
 
 /**
- * A chapter: two word sets, a Find round, a third set, the chest, a hands-on round, a fourth set, a Spell
+ * A chapter: two word sets, a Find round, a third set, a hands-on round, a fourth set, a Spell
  * round, the last set, then the challenge that clears the fog. Practice always comes after something to practise.
  */
-export const CHAPTER_SHAPE: StopKind[] = ['learn', 'learn', 'find', 'learn', 'chest', 'hands', 'learn', 'spell', 'learn', 'challenge'];
+export const CHAPTER_SHAPE: StopKind[] = ['learn', 'learn', 'find', 'learn', 'hands', 'learn', 'spell', 'learn', 'challenge'];
 /** How many words one learn stop teaches. */
-export const SET_SIZE = 2;
+export const SET_SIZE = 1;
 
 type ForPicking = Pick<Data, 'words' | 'skill' | 'profile' | 'patterns' | 'journey' | 'counters' | 'mod' | 'mind'>;
 
@@ -37,6 +37,30 @@ export const chapterWords = (s: Pick<Data, 'journey'>): string[] => s.journey.st
 export function sharedPattern(ids: string[]) {
   const first = ids.length > 1 ? patternOf(ids[0]) : undefined;
   return first && ids.every((id) => patternOf(id) === first) ? first : undefined;
+}
+
+/**
+ * One bubble per word. Stops saved when a learn stop taught a set of words are split into one stop per
+ * word, so the path shows each word learned on its own. A word the stop already taught becomes a done
+ * stop (finished `day`, or the stop's own day when the whole set was done); the rest are still to do.
+ * Returns the same array when there is nothing to split.
+ */
+export function splitStops(stops: Stop[], day: string): Stop[] {
+  if (!stops.some((st) => st.kind === 'learn' && stopWords(st).length > 1)) return stops;
+  return stops.flatMap((st): Stop[] => {
+    const words = st.kind === 'learn' ? stopWords(st) : [];
+    if (words.length <= 1) return [st];
+    return words.map((w): Stop => {
+      const taught = !!st.done || !!st.got?.includes(w);
+      const one: Stop = { kind: 'learn', words: [w] };
+      if (taught) {
+        one.got = [w];
+        one.done = st.done ?? day;
+      }
+      if (st.checked?.includes(w)) one.checked = [w];
+      return one;
+    });
+  });
 }
 
 /**

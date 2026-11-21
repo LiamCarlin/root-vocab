@@ -5,8 +5,7 @@ import { Platform, Text, View } from 'react-native';
 import { Wiggle } from '@/components/fx';
 import { PartTiles, SylWord } from '@/components/learn';
 import { useElapsed } from '@/components/play/hooks';
-import { Block, Field, IconBtn, Tag, Txt } from '@/components/ui';
-import { TOPICS } from '@/data/profile';
+import { Block, Btn, Field, IconBtn, Txt } from '@/components/ui';
 import { buzz, listenOnce, micAvailable, say, sayBeat, stopListening } from '@/lib/audio';
 import { closeEnough } from '@/lib/lexicon';
 import { useStore } from '@/lib/store';
@@ -158,20 +157,20 @@ export function Clue({ lex, onResult, done }: GameProps) {
   };
 
   const frozen = done || solved;
-  const topic = lex.topics[0] ? TOPICS[lex.topics[0]] : null;
   const lastRung = cues >= rungs;
 
   return (
     <View style={{ flex: 1, gap: 14 }}>
-      <Block tone="pink" pad={20} style={{ gap: 14 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 }}>
-          {topic ? <Tag icon={topic.icon} label={topic.label} tint="surface" color="ink" /> : <View />}
+      <Block pad={20} style={{ gap: 14 }}>
+        {!!hook && (
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
           {!!hook && (
             <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' }} accessible accessibilityLabel={`Your picture: ${hook}`}>
               <Text style={{ fontSize: 28 }}>{hook}</Text>
             </View>
           )}
         </View>
+        )}
         <Txt v={lex.clue.length > 70 ? 'heading' : 'title'} accessibilityLabel={`Clue: ${lex.clue}`}>
           {lex.clue}
         </Txt>
@@ -202,7 +201,7 @@ export function Clue({ lex, onResult, done }: GameProps) {
             />
           </Wiggle>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-            <IconBtn icon={Lightbulb} label={lastRung ? 'Show me the word' : cues === 0 ? 'Give me a cue' : 'Another cue'} kind="butter" size={58} badge={cues || undefined} onPress={nextCue} />
+            <Btn kind="soft" icon={Lightbulb} label={lastRung ? 'Show me the word' : cues === 0 ? 'Give me a hint' : 'Another hint'} flex={1} onPress={nextCue} />
             {mic && <IconBtn icon={listening ? Square : Mic} label={listening ? 'Stop listening' : 'Say it'} kind={listening ? 'orange' : 'ghost'} size={58} onPress={listen} />}
           </View>
         </>

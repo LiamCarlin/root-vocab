@@ -3,7 +3,6 @@ import { ArrowRight, RotateCcw } from 'lucide-react-native';
 import { View, useWindowDimensions } from 'react-native';
 
 import { Figure } from '@/components/Buddy';
-import { Float, Pop, Rays } from '@/components/fx';
 import { Btn, Rise, Screen, Txt } from '@/components/ui';
 import { sfx } from '@/lib/sfx';
 
@@ -15,7 +14,6 @@ export default function Welcome() {
 
   return (
     <Screen
-      tone="brand"
       scroll={false}
       footer={
         <>
@@ -28,22 +26,20 @@ export default function Welcome() {
               router.push('/onboarding/about');
             }}
           />
-          <Btn kind="white" small icon={RotateCcw} label="Restore" a11y="I have used Root before. Restore my words." onPress={() => router.push('/onboarding/restore')} />
+          <Btn kind="soft" small icon={RotateCcw} label="I have used Root before" a11y="I have used Root before. Bring back my words." onPress={() => router.push('/onboarding/restore')} />
         </>
       }>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 28 }}>
         <View style={{ width: disc, height: disc, alignItems: 'center', justifyContent: 'flex-end' }}>
-          <Rays size={disc * 1.5} />
-          <Pop from={0.7} style={{ position: 'absolute', left: 0, top: 0 }}>
-            <Float amp={4} period={3400}>
-              <View style={{ width: disc, height: disc, borderRadius: disc / 2, backgroundColor: 'rgba(255,255,255,0.42)' }} />
-            </Float>
-          </Pop>
           <Figure pose="wave" size={size} delay={220} />
         </View>
         <Rise i={2}>
+          {/* Root says who it is here, so the name is known before the app starts using it. */}
           <Txt v="hero" center accessibilityRole="header">
-            Find your words.
+            Hi, I’m Root.
+          </Txt>
+          <Txt v="title" color="ink2" center style={{ marginTop: 6 }}>
+            Let’s find your words.
           </Txt>
         </Rise>
       </View>

@@ -1,12 +1,8 @@
 import { router } from 'expo-router';
-import { Play, Shuffle, Sparkles } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { Play, Shuffle } from 'lucide-react-native';
 import { Image, Text, View } from 'react-native';
 
-import { Perch } from '@/components/Buddy';
-import { Shine } from '@/components/fx';
 import { GAMES } from '@/components/games';
-import { LIP } from '@/components/rewards';
 import { Block, Ring, Rise, Screen, Txt } from '@/components/ui';
 import { STRANDS, type Strand } from '@/data/profile';
 import { OBJECTS } from '@/data/story';
@@ -70,16 +66,7 @@ export default function Practice() {
   const { c } = useTheme();
   const due = useStore((s) => dueCount(s));
   const skill = useStore((s) => s.skill);
-  const log = useStore((s) => s.log);
-  const counters = useStore((s) => s.counters);
   const companion = useStore((s) => s.display.companion);
-
-  // A game is "new" until it shows up in the attempt log (or, for the hands-on games, in their counters).
-  const played = useMemo(() => {
-    const set = new Set<string>(log.map((a) => a.game));
-    for (const k of HANDS) if ((counters[k] ?? 0) > 0) set.add(k);
-    return set;
-  }, [log, counters]);
 
   return (
     <Screen bottomSpace={TAB_SPACE} gap={18}>
@@ -91,12 +78,9 @@ export default function Practice() {
       <Rise>
         {/* Room for Root to sit on the card; none is kept when Root is switched off. */}
         <View style={{ position: 'relative', marginTop: companion === 'off' ? 0 : 70 }}>
-          <Block tone="brand" pad={22} onPress={() => router.push('/play/mix')} a11y={due ? `Daily mix. ${due} ${due === 1 ? 'word' : 'words'} due.` : 'Daily mix'} style={{ minHeight: 168, justifyContent: 'space-between', borderBottomWidth: 6, borderBottomColor: LIP.brand }}>
-            <Shine round={radius.xl} />
+          <Block tone="brand" pad={22} onPress={() => router.push('/play/mix')} a11y={due ? `Daily mix. ${due} ${due === 1 ? 'word' : 'words'} due.` : 'Daily mix'} style={{ minHeight: 168, justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center' }}>
-                <Shuffle size={26} color="#FFFFFF" strokeWidth={2.6} />
-              </View>
+              <Shuffle size={30} color={ON_BLOCK.ink} strokeWidth={2.4} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
               <View style={{ flex: 1 }}>
@@ -104,30 +88,26 @@ export default function Practice() {
                 <Txt v="title">Daily mix</Txt>
               </View>
               {/* Looks like the app's play button; the whole card is the button. */}
-              <View style={{ height: 58, paddingHorizontal: 26, borderRadius: radius.pill, backgroundColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 5, borderBottomColor: '#000000' }}>
+              <View style={{ height: 58, paddingHorizontal: 26, borderRadius: radius.pill, backgroundColor: c.press, alignItems: 'center', justifyContent: 'center' }}>
                 <Play size={24} color="#FFFFFF" fill="#FFFFFF" />
               </View>
             </View>
           </Block>
-          <Perch pose="sit" size={96} side="right" inset={26} />
         </View>
       </Rise>
 
       {GROUPS.map((g, gi) => {
         const theta = g.strand ? skill[g.strand] : 0;
-        const tone = g.strand ? STRANDS[g.strand].tone : 'butter';
         return (
           <Rise key={g.id} i={gi + 1} style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 6 }}>
-              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: c[tone], alignItems: 'center', justifyContent: 'center' }}>
-                <Image source={g.art} style={{ width: 40, height: 40 }} resizeMode="contain" />
-              </View>
+              <Image source={g.art} style={{ width: 44, height: 44 }} resizeMode="contain" />
               <Txt v="title" accessibilityRole="header" style={{ flex: 1 }}>
                 {g.label}
               </Txt>
               {g.strand && (
                 <View accessible accessibilityLabel={`${g.label} level ${levelOf(theta)}`}>
-                  <Ring value={levelProgress(theta)} size={46} stroke={5} color={c.ink}>
+                  <Ring value={levelProgress(theta)} size={46} stroke={5} color={c.indigo}>
                     <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 16, color: c.ink }}>{levelOf(theta)}</Text>
                   </Ring>
                 </View>
@@ -137,23 +117,9 @@ export default function Practice() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               {g.games.map((id) => {
                 const game = GAMES[id];
-                const fresh = !played.has(id);
                 return (
-                  <Block key={id} tone={game.tone} pad={16} onPress={() => openGame(id)} a11y={`${game.name}${fresh ? ', new' : ''}. ${game.a11y}.`} style={{ flexBasis: '46%', flexGrow: 1, minHeight: 132, gap: 10, justifyContent: 'space-between', borderBottomWidth: 5, borderBottomColor: LIP[game.tone] }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: ON_BLOCK.ink, alignItems: 'center', justifyContent: 'center' }}>
-                        <game.icon size={23} color="#FFFFFF" strokeWidth={2.4} />
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        {fresh && (
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-                            <Sparkles size={16} color={ON_BLOCK.ink} strokeWidth={2.5} />
-                          </View>
-                        )}
-                        {/* Which strand a game feeds, in that strand's colour. Only where the tile itself does not already say so. */}
-                        {STRANDS[game.strand].tone !== game.tone && <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c[STRANDS[game.strand].tone], borderWidth: 2.5, borderColor: ON_BLOCK.ink }} />}
-                      </View>
-                    </View>
+                  <Block key={id} pad={16} onPress={() => openGame(id)} a11y={`${game.name}. ${game.a11y}.`} style={{ flexBasis: '46%', flexGrow: 1, minHeight: 132, gap: 10, justifyContent: 'space-between' }}>
+                    <game.icon size={26} color={c.indigo} strokeWidth={2.3} />
                     <Txt v="heading" numberOfLines={2}>
                       {game.name}
                     </Txt>

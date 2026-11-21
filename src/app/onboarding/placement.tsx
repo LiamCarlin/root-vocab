@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
-import { ArrowRight, Check, CircleQuestionMark, Lightbulb, LogOut, Mic, Play, SkipForward, Volume2 } from 'lucide-react-native';
+import { ArrowRight, Check, Lightbulb, LogOut, Mic, Play, Volume2 } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, View } from 'react-native';
 
 import { Figure } from '@/components/Buddy';
 import type { Pose } from '@/components/Mascot';
 import { Pop, Wiggle } from '@/components/fx';
-import { Controls, SylWord } from '@/components/learn';
+import { SylWord } from '@/components/learn';
 import { Block, Btn, Field, IconBtn, Rise, Screen, Sheet, Tag, TopBar, Txt } from '@/components/ui';
-import { STRANDS, TOPICS, type Strand } from '@/data/profile';
+import { STRANDS, type Strand } from '@/data/profile';
 import { BANK, type BankWord } from '@/data/words';
 import { buzz, listenOnce, micAvailable, say, sayBeat, speakable, stopListening, stopSpeaking } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/unlocks';
@@ -20,6 +20,11 @@ import { ON_BLOCK, radius, useTheme, wordSize } from '@/theme';
 
 const ORDER: Strand[] = ['know', 'find', 'spell'];
 /** Items per strand. Enough for the level to settle, short enough to finish in about three minutes. */
+const PART_TASK: Record<Strand, string> = {
+  know: 'Pick what each word means.',
+  find: 'Read a clue and type the word it points to.',
+  spell: 'Hear a word in a sentence and spell it.',
+};
 const PER = 6;
 const START = 2.5;
 /** Placement moves the level faster than everyday practice does. */
@@ -54,9 +59,13 @@ function makeItem(strand: Strand, theta: number, used: string[]): Item | null {
   const a = pool[h % pool.length];
   const rest = pool.filter((b) => b.id !== a.id && b.meaning !== a.meaning);
   const b = rest[(h >>> 5) % rest.length] ?? a;
+  // Where the right meaning lands is random every time, so no position is ever a pattern to learn.
   const opts = [word.meaning, a.meaning, b.meaning];
-  const k = h % 3; // where the right one lands
-  return { word, options: [...opts.slice(k), ...opts.slice(0, k)] };
+  for (let i = opts.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [opts[i], opts[j]] = [opts[j], opts[i]];
+  }
+  return { word, options: opts };
 }
 
 /**
@@ -150,18 +159,21 @@ export default function Placement() {
     <View style={{ flex: 1, flexDirection: 'row', gap: 6 }} accessibilityRole="progressbar" accessibilityLabel={`Part ${st.si + 1} of 3, ${meta.label}. Word ${Math.min(st.n + 1, PER)} of ${PER}.`}>
       {ORDER.map((id, i) => {
         const fill = i < st.si ? 1 : i > st.si || st.inter ? 0 : (st.n + (st.res ? 1 : 0)) / PER;
-        return <ProgressBar key={id} strand={id} fill={fill} onTone={st.inter} />;
+        return <ProgressBar key={id} fill={fill} onTone={st.inter} />;
       })}
     </View>
   );
 
   const leave = (
-    <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave?">
-      <Btn icon={Play} label="Stay" onPress={() => setLeaving(false)} />
+    <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave the check?">
+      <Txt v="body" center>
+        Your answers so far are not kept. You can start the check again or skip it.
+      </Txt>
+      <Btn icon={Play} label="Keep going" onPress={() => setLeaving(false)} />
       <Btn
         kind="soft"
         icon={LogOut}
-        label="Leave"
+        label="Leave the check"
         onPress={() => {
           setLeaving(false);
           if (router.canGoBack()) router.back();
@@ -175,7 +187,7 @@ export default function Placement() {
   if (st.inter || !st.item) {
     return (
       <>
-        <Screen tone={meta.tone} scroll={false} top={<TopBar back="close" onBack={() => setLeaving(true)} center={bars} />} footer={<Btn icon={Play} a11y={`Start the ${meta.label} part`} onPress={() => setSt({ ...st, inter: false })} />}>
+        <Screen tone={meta.tone} scroll={false} top={<TopBar back="close" onBack={() => setLeaving(true)} center={bars} />} footer={<Btn icon={Play} label="Start" a11y={`Start the ${meta.label} part`} onPress={() => setSt({ ...st, inter: false })} />}>
           <View key={strand} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22 }}>
             <Figure pose={POSE[strand]} size={180} />
             <Pop delay={160}>
@@ -188,8 +200,12 @@ export default function Placement() {
                 {meta.label}
               </Txt>
             </Rise>
+            {/* What this part asks for, before it starts. */}
+            <Txt v="body" center style={{ maxWidth: 300 }}>
+              {PART_TASK[strand]}
+            </Txt>
             <Txt v="label" color="ink2">
-              {st.si + 1} / {ORDER.length}
+              Part {st.si + 1} of {ORDER.length}
             </Txt>
           </View>
         </Screen>
@@ -204,7 +220,7 @@ export default function Placement() {
       <Screen
         keyboard
         gap={14}
-        top={<TopBar back="close" onBack={() => setLeaving(true)} center={bars} right={<IconBtn icon={SkipForward} label="Skip this word" size={48} disabled={!!st.res} onPress={() => advance({ r: 0, skipped: true })} />} />}
+        top={<TopBar back="close" onBack={() => setLeaving(true)} center={bars} />}
         footer={st.res ? <Btn icon={ArrowRight} a11y="Next" onPress={() => advance()} /> : undefined}>
         {strand === 'know' && <KnowItem key={item.word.id} item={item} res={st.res} onAnswer={answer} />}
         {strand === 'find' && <FindItem key={item.word.id} item={item} res={st.res} onAnswer={answer} />}
@@ -215,11 +231,11 @@ export default function Placement() {
   );
 }
 
-function ProgressBar({ strand, fill, onTone }: { strand: Strand; fill: number; onTone: boolean }) {
+function ProgressBar({ fill, onTone }: { fill: number; onTone: boolean }) {
   const { c } = useTheme();
   return (
     <View style={{ flex: 1, height: 10, borderRadius: 5, backgroundColor: onTone ? 'rgba(14,14,19,0.16)' : c.surface2, overflow: 'hidden' }}>
-      <View style={{ width: `${Math.round(Math.max(0, Math.min(1, fill)) * 100)}%`, height: 10, borderRadius: 5, backgroundColor: onTone ? ON_BLOCK.ink : c[STRANDS[strand].tone] }} />
+      <View style={{ width: `${Math.round(Math.max(0, Math.min(1, fill)) * 100)}%`, height: 10, borderRadius: 5, backgroundColor: onTone ? ON_BLOCK.ink : c.indigo }} />
     </View>
   );
 }
@@ -233,9 +249,13 @@ function Reveal({ word, ok }: { word: BankWord; ok: boolean }) {
     <Rise>
       <Block pad={22} style={{ alignItems: 'center', gap: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: ok ? c.mint : c.surface2, alignItems: 'center', justifyContent: 'center' }} accessible accessibilityLabel={ok ? 'Got it' : 'Noted'}>
-            {ok ? <Check size={18} color={ON_BLOCK.ink} strokeWidth={3.2} /> : <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.ink3 }} />}
-          </View>
+          {ok ? (
+            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c.mint, alignItems: 'center', justifyContent: 'center' }} accessible accessibilityLabel="Got it">
+              <Check size={18} color={ON_BLOCK.ink} strokeWidth={3.2} />
+            </View>
+          ) : (
+            <Txt v="heading">The word was</Txt>
+          )}
           <IconBtn icon={Volume2} label={`Hear ${word.text}`} kind="soft" size={46} onPress={() => say(speakable(word.text))} />
         </View>
         <SylWord text={word.text} parts={word.parts} size={wordSize(word.text, 40, 280)} />
@@ -249,7 +269,6 @@ function Reveal({ word, ok }: { word: BankWord; ok: boolean }) {
 
 // ── Know: what does it mean? ──────────────────────────────────────────────
 function KnowItem({ item, res, onAnswer }: ItemProps) {
-  const { c } = useTheme();
   const w = item.word;
   const [picked, setPicked] = useState(-1);
 
@@ -261,6 +280,9 @@ function KnowItem({ item, res, onAnswer }: ItemProps) {
 
   return (
     <>
+      <Txt v="heading" accessibilityRole="header">
+        What does it mean?
+      </Txt>
       <Rise>
         <Block pad={22} style={{ alignItems: 'center', gap: 16 }}>
           <SylWord text={w.text} parts={w.parts} size={wordSize(w.text, 42, 290)} />
@@ -294,12 +316,16 @@ function KnowItem({ item, res, onAnswer }: ItemProps) {
                   <Check size={16} color="#FFFFFF" strokeWidth={3.2} />
                 </View>
               )}
-              {shown && mine && !isRight && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.ink3, marginRight: 10 }} />}
+              {shown && mine && !isRight && (
+                <Txt v="caption" color="ink2">
+                  Your pick
+                </Txt>
+              )}
             </Block>
           </Rise>
         );
       })}
-      {!res && <Btn kind="ghost" small icon={CircleQuestionMark} label="Not sure" a11y="I am not sure what it means" onPress={() => onAnswer({ r: 0 })} />}
+      {!res && <Btn kind="soft" small label="I don’t know" a11y="I don’t know what it means. Show me." onPress={() => onAnswer({ r: 0 })} />}
     </>
   );
 }
@@ -308,7 +334,6 @@ function KnowItem({ item, res, onAnswer }: ItemProps) {
 function FindItem({ item, res, onAnswer }: ItemProps) {
   const { c, syl, font } = useTheme();
   const w = item.word;
-  const topic = TOPICS[w.topics[0]];
   const [text, setText] = useState('');
   const [cue, setCue] = useState(false);
   const [tries, setTries] = useState(0);
@@ -348,14 +373,11 @@ function FindItem({ item, res, onAnswer }: ItemProps) {
 
   return (
     <>
+      <Txt v="heading" accessibilityRole="header">
+        What is the word? Spelling does not matter.
+      </Txt>
       <Rise>
-        <Block tone="pink" pad={22} style={{ gap: 14, alignItems: 'flex-start' }}>
-          {topic && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(14,14,19,0.1)', borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 5 }}>
-              <topic.icon size={14} color={ON_BLOCK.ink} strokeWidth={2.5} />
-              <Txt v="caption">{topic.label}</Txt>
-            </View>
-          )}
+        <Block pad={22} style={{ gap: 14, alignItems: 'flex-start' }}>
           <Txt v="title">{w.clue}</Txt>
         </Block>
       </Rise>
@@ -396,9 +418,9 @@ function FindItem({ item, res, onAnswer }: ItemProps) {
             </View>
           )}
           <Rise i={2} style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-            {canSpeak && <IconBtn icon={Mic} label={listening ? 'Stop listening' : 'Say the word'} kind="orange" active={listening} onPress={listen} />}
-            <IconBtn icon={Lightbulb} label="Give me a cue: the number of beats and the first sound" kind="butter" disabled={cue} onPress={giveCue} />
-            <Btn kind="ghost" small label="It won’t come" a11y="The word will not come. Show it." flex={1} onPress={() => onAnswer({ r: 0 })} />
+            {canSpeak && <IconBtn icon={Mic} label={listening ? 'Stop listening' : 'Say the word'} kind="ink" onPress={listen} />}
+            <Btn kind="soft" small icon={Lightbulb} label="Hint" a11y="Give me a hint: the number of beats and the first sound" disabled={cue} flex={1} onPress={giveCue} />
+            <Btn kind="soft" small label="I don’t know" a11y="I don’t know it. Show me the word." flex={1} onPress={() => onAnswer({ r: 0 })} />
           </Rise>
         </>
       )}
@@ -425,32 +447,26 @@ function SpellItem({ item, res, onAnswer }: ItemProps) {
 
   return (
     <>
+      <Txt v="heading" accessibilityRole="header">
+        Spell the missing word
+      </Txt>
       <Rise>
         <Block pad={20} style={{ gap: 16 }}>
-          <Controls onReplay={() => say(speakable(w.text))} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Txt v="body" style={{ flex: 1 }}>
-              {res ? plain(w.life) : gapped(w.life)}
-            </Txt>
-            <IconBtn icon={Volume2} label="Hear the sentence" kind="soft" size={46} onPress={() => say(plain(w.life))} />
+          <Txt v="body">{res ? plain(w.life) : gapped(w.life)}</Txt>
+          {/* Two different things to hear, so each says which. */}
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Btn kind="soft" small icon={Volume2} label="The word" a11y="Hear the word" flex={1} onPress={() => say(speakable(w.text))} />
+            <Btn kind="soft" small icon={Volume2} label="The sentence" a11y="Hear the sentence" flex={1} onPress={() => say(plain(w.life))} />
           </View>
         </Block>
       </Rise>
       {res ? (
         <Reveal word={w} ok={res.r === 1} />
       ) : (
-        <Rise i={1}>
-          <Field
-            big
-            value={text}
-            onChangeText={setText}
-            placeholder="Write the word"
-            accessibilityLabel="Write the word you heard"
-            returnKeyType="done"
-            style={{ minWidth: 0 }}
-            onSubmitEditing={judge}
-            right={<IconBtn icon={Check} label="Check" kind="ink" size={50} disabled={!text.trim()} onPress={judge} />}
-          />
+        <Rise i={1} style={{ gap: 12 }}>
+          <Field big value={text} onChangeText={setText} autoFocus autoComplete="off" returnKeyType="done" onSubmitEditing={judge} placeholder="Type the word" accessibilityLabel="Spell the missing word" style={{ minWidth: 0 }} />
+          <Btn icon={Check} label="Check" a11y="Check my spelling" disabled={!text.trim()} onPress={judge} />
+          <Btn kind="soft" small label="I don’t know" a11y="I don’t know how to spell it. Show me." onPress={() => onAnswer({ r: 0 })} />
         </Rise>
       )}
     </>

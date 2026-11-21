@@ -8,8 +8,7 @@ import type { FontId } from '@/theme/tokens';
 import { JOURNAL, RESTORE_BY_ID } from '@/data/valley';
 import { addDays, diffDays, weekOf } from './dates';
 import { askFor, bumpSkill, dayOf, difficulty, emptyMem, levelOf, nextMem, pickSet, SKILL_MAX, SKILL_MIN, STRAND_LIST, stopTodo, stopWords, streakOf, type GameId, type SessionKind } from './engine';
-import { cleanFriend, type Friend } from './friends';
-import { buildChapter, refreshStops, SET_SIZE } from './journey';
+import { buildChapter, refreshStops, SET_SIZE, splitStops } from './journey';
 import { lexemeFor, slug, type Lexeme } from './lexicon';
 import { cleanMind, freshMind, gapFor, levelDrift, observe, observeAll, predict, settle, type Mind, type Signal } from './mind';
 import { drain } from './signals';
@@ -17,7 +16,6 @@ import { newBadgeUnlocks, QUEST_BY_ID, questsFor, questState } from './rewards';
 
 export type { Strand } from '@/data/profile';
 export type { GameId, SessionKind } from './engine';
-export type { Friend } from './friends';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 /** How well one strand of one word is held. Box 0..4; a higher box comes back less often. */
@@ -49,12 +47,9 @@ export type UserWord = {
   lesson?: LessonStats;
 };
 
-export type SlotId = 'morning' | 'lunch' | 'evening';
-export const SLOT_LABEL: Record<SlotId, string> = { morning: 'Morning', lunch: 'Midday', evening: 'Evening' };
 
 export type Profile = { name: string; guest: boolean; days: DayId[]; interests: Topic[]; goals: Strand[] };
 export type Display = { font: FontId; size: 0 | 1 | 2; spacing: 0 | 1; theme: 'system' | 'light' | 'paper' | 'dark'; reduceMotion: boolean; haptics: boolean; sound: boolean; /** Whether Root's pictures appear on cards and corners. */ companion: 'on' | 'off' };
-export type CheckIn = { freq: 'daily' | 'three' | 'off'; days: number[]; slots: SlotId[]; times: Record<SlotId, string> };
 export type Moderator = { micMiss: boolean; dayOffset: number };
 
 export type Attempt = { d: string; id: string; strand: Strand; r: 0 | 0.5 | 1; game: GameId; ms?: number; cue?: number; /** What the model guessed the answer would score, before it was given. */ p?: number };
@@ -87,7 +82,6 @@ export type Data = {
   /** The placement has been done (or skipped). */
   placed: boolean;
   profile: Profile;
-  checkIn: CheckIn;
   voice: 'coach' | 'quiet';
   slowAudio: boolean;
   display: Display;
@@ -135,7 +129,6 @@ export type Data = {
   /** A random id for this copy of the app, made the first time a friend card is shared. */
   me: { id: string };
   /** People whose cards have been added. Nothing is fetched: a friend's numbers are as fresh as the last card they sent. */
-  friends: Friend[];
 };
 
 type AddOpts = Partial<Pick<UserWord, 'origin' | 'status' | 'meaning' | 'example' | 'parts' | 'says' | 'pos'>>;
@@ -144,7 +137,6 @@ type Actions = {
   patch: (p: Partial<Data>) => void;
   setProfile: (p: Partial<Profile>) => void;
   setDisplay: (p: Partial<Display>) => void;
-  setCheckIn: (p: Partial<CheckIn>) => void;
   setMod: (p: Partial<Moderator>) => void;
   /** Adds a word to the learner's list (queued unless told otherwise). Returns its id, or '' for an empty word. */
   addWord: (text: string, opts?: AddOpts) => string;
@@ -189,8 +181,6 @@ type Actions = {
   build: (id: string) => boolean;
   readJournal: (pages: number) => void;
   /** Adds a friend from their card, or updates them if the card is newer. False for a card that is not one, or is the learner's own. */
-  addFriend: (f: Friend) => boolean;
-  removeFriend: (id: string) => void;
   /** The id other people's apps know this one by. Made on first use. */
   myId: () => string;
   shiftUnlock: () => void;
@@ -201,6 +191,7 @@ type Actions = {
   bump: (counter: string, by?: number) => void;
   /** Rolls the day over if it has changed (fresh quests and daily counters, streak freezes) and repairs any stop that can no longer be played. Cheap; call on app focus. */
   tick: () => void;
+  splitPath: () => void;
   finishOnboarding: () => void;
   exportData: () => string;
   importData: (json: string) => boolean;
@@ -238,7 +229,6 @@ const initial: Data = {
   onboarded: false,
   placed: false,
   profile: { name: '', guest: false, days: [], interests: [], goals: [] },
-  checkIn: { freq: 'daily', days: [1, 3, 5], slots: ['evening'], times: { morning: '07:45', lunch: '12:30', evening: '19:00' } },
   voice: 'coach',
   slowAudio: false,
   display: { font: 'lexend', size: 0, spacing: 0, theme: 'system', reduceMotion: false, haptics: true, sound: true, companion: 'on' },
@@ -268,7 +258,6 @@ const initial: Data = {
   pledge: null,
   journalSeen: 0,
   me: { id: '' },
-  friends: [],
 };
 const DATA_KEYS = Object.keys(initial) as (keyof Data)[];
 
@@ -434,7 +423,6 @@ const STATUSES: WordStatus[] = ['queued', 'learning', 'known', 'removed'];
 const ORIGINS: Origin[] = ['path', 'finder', 'assess', 'typed'];
 const STOP_KINDS: StopKind[] = ['learn', 'find', 'spell', 'chest', 'hands', 'challenge'];
 const SESSION_KINDS: SessionKind[] = ['find', 'spell', 'mix', 'challenge', 'game', 'hands'];
-const SLOTS: SlotId[] = ['morning', 'lunch', 'evening'];
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const num = (v: unknown, dflt: number, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : dflt);
@@ -511,17 +499,6 @@ export function sanitizeImport(raw: unknown): Data | null {
     companion: di.companion === 'off' ? 'off' : 'on',
   };
 
-  const ci = isObj(d.checkIn) ? d.checkIn : {};
-  const times = isObj(ci.times) ? ci.times : {};
-  const time = (k: SlotId) => (typeof times[k] === 'string' && /^\d{2}:\d{2}$/.test(times[k] as string) ? (times[k] as string) : initial.checkIn.times[k]);
-  const slots = strList(ci.slots).filter((x): x is SlotId => SLOTS.includes(x as SlotId));
-  const checkIn: CheckIn = {
-    freq: pick<CheckIn['freq']>(ci.freq, ['daily', 'three', 'off'], initial.checkIn.freq),
-    days: Array.isArray(ci.days) ? ci.days.filter((n): n is number => Number.isInteger(n) && n >= 0 && n <= 6) : initial.checkIn.days,
-    slots: slots.length ? slots : initial.checkIn.slots,
-    times: { morning: time('morning'), lunch: time('lunch'), evening: time('evening') },
-  };
-
   const patterns: Data['patterns'] = {};
   if (isObj(d.patterns)) for (const [k, v] of Object.entries(d.patterns)) if (isObj(v)) patterns[k] = { seen: num(v.seen, 0, 0), ok: num(v.ok, 0, 0) };
 
@@ -574,7 +551,6 @@ export function sanitizeImport(raw: unknown): Data | null {
     onboarded: true,
     placed: flag(d.placed, false),
     profile,
-    checkIn,
     voice: pick<Data['voice']>(d.voice, ['coach', 'quiet'], initial.voice),
     slowAudio: flag(d.slowAudio, initial.slowAudio),
     display,
@@ -602,10 +578,10 @@ export function sanitizeImport(raw: unknown): Data | null {
     pledge: isObj(d.pledge) && dayKeyOf(d.pledge.start) ? { start: d.pledge.start as string, stake: Math.round(num(d.pledge.stake, GEMS.pledge, 0, 1000)), state: pick<Pledge['state']>(d.pledge.state, ['on', 'won', 'lost'], 'on') } : null,
     journalSeen: Math.round(num(d.journalSeen, 0, 0, JOURNAL.length)),
     me: { id: isObj(d.me) ? str(d.me.id).replace(/[^a-z0-9]/g, '').slice(0, 24) : '' },
-    friends: (Array.isArray(d.friends) ? d.friends : []).map(cleanFriend).filter((f): f is Friend => !!f).slice(0, 30),
   };
   // A path that can be walked: a chapter if there is none, and a word for every learn stop that has lost its own.
   if (!s.journey.stops.length) s = { ...s, journey: { ...s.journey, stops: buildChapter(s, s.journey.chapter) } };
+  s = { ...s, journey: { ...s.journey, stops: splitStops(s.journey.stops, dayOf(s)) } };
   s = { ...s, journey: { ...s.journey, stops: refreshStops(s) } };
   return s;
 }
@@ -617,7 +593,6 @@ export const useStore = create<State>()(
       patch: (p) => set(p),
       setProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p } })),
       setDisplay: (p) => set((s) => ({ display: { ...s.display, ...p } })),
-      setCheckIn: (p) => set((s) => ({ checkIn: { ...s.checkIn, ...p } })),
       setMod: (p) => set((s) => ({ mod: { ...s.mod, ...p } })),
 
       addWord: (text, opts = {}) => {
@@ -884,17 +859,6 @@ export const useStore = create<State>()(
         return true;
       },
       readJournal: (pages) => set((s) => (pages > s.journalSeen ? { journalSeen: Math.min(JOURNAL.length, pages) } : s)),
-      addFriend: (f) => {
-        const s = get();
-        const clean = cleanFriend(f);
-        if (!clean || clean.id === s.me.id) return false;
-        const old = s.friends.find((x) => x.id === clean.id);
-        // An older card never overwrites a newer one.
-        if (old && old.at > clean.at) return true;
-        set({ friends: [clean, ...s.friends.filter((x) => x.id !== clean.id)].slice(0, 30), counters: old ? s.counters : add(s.counters, 'friends') });
-        return true;
-      },
-      removeFriend: (id) => set((s) => ({ friends: s.friends.filter((f) => f.id !== id) })),
       myId: () => {
         const cur = get().me.id;
         if (cur) return cur;
@@ -927,6 +891,14 @@ export const useStore = create<State>()(
         if (stops !== next.journey.stops) next = { ...next, journey: { ...next.journey, stops } };
         if (next !== s) set(next);
       },
+
+      // One bubble per word: a path saved with two-word stops is split. Called by the journey screen as it
+      // opens, never during a lesson, so the stop a lesson is working on cannot move under it.
+      splitPath: () =>
+        set((s) => {
+          const stops = splitStops(s.journey.stops, dayOf(data(s)));
+          return stops === s.journey.stops ? {} : { journey: { ...s.journey, stops } };
+        }),
 
       finishOnboarding: () =>
         set((s) => {
@@ -965,7 +937,6 @@ export const useStore = create<State>()(
           profile: { ...current.profile, ...p.profile },
           // Older saves had three companion modes; anything that was not `off` is `on`.
           display: { ...current.display, ...p.display, companion: p.display?.companion === 'off' ? 'off' : 'on' },
-          checkIn: { ...current.checkIn, ...p.checkIn },
           mod: { ...current.mod, ...p.mod },
           skill: { ...current.skill, ...p.skill },
           levelSeen: { ...current.levelSeen, ...p.levelSeen },
@@ -975,7 +946,6 @@ export const useStore = create<State>()(
           mind: cleanMind(p.mind),
           earned: { ...p.earned },
           built: p.built ?? [],
-          friends: p.friends ?? [],
           me: { ...current.me, ...p.me },
         };
       },

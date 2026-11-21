@@ -68,7 +68,7 @@ export function Gap({ lex, onResult, done }: GameProps) {
 
   return (
     <View style={{ flex: 1, gap: 14 }}>
-      <Block tone="pink" pad={20} style={{ gap: 14 }}>
+      <Block pad={20} style={{ gap: 14 }}>
         <Txt v="title" accessibilityLabel={prompt ?? `${before} ${open ? word : 'blank'} ${after}`}>
           {prompt ?? (
             <>

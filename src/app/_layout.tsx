@@ -2,7 +2,7 @@ import { AtkinsonHyperlegible_400Regular, AtkinsonHyperlegible_700Bold } from '@
 import { Lexend_400Regular, Lexend_500Medium, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
 import { PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFonts } from 'expo-font';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -12,7 +12,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { UnlockHost } from '@/components/rewards';
 import { ToastHost } from '@/components/ui';
-import { onCheckInTap } from '@/lib/checkins';
 import { useStore } from '@/lib/store';
 import { motion, useTheme } from '@/theme';
 
@@ -34,7 +33,6 @@ export default function RootLayout() {
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(c.canvas).catch(() => {});
   }, [c.canvas]);
-  // A reminder opens the journey, if setup is finished.
   // Coming back to the app on a new day (on any tab) rolls the day over: quests, the daily goal, freezes.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -43,7 +41,6 @@ export default function RootLayout() {
     });
     return () => sub.remove();
   }, []);
-  useEffect(() => onCheckInTap(() => useStore.getState().onboarded && router.push('/(tabs)')), []);
 
   if (!fontsReady || !hydrated) return <View style={{ flex: 1, backgroundColor: c.canvas }} />;
 

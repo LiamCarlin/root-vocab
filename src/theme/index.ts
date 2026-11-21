@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { useColorScheme, type TextStyle, type ViewStyle } from 'react-native';
+import { type TextStyle, type ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { useStore } from '@/lib/store';
-import { SYLLABLE_TONES, fonts, palettes, textScales, trackSteps, type, type BlockTone, type Colors, type ThemeName, type Variant, type Weight } from './tokens';
+import { fonts, palettes, sylFill, textScales, trackSteps, type, type Colors, type ThemeName, type Variant, type Weight } from './tokens';
 
 export * from './tokens';
 
@@ -18,19 +18,20 @@ export type Theme = {
   reduceMotion: boolean;
   e1: ViewStyle;
   e2: ViewStyle;
-  /** Block colour for the nth syllable of a word. */
+  /** Fill for the nth syllable of a word: two shades that alternate. */
   syl: (i: number) => string;
 };
 
 export function useTheme(): Theme {
   const display = useStore((s) => s.display);
-  const system = useColorScheme();
   const systemReduce = useReducedMotion();
 
   return useMemo(() => {
-    const name: ThemeName = display.theme === 'system' ? (system === 'dark' ? 'dark' : 'light') : display.theme;
+    // Light only for now: the dark palette has not been checked against the colour rules in tokens.ts.
+    // The cream Paper background stays, as a reading aid.
+    const name: ThemeName = display.theme === 'paper' ? 'paper' : 'light';
     const c = palettes[name];
-    const dark = name === 'dark';
+    const dark = false; // light only for now
     const scale = textScales[display.size];
     const extraTrack = trackSteps[display.spacing];
     const font = (w: Weight) => fonts[display.font][w];
@@ -52,11 +53,12 @@ export function useTheme(): Theme {
       text,
       scale,
       reduceMotion: display.reduceMotion || systemReduce,
-      e1: { boxShadow: dark ? '0px 2px 10px rgba(0,0,0,0.35)' : '0px 4px 14px rgba(20,23,40,0.05)' },
-      e2: { boxShadow: dark ? '0px 14px 34px rgba(0,0,0,0.6)' : '0px 14px 34px rgba(20,23,40,0.14)' },
-      syl: (i: number) => c[SYLLABLE_TONES[i % SYLLABLE_TONES.length] as BlockTone],
+      // Flat: no drop shadows anywhere. Cards are told apart by their border and fill.
+      e1: {},
+      e2: {},
+      syl: sylFill,
     };
-  }, [display, system, systemReduce]);
+  }, [display, systemReduce]);
 }
 
 /** Shrinks the big "Word" type so long terms still fit on one line. */

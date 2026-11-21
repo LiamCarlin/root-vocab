@@ -80,7 +80,8 @@ export type BtnKind = 'ink' | 'brand' | 'orange' | 'white' | 'soft' | 'ghost' | 
 function btnColors(kind: BtnKind, c: Colors, dark: boolean): { bg: string; fg: string; lip: string } {
   switch (kind) {
     case 'ink':
-      return { bg: c.ink, fg: c.onInk, lip: dark ? '#C9C9D2' : '#3A3A46' };
+      // The main button: the "press this" blue, not black, so the one thing to do is the one bit of colour.
+      return { bg: c.press, fg: '#FFFFFF', lip: c.press };
     case 'brand':
       return { bg: c.brand, fg: ON_BLOCK.ink, lip: '#7B97E8' };
     case 'orange':
@@ -105,11 +106,14 @@ function btnColors(kind: BtnKind, c: Colors, dark: boolean): { bg: string; fg: s
  */
 export function Btn({ icon: Icon, iconRight: IconR, label, a11y, onPress, kind = 'ink', disabled, style, small, flex }: { icon?: LucideIcon; iconRight?: LucideIcon; label?: string; a11y?: string; onPress?: () => void; kind?: BtnKind; disabled?: boolean; style?: StyleProp<ViewStyle>; small?: boolean; flex?: number }) {
   const { c, dark } = useTheme();
-  const { bg, fg, lip } = btnColors(kind, c, dark);
-  const y = useSharedValue(0);
-  const h = small ? 48 : 62;
-  const lipH = kind === 'ghost' ? 0 : small ? 3 : 5;
-  const anim = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  const base = btnColors(kind, c, dark);
+  // A main button that is off stays readable: its reason is written on it ("Say the word first").
+  const off = disabled && kind === 'ink';
+  const { bg, fg, lip } = off ? { bg: c.surface2, fg: c.ink2, lip: c.surface2 } : base;
+  // Flat: a solid pill, no 3D lip (that read as a children's game). Pressing dims it a little.
+  const y = useSharedValue(1);
+  const h = small ? 46 : 56;
+  const anim = useAnimatedStyle(() => ({ opacity: y.value }));
   return (
     <Pressable
       onPress={() => {
@@ -117,15 +121,14 @@ export function Btn({ icon: Icon, iconRight: IconR, label, a11y, onPress, kind =
         noteTap(a11y ?? label);
         onPress?.();
       }}
-      onPressIn={() => y.set(withTiming(lipH, { duration: 70 }))}
-      onPressOut={() => y.set(withTiming(0, { duration: 110 }))}
+      onPressIn={() => y.set(withTiming(0.7, { duration: 70 }))}
+      onPressOut={() => y.set(withTiming(1, { duration: 110 }))}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={a11y ?? label}
       accessibilityState={{ disabled: !!disabled }}
-      style={[{ height: h + lipH, opacity: disabled ? 0.35 : 1, flex }, style]}>
-      <View style={{ position: 'absolute', left: 0, right: 0, top: lipH, height: h, borderRadius: radius.pill, backgroundColor: lip }} />
-      <Animated.View style={[{ height: h, borderRadius: radius.pill, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, paddingHorizontal: 26 }, anim]}>
+      style={[{ height: h, opacity: disabled && !off ? 0.35 : 1, flex }, style]}>
+      <Animated.View style={[{ height: h, borderRadius: radius.pill, backgroundColor: bg, borderWidth: kind === 'soft' || kind === 'white' ? 1.5 : 0, borderColor: lip, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, paddingHorizontal: 26 }, anim]}>
         {Icon && <Icon size={small ? 20 : 24} color={fg} strokeWidth={2.6} />}
         {!!label && (
           <Txt v="button" style={{ color: fg, fontSize: small ? 15 : undefined }} numberOfLines={1}>
@@ -145,8 +148,8 @@ export function IconBtn({ icon: Icon, onPress, label, kind = 'ghost', size = 52,
   const { c, e1 } = useTheme();
   const onBlock = useContext(OnBlock);
   const k: IconKind = active ? 'ink' : kind;
-  const bg = { ghost: c.surface, ink: c.ink, brand: c.brand, orange: c.orange, pink: c.pink, mint: c.mint, butter: c.butter, glass: 'rgba(255,255,255,0.42)', plain: 'transparent', soft: c.surface2 }[k];
-  const fg = k === 'ink' ? c.onInk : k === 'ghost' || k === 'soft' ? c.ink : k === 'plain' ? (onBlock ? ON_BLOCK.ink : c.ink) : ON_BLOCK.ink;
+  const bg = { ghost: c.surface, ink: c.press, brand: c.brand, orange: c.orange, pink: c.pink, mint: c.mint, butter: c.butter, glass: 'rgba(255,255,255,0.42)', plain: 'transparent', soft: c.surface2 }[k];
+  const fg = k === 'ink' ? '#FFFFFF' : k === 'ghost' || k === 'soft' ? c.ink : k === 'plain' ? (onBlock ? ON_BLOCK.ink : c.ink) : ON_BLOCK.ink;
   return (
     <Tap onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled, selected: !!active }} style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', borderWidth: k === 'ghost' ? 1 : 0, borderColor: c.line, opacity: disabled ? 0.35 : 1 }, k === 'ghost' ? e1 : null]}>
       <Icon size={Math.round(size * 0.44)} color={fg} strokeWidth={2.4} />
@@ -168,12 +171,15 @@ export function Chip({ label, onPress, state = 'default', selected, icon: Icon, 
   const toned = !!tone && st === 'default';
   const bg = toned ? c[tone!] : { default: c.surface, selected: c.ink, correct: c.mint, wrong: c.sun }[st];
   const fg = st === 'selected' ? c.onInk : toned || st === 'correct' ? ON_BLOCK.ink : c.ink;
-  const border = toned ? 'transparent' : { default: c.line, selected: c.ink, correct: c.mint, wrong: c.orange }[st];
+  const border = toned ? 'transparent' : { default: c.line, selected: c.ink, correct: c.success, wrong: '#E6C766' }[st];
   const Shell = onPress ? Tap : View;
+  // Shape says what it is: something to press is a pill with an outline; a word only to read is a
+  // flat, square-cornered label with no outline, so it never passes for a button.
+  const readOnly = !onPress && !onRemove;
   return (
     <Shell
       {...(onPress ? { onPress, disabled, accessibilityRole: 'button' as const, accessibilityState: { selected: st === 'selected', disabled: !!disabled }, accessibilityLabel: label } : null)}
-      style={[{ minHeight: big ? 60 : 48, paddingHorizontal: big ? 22 : 18, borderRadius: radius.pill, backgroundColor: bg, borderWidth: 1.5, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 8, opacity: disabled ? 0.4 : 1 }, style]}>
+      style={[readOnly ? { minHeight: big ? 48 : 36, paddingHorizontal: 14, borderRadius: 10, backgroundColor: st === 'default' ? c.surface2 : bg, flexDirection: 'row', alignItems: 'center', gap: 8 } : { minHeight: big ? 60 : 48, paddingHorizontal: big ? 22 : 18, borderRadius: radius.pill, backgroundColor: bg, borderWidth: 1.5, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 8, opacity: disabled ? 0.4 : 1 }, style]}>
       {Icon && <Icon size={big ? 20 : 18} color={fg} strokeWidth={2.3} />}
       <Txt v={big ? 'heading' : 'bodyS'} style={{ color: fg }}>
         {label}
@@ -198,7 +204,11 @@ export function Block({ children, tone = 'surface', onPress, style, pad = 22, ro
   const { c, e1 } = useTheme();
   const bg = tone === 'surface' ? c.surface : tone === 'soft' ? c.surface2 : tone === 'ink' ? '#0E0E13' : tone === 'error' ? c.errorTint : tone === 'success' ? c.mintTint : c[tone];
   const coloured = tone !== 'surface' && tone !== 'soft' && tone !== 'ink' && tone !== 'error' && tone !== 'success';
-  const base: ViewStyle = { backgroundColor: bg, borderRadius: round, padding: pad, borderWidth: outline ? 2 : tone === 'surface' ? 1 : 0, borderColor: outline ? c[outline] : c.line, overflow: 'hidden', ...(tone === 'surface' ? e1 : null) };
+  // Shape says what it is. A card you can press has an edge: an outline and a lip under it, like a
+  // key. A card you only read is flat, with no outline, so the two are never confused.
+  const plain = tone === 'surface' || tone === 'soft';
+  const edge: ViewStyle = onPress ? { borderWidth: 1.5, borderColor: plain ? '#CFD1DA' : 'rgba(14,14,19,0.18)' } : {};
+  const base: ViewStyle = { backgroundColor: bg, borderRadius: round, padding: pad, overflow: 'hidden', ...edge, ...(outline ? { borderWidth: 2, borderColor: c[outline] } : null), ...e1 };
   const inner = <OnBlock.Provider value={coloured}>{children}</OnBlock.Provider>;
   if (onPress)
     return (
@@ -269,7 +279,7 @@ export function Stat({ icon: Icon, value, tint = 'orange', onPress, a11y }: { ic
   const { c, e1 } = useTheme();
   const Shell = onPress ? Tap : View;
   return (
-    <Shell {...(onPress ? { onPress, accessibilityRole: 'button' as const } : { accessible: true })} accessibilityLabel={a11y} style={[{ height: 44, borderRadius: 22, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14 }, e1]}>
+    <Shell {...(onPress ? { onPress, accessibilityRole: 'button' as const } : { accessible: true })} accessibilityLabel={a11y} style={[{ height: 44, borderRadius: 22, backgroundColor: c.surface, borderWidth: onPress ? 1.5 : 0, borderColor: c.line, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14 }, e1]}>
       <Icon size={19} color={c[tint]} fill={c[tint]} strokeWidth={2} />
       <Text style={{ fontFamily: 'Lexend_700Bold', fontSize: 17, color: c.ink }}>{value}</Text>
     </Shell>
@@ -281,7 +291,7 @@ export function Screen({ children, top, footer, scroll = true, gap = 16, pad = t
   const { c } = useTheme();
   const bg = tone ? (tone === 'ink' ? '#0E0E13' : c[tone]) : c.canvas;
   const body = scroll ? (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: pad ? GUTTER : 0, paddingTop: 8, paddingBottom: 24 + bottomSpace, gap }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: pad ? GUTTER : 0, paddingTop: 8, paddingBottom: 24 + bottomSpace, gap }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}>
       {children}
     </ScrollView>
   ) : (
@@ -319,7 +329,8 @@ export function TopBar({ back = 'back', onBack, steps, center, right }: { back?:
 
 export function SectionLabel({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
   return (
-    <Txt v="label" color="ink2" style={[{ marginTop: 8 }, style]} accessibilityRole="header">
+    // A section heading under the screen's one title: level 2, so the screen keeps a single h1.
+    <Txt v="label" color="ink2" style={[{ marginTop: 8 }, style]} role="heading" aria-level={2}>
       {children}
     </Txt>
   );
@@ -339,11 +350,8 @@ export function Row({ title, sub, right, left, icon: Icon, iconTone = 'soft', on
   const { c } = useTheme();
   const inner = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: last ? 0 : 1, borderBottomColor: c.line, minHeight: 68 }}>
-      {Icon && (
-        <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: iconTone === 'soft' ? c.surface2 : c[iconTone], alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={20} color={iconTone === 'soft' ? c.ink : ON_BLOCK.ink} strokeWidth={2.3} />
-        </View>
-      )}
+      {/* A plain icon before the label. In a disc it read as a second, smaller button. */}
+      {Icon && <Icon size={20} color={iconTone === 'soft' ? c.ink2 : c[iconTone]} strokeWidth={2.2} />}
       {left}
       <View style={{ flex: 1 }}>
         <Txt v="body" color={titleColor} numberOfLines={1}>
@@ -370,10 +378,11 @@ export function Row({ title, sub, right, left, icon: Icon, iconTone = 'soft', on
 
 export function Tag({ label, tint = 'surface2', color = 'ink2', icon: Icon }: { label: string; tint?: ColorKey; color?: ColorKey; icon?: LucideIcon }) {
   const { c } = useTheme();
-  const blocky = ['brand', 'orange', 'pink', 'mint', 'butter', 'lilac'].includes(tint);
+  const blocky = ['brand', 'orange', 'pink', 'mint', 'butter', 'lilac', 'stone'].includes(tint);
   const fg = blocky ? ON_BLOCK.ink : c[color];
   return (
-    <View style={{ backgroundColor: c[tint], borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+    // A label you read: square-cornered and flat. Pills are kept for things you press.
+    <View style={{ backgroundColor: c[tint], borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
       {Icon && <Icon size={13} color={fg} strokeWidth={2.6} />}
       <Txt v="caption" style={{ color: fg }}>
         {label}
@@ -400,16 +409,12 @@ export function Toggle({ value, onChange, label, icon: Icon, a11y }: { value: bo
       accessibilityState={{ checked: value }}
       accessibilityLabel={a11y ?? label}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 52 }}>
-      {Icon && (
-        <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={20} color={c.ink} strokeWidth={2.3} />
-        </View>
-      )}
+      {Icon && <Icon size={20} color={c.ink2} strokeWidth={2.2} />}
       <Txt v="body" style={{ flex: 1 }} numberOfLines={2}>
         {label}
       </Txt>
       <View style={{ width: 58, height: 34, borderRadius: 17, backgroundColor: value ? c.ink : c.surface2, padding: 3, borderWidth: 1, borderColor: value ? c.ink : c.line }}>
-        <Animated.View style={[{ width: 26, height: 26, borderRadius: 13, backgroundColor: value ? c.orange : '#FFFFFF', boxShadow: '0px 1px 3px rgba(0,0,0,0.2)' }, knob]} />
+        <Animated.View style={[{ width: 26, height: 26, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.line }, knob]} />
       </View>
     </Pressable>
   );

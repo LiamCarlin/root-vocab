@@ -1,6 +1,7 @@
 import { User } from 'lucide-react-native';
 import { View } from 'react-native';
 
+import { PacePicker } from '@/components/PacePicker';
 import { Chip, ChipRow, Field, Screen, SectionLabel, TopBar, Txt } from '@/components/ui';
 import { DAYS, STRANDS, STRAND_ORDER, TOPICS, TOPIC_ORDER, type DayId, type Strand } from '@/data/profile';
 import type { Topic } from '@/data/words';
@@ -22,9 +23,12 @@ export default function AboutMe() {
       <SectionLabel>My goals</SectionLabel>
       <ChipRow>
         {STRAND_ORDER.map((id: Strand) => (
-          <Chip key={id} label={STRANDS[id].goal} icon={STRANDS[id].icon} tone={STRANDS[id].tone} selected={profile.goals.includes(id)} onPress={() => setProfile({ goals: flip(profile.goals, id) })} />
+          <Chip key={id} label={STRANDS[id].goal} icon={STRANDS[id].icon} selected={profile.goals.includes(id)} onPress={() => setProfile({ goals: flip(profile.goals, id) })} />
         ))}
       </ChipRow>
+
+      <SectionLabel>Stops on the journey each day</SectionLabel>
+      <PacePicker />
 
       <SectionLabel>My days</SectionLabel>
       <ChipRow>
@@ -36,7 +40,7 @@ export default function AboutMe() {
       <SectionLabel>I like</SectionLabel>
       <ChipRow>
         {TOPIC_ORDER.map((t: Topic) => (
-          <Chip key={t} label={TOPICS[t].label} icon={TOPICS[t].icon} tone={TOPICS[t].tone} selected={profile.interests.includes(t)} onPress={() => setProfile({ interests: flip(profile.interests, t) })} />
+          <Chip key={t} label={TOPICS[t].label} icon={TOPICS[t].icon} selected={profile.interests.includes(t)} onPress={() => setProfile({ interests: flip(profile.interests, t) })} />
         ))}
       </ChipRow>
     </Screen>

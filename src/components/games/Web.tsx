@@ -94,7 +94,7 @@ export function Web({ lex, onResult, done }: GameProps) {
             const got = found.includes(b.label);
             const off = missed.includes(b.label) || (open && !b.belongs);
             return (
-              <Float key={b.label} amp={got ? 0 : 4 + (i % 3)} period={2400 + i * 310} style={{ position: 'absolute', left: p.x - BW / 2, top: p.y - BH / 2, width: BW, height: BH }}>
+              <Float key={b.label} amp={0} period={2400 + i * 310} style={{ position: 'absolute', left: p.x - BW / 2, top: p.y - BH / 2, width: BW, height: BH }}>
                 <Wiggle trigger={missed.includes(b.label) ? 1 : 0}>
                   <Tap
                     onPress={() => tap(b)}

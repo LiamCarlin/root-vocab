@@ -3,7 +3,6 @@ import { useEffect, type ReactNode } from 'react';
 import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { Companion } from '@/components/Buddy';
 import type { Pose } from '@/components/Mascot';
 import { Screen, Txt } from '@/components/ui';
 import { ON_BLOCK, radius, useTheme } from '@/theme';
@@ -19,12 +18,10 @@ export function StepScreen({ top, footer, children, scroll = true, gap = 16, key
       scroll={scroll}
       gap={gap}
       keyboard={keyboard}
-      bottomSpace={pose && scroll ? 22 : 0}
+      bottomSpace={0}
       footer={
         <View style={{ gap: 10 }}>
           {footer}
-          {/* The footer is the audio controls, then the main button: Root stands on the button, beside the controls. */}
-          {pose && <Companion pose={pose} size={84} style={{ position: 'absolute', right: -6, bottom: 75 }} />}
         </View>
       }>
       {children}
@@ -44,7 +41,7 @@ export function LessonBar({ total, done }: { total: number; done: number }) {
   return (
     <View style={{ flex: 1, height: 28, justifyContent: 'center' }} accessibilityRole="progressbar" accessibilityLabel={`Step ${Math.min(done + 1, total)} of ${total}`} accessibilityValue={{ min: 0, max: total, now: done }}>
       <View style={{ height: 14, borderRadius: 7, backgroundColor: c.surface2, overflow: 'hidden' }}>
-        <Animated.View style={[{ height: 14, borderRadius: 7, backgroundColor: c.orange }, fill]}>
+        <Animated.View style={[{ height: 14, borderRadius: 7, backgroundColor: c.indigo }, fill]}>
           <View style={{ position: 'absolute', left: 7, right: 7, top: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.45)' }} />
         </Animated.View>
       </View>
@@ -56,10 +53,9 @@ export function LessonBar({ total, done }: { total: number; done: number }) {
 export function Why({ text, label, icon: Icon = Lightbulb, tone = 'butter' }: { text: string; label?: string; icon?: LucideIcon; tone?: 'butter' | 'error' }) {
   const { c } = useTheme();
   return (
-    <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', backgroundColor: tone === 'butter' ? c.sun : c.errorTint, borderRadius: radius.lg, padding: 16 }}>
-      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: tone === 'butter' ? c.butter : c.orange, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={20} color={ON_BLOCK.ink} strokeWidth={2.4} />
-      </View>
+    <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', backgroundColor: c.sun, borderRadius: radius.lg, padding: 16 }}>
+      {/* Bare icon: this card is to read, not to press. */}
+      <Icon size={22} color={ON_BLOCK.ink} strokeWidth={2.4} style={{ marginTop: 1 }} />
       <View style={{ flex: 1, gap: 4 }}>
         {!!label && (
           <Txt v="caption" color="ink2">

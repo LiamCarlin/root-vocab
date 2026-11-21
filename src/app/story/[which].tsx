@@ -7,7 +7,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Figure } from '@/components/Buddy';
 import { Pop } from '@/components/fx';
 import { Scene } from '@/components/rewards';
-import { Block, IconBtn, Screen, TopBar, Txt } from '@/components/ui';
+import { Block, Btn, Screen, TopBar, Txt } from '@/components/ui';
 import { KEEPSAKES, PROLOGUE, chapterOf } from '@/data/story';
 import { buzz } from '@/lib/audio';
 import { useHoldUnlocks } from '@/lib/unlocks';
@@ -87,6 +87,23 @@ function Story({ which }: { which: Which }) {
     }
   };
 
+  /**
+   * The skip button skips the story, all of it. Skipping the prologue used to open the chapter's
+   * opening, another story page that looks the same, so the button seemed to do nothing.
+   */
+  const skip = () => {
+    if (gone.current) return;
+    if (which === 'prologue') {
+      gone.current = true;
+      const st = useStore.getState();
+      st.seeStory('prologue');
+      st.seeStory('intro');
+      home();
+      return;
+    }
+    finish();
+  };
+
   const advance = () => {
     if (pageAt.current) note({ k: 'read', words: beat.line.split(/\s+/).length, ms: clock() - pageAt.current });
     pageAt.current = clock();
@@ -98,7 +115,6 @@ function Story({ which }: { which: Which }) {
 
   const fog = which === 'prologue' ? [0, 0.9, 0.92, 0.92, 0.75, 0.6][Math.min(i, 5)] : which === 'intro' ? 0.85 : cleared ? 0 : 0.6;
   const sceneSize = Math.max(150, Math.min(260, height * 0.28));
-  const kicker = which === 'prologue' ? 'The valley' : `Chapter ${ch.n}`;
   const title = which === 'prologue' ? 'The Hush' : ch.name;
 
   return (
@@ -116,15 +132,12 @@ function Story({ which }: { which: Which }) {
               ))}
             </View>
           }
-          right={<IconBtn icon={SkipForward} label="Skip the story" kind="glass" size={48} onPress={finish} />}
+          right={<Btn kind="white" small iconRight={SkipForward} label="Skip story" a11y="Skip the story" onPress={skip} />}
         />
       }>
       <Pressable onPress={advance} accessibilityRole="button" accessibilityLabel={`${beat.line} ${last ? 'Continue' : 'Next'}`} style={{ flex: 1, paddingBottom: 22 }}>
-        <View style={{ alignItems: 'center', gap: 2, paddingTop: 4 }}>
-          <Txt v="label" color="ink2">
-            {kicker}
-          </Txt>
-          <Txt v="display" center>
+        <View style={{ alignItems: 'center', paddingTop: 4 }}>
+          <Txt v="display" center accessibilityRole="header">
             {title}
           </Txt>
         </View>

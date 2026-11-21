@@ -12,7 +12,6 @@
 import { BANK_BY_ID } from '../../src/data/words';
 import { addDays } from '../../src/lib/dates';
 import { askFor, difficulty, emptyMem, levelOf, nextMem, pickSet, STRAND_LIST } from '../../src/lib/engine';
-import { makeCard, readCard } from '../../src/lib/friends';
 import { lexemeFor } from '../../src/lib/lexicon';
 import { freshMind, gapFor, levelDrift, mainSlip, observe, predict, settle, slipsIn, weight, type Ask, type Mind } from '../../src/lib/mind';
 
@@ -130,7 +129,3 @@ run({ name: 'C. Placed right, strong on meaning, weak on spelling, trips on doub
 // Spot checks on the small tools.
 console.log('\nSlips:');
 for (const [a, b] of [['recieve', 'receive'], ['acommodate', 'accommodate'], ['seperate', 'separate'], ['dog', 'bog'], ['definately', 'definitely'], ['untill', 'until'], ['wich', 'which']]) console.log(`  ${a} -> ${b}: ${slipsIn(a, b).map((x) => x.kind + (x.pair ? `(${x.pair})` : '')).join(', ')}`);
-const card = makeCard({ id: 'abc123xyz789', name: 'Sam O.Neil', streak: 12, week: 340, rooted: 27, day: '2026-11-19', at: 1795000000000 });
-const same = (f: unknown) => (JSON.stringify(f) === JSON.stringify(readCard(card)) ? 'ok' : `WRONG ${JSON.stringify(f)}`);
-console.log(`\nCard: ${card}\n  read back: ${JSON.stringify(readCard(card))}`);
-console.log(`  inside a link: ${same(readCard(`Join me! rootvocab://friends?add=${encodeURIComponent(card)} see you`))}   unescaped by an app: ${same(readCard(decodeURIComponent(card)))}   in a message: ${same(readCard(`Add me:\n${card}\nthanks`))}   damaged: ${JSON.stringify(readCard(card.replace('abc', 'abd')))}`);

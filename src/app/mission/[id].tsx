@@ -1,9 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { FastForward, Home, LogOut, Play } from 'lucide-react-native';
+import { Home, LogOut, Play } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { StepBack } from '@/components/learn';
 import { Mascot } from '@/components/Mascot';
 import { Beats } from '@/components/mission/Beats';
 import { Bridge } from '@/components/mission/Bridge';
@@ -18,7 +19,7 @@ import { Spell } from '@/components/mission/Spell';
 import { Together } from '@/components/mission/Together';
 import { stepsFor, type MissionStats, type StepProps } from '@/components/mission/types';
 import { Use } from '@/components/mission/Use';
-import { Btn, IconBtn, Screen, Sheet, TopBar, Txt } from '@/components/ui';
+import { Btn, Screen, Sheet, TopBar, Txt } from '@/components/ui';
 import { trailLine, wordLine } from '@/data/story';
 import { buzz, stopListening, stopSpeaking } from '@/lib/audio';
 import { canPlay, shouldProbe } from '@/lib/engine';
@@ -40,11 +41,11 @@ type Plan = { queue: string[]; stop: number; /** Words of the set taught before 
 /**
  * The lesson: how new words are first taught.
  *
- * One word is seven steps, each putting another sense behind it:
- * hear → link → beats → build → move → spell → use.
+ * One word is five steps, each putting another sense behind it:
+ * hear → link → move → spell → use.
  *
  * A stop on the journey teaches a small set of words, so the route runs the seven steps for
- * the first word, a short bridge, the seven steps for the next, and then one step that mixes
+ * the first word, a short bridge, the five steps for the next, and then one step that mixes
  * the set. A word is recorded as soon as its own steps are done, so leaving half-way loses
  * nothing: the stop picks up at the next word. Replay, slower and skip sit in the same place
  * on every step.
@@ -105,7 +106,6 @@ function Mission({ id, stopRaw }: { id: string; stopRaw?: string }) {
   const [outcome, setOutcome] = useState<StopOutcome | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [hook, setHook] = useState<string | null>(null);
-  const [settled, setSettled] = useState(false);
   const stats = useRef<MissionStats>({ hints: 0, retries: 0, skipped: [] });
   const recorded = useRef(new Set<string>());
   const closed = useRef(false);
@@ -120,15 +120,10 @@ function Mission({ id, stopRaw }: { id: string; stopRaw?: string }) {
   const pattern = useMemo(() => sharedPattern(set.map((l) => l.id)), [set]);
   const mixes = set.length > 1;
 
-  // No full-screen celebration may open over a step. They wait for the Done screen, and then a moment more so it gets its own beat first.
-  // A lesson that finishes the chapter keeps them back until the story's ending has played.
+  // No full-screen celebration may open over a step, or over the Done screen while it is being read.
+  // They wait until the learner leaves the lesson, and then play on the journey.
   const finished = phase === 'done';
-  useHoldUnlocks(!finished || !settled || !!outcome?.chapterDone);
-  useEffect(() => {
-    if (!finished) return;
-    const t = setTimeout(() => setSettled(true), 2400);
-    return () => clearTimeout(t);
-  }, [finished]);
+  useHoldUnlocks(true);
 
   useEffect(
     () => () => {
@@ -197,6 +192,15 @@ function Mission({ id, stopRaw }: { id: string; stopRaw?: string }) {
     [idx, steps, lex, wordId, hook, wi, plan.queue.length, mixes, close],
   );
 
+  /** One step back within the word, to look again at something that went by too fast. Nothing is undone. */
+  const back = useCallback(() => {
+    if (idx <= 0) return;
+    stopSpeaking();
+    stopListening();
+    stepAt.current = clock();
+    setIdx(idx - 1);
+  }, [idx]);
+
   /** The clocks start when a word's own steps do, not while the check is on screen. */
   const startWord = () => {
     stepAt.current = clock();
@@ -263,7 +267,7 @@ function Mission({ id, stopRaw }: { id: string; stopRaw?: string }) {
       back="close"
       onBack={() => setLeaving(true)}
       center={<LessonBar total={total} done={doneSteps} />}
-      right={canCheck ? <IconBtn icon={FastForward} label="I know this word. Check me." kind="butter" size={48} onPress={() => beginCheck(wordId)} /> : <View style={{ width: 4 }} />}
+      right={canCheck ? <Btn kind="white" small label="I know it" a11y="I know this word already. Test me on it." onPress={() => beginCheck(wordId)} /> : <View style={{ width: 4 }} />}
     />
   );
 
@@ -286,6 +290,7 @@ function Mission({ id, stopRaw }: { id: string; stopRaw?: string }) {
   return (
     <>
       <View style={{ flex: 1 }}>
+        <StepBack.Provider value={phase === 'word' && idx > 0 ? back : null}>
         <Animated.View key={`${phase}-${wordId}-${step}`} entering={reduceMotion ? undefined : FadeIn.duration(220)} style={{ flex: 1 }}>
           {phase === 'bridge' && set[wi + 1] && <Bridge done={lex} next={set[wi + 1]} at={plan.before + wi + 1} of={plan.of} pattern={pattern} top={top} onNext={nextWord} />}
           {phase === 'together' && <Together words={set} pattern={pattern} top={top} next={close} skip={close} />}
@@ -302,17 +307,21 @@ function Mission({ id, stopRaw }: { id: string; stopRaw?: string }) {
             </>
           )}
         </Animated.View>
+        </StepBack.Provider>
       </View>
 
-      <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Leave?">
-        <View style={{ alignItems: 'center' }}>
-          <Mascot pose="oops" size={130} />
+      <Sheet visible={leaving} onClose={() => setLeaving(false)} title="Stop for now?">
+        <View style={{ alignItems: 'center', gap: 8 }}>
+          <Mascot pose="wave" size={120} />
+          <Txt v="body" center>
+            {taught.length ? 'The words you finished are saved. You can pick up the rest from the journey.' : 'Nothing is lost. This stop will be waiting on the journey.'}
+          </Txt>
         </View>
-        <Btn icon={Play} label="Stay" onPress={() => setLeaving(false)} />
+        <Btn icon={Play} label="Keep going" onPress={() => setLeaving(false)} />
         <Btn
           kind="soft"
           icon={LogOut}
-          label="Leave"
+          label="Stop for now"
           onPress={() => {
             setLeaving(false);
             leave();

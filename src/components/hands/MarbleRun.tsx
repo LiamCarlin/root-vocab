@@ -5,11 +5,11 @@ import Animated, { FadeIn, useAnimatedStyle, useSharedValue } from 'react-native
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { IconBtn } from '@/components/ui';
-import { buzz, say } from '@/lib/audio';
+import { buzz } from '@/lib/audio';
 import { layoutLetters, pathOf, pointAt, type Track } from '@/lib/glyphs';
 import { motionAvailable, watchTilt } from '@/lib/motion';
 import { useTheme } from '@/theme';
-import { BOARD, PAD_RADIUS, WordStrip, letterName } from './kit';
+import { BOARD, PAD_RADIUS, WordStrip } from './kit';
 
 // ── Marble run ────────────────────────────────────────────────────────────
 // The letters are grooves cut into a board, and a marble runs along them in the order and
@@ -142,7 +142,6 @@ export function MarbleRun({ text, parts, onPart, onDone, onInput, height = 320 }
       const n = r.k + 1;
       if (n >= all.length || all[n].li !== cur.li) {
         buzz.tap();
-        say(letterName(lay.letters[cur.li].ch));
       }
       r.k = n;
       r.s = 0;
@@ -285,7 +284,7 @@ export function MarbleRun({ text, parts, onPart, onDone, onInput, height = 320 }
       )}
 
       {!finished && (
-        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, width: R * 2, height: R * 2, borderRadius: R, backgroundColor: c.orange, boxShadow: '0px 3px 8px rgba(0,0,0,0.55)' }, marble]}>
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, width: R * 2, height: R * 2, borderRadius: R, backgroundColor: c.orange }, marble]}>
           <View style={{ position: 'absolute', left: R * 0.36, top: R * 0.28, width: R * 0.6, height: R * 0.44, borderRadius: R * 0.3, backgroundColor: 'rgba(255,255,255,0.7)' }} />
         </Animated.View>
       )}
